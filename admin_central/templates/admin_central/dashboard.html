@@ -1,0 +1,295 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Дашборд - Управление лесным хозяйством{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Шапка с общей статистикой -->
+    <div class="dashboard-card" style="grid-column: 1 / -1;">
+        <h2><i class="fas fa-tachometer-alt"></i> Общая статистика</h2>
+        <div class="dashboard-stats">
+            <div class="stat-item">
+                <div class="stat-value">{{ total_employees }}</div>
+                <div class="stat-label">Всего сотрудников</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ total_materials }}</div>
+                <div class="stat-label">Видов материалов</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ total_cutting_areas }}</div>
+                <div class="stat-label">Лесосек</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ total_vehicles }}</div>
+                <div class="stat-label">Транспортных средств</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ pending_movements }}</div>
+                <div class="stat-label">Ожидающих движений</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Сводка по лесничествам -->
+    <div class="dashboard-card">
+        <h3><i class="fas fa-tree"></i> Лесничества</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f8f9fa;">
+                    <th style="padding: 8px; text-align: left;">Лесничество</th>
+                    <th style="padding: 8px; text-align: right;">Лесосек</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for forestry in forestries_summary %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">
+                        <a href="{% url 'admin:forestry_forestry_change' forestry.id %}">{{ forestry.name }}</a>
+                    </td>
+                    <td style="padding: 8px; text-align: right;">
+                        <span class="badge" style="background: #4caf50; color: white; padding: 2px 8px; border-radius: 10px;">
+                            {{ forestry.cutting_area_count }}
+                        </span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2" style="padding: 8px; text-align: center; color: #999;">
+                        Нет данных
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div style="margin-top: 15px;">
+            <a href="{% url 'admin:forestry_forestry_changelist' %}" class="button" style="display: inline-block;">
+                <i class="fas fa-list"></i> Все лесничества
+            </a>
+            <a href="{% url 'admin:forestry_forestry_add' %}" class="button" style="display: inline-block; background: #4caf50;">
+                <i class="fas fa-plus"></i> Добавить
+            </a>
+        </div>
+    </div>
+
+    <!-- Последние движения материалов -->
+    <div class="dashboard-card">
+        <h3><i class="fas fa-exchange-alt"></i> Последние движения</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f8f9fa;">
+                    <th style="padding: 8px; text-align: left;">Тип</th>
+                    <th style="padding: 8px; text-align: left;">Материал</th>
+                    <th style="padding: 8px; text-align: right;">Кол-во</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for movement in recent_movements %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">
+                        <span class="badge" style="
+                            background: {% if movement.accounting_type == 'Перемещение' %}#2196f3
+                                      {% elif movement.accounting_type == 'Реализация' %}#4caf50
+                                      {% else %}#f44336{% endif %};
+                            color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px;
+                        ">
+                            {{ movement.accounting_type|slice:":3" }}
+                        </span>
+                    </td>
+                    <td style="padding: 8px;">{{ movement.material.name|truncatechars:20 }}</td>
+                    <td style="padding: 8px; text-align: right;">
+                        {{ movement.quantity_pieces|default:"0" }} шт
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" style="padding: 8px; text-align: center; color: #999;">
+                        Нет движений
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div style="margin-top: 15px;">
+            <a href="{% url 'admin:inventory_materialmovement_changelist' %}" class="button" style="display: inline-block;">
+                <i class="fas fa-history"></i> Все движения
+            </a>
+        </div>
+    </div>
+
+    <!-- Статистика по складам -->
+    <div class="dashboard-card">
+        <h3><i class="fas fa-warehouse"></i> Склады</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f8f9fa;">
+                    <th style="padding: 8px; text-align: left;">Склад</th>
+                    <th style="padding: 8px; text-align: right;">Сотрудников</th>
+                    <th style="padding: 8px; text-align: right;">Активен</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for warehouse in warehouses %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">
+                        <a href="{% url 'admin:core_warehouse_change' warehouse.id %}">
+                            {{ warehouse.name }}
+                        </a>
+                    </td>
+                    <td style="padding: 8px; text-align: right;">
+                        {{ warehouse.employee_count }}
+                    </td>
+                    <td style="padding: 8px; text-align: right;">
+                        {% if warehouse.is_active %}
+                        <i class="fas fa-check-circle" style="color: #4caf50;"></i>
+                        {% else %}
+                        <i class="fas fa-times-circle" style="color: #f44336;"></i>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" style="padding: 8px; text-align: center; color: #999;">
+                        Нет складов
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div style="margin-top: 15px;">
+            <a href="{% url 'admin:core_warehouse_changelist' %}" class="button" style="display: inline-block;">
+                <i class="fas fa-list"></i> Все склады
+            </a>
+        </div>
+    </div>
+
+    <!-- Недавние операции -->
+    <div class="dashboard-card">
+        <h3><i class="fas fa-cogs"></i> Недавние операции</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f8f9fa;">
+                    <th style="padding: 8px; text-align: left;">Тип</th>
+                    <th style="padding: 8px; text-align: left;">Материал</th>
+                    <th style="padding: 8px; text-align: right;">Кол-во</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for operation in recent_operations %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">{{ operation.operation_type.name|truncatechars:15 }}</td>
+                    <td style="padding: 8px;">{{ operation.material.name|truncatechars:15 }}</td>
+                    <td style="padding: 8px; text-align: right;">{{ operation.quantity }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" style="padding: 8px; text-align: center; color: #999;">
+                        Нет операций
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div style="margin-top: 15px;">
+            <a href="{% url 'admin:operations_operationrecord_changelist' %}" class="button" style="display: inline-block;">
+                <i class="fas fa-history"></i> Все операции
+            </a>
+        </div>
+    </div>
+
+    <!-- Материалы с низким запасом -->
+    <div class="dashboard-card">
+        <h3><i class="fas fa-exclamation-triangle" style="color: #ff9800;"></i> Мало остатков</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f8f9fa;">
+                    <th style="padding: 8px; text-align: left;">Материал</th>
+                    <th style="padding: 8px; text-align: right;">Остаток</th>
+                    <th style="padding: 8px; text-align: left;">Место</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for balance in low_stock_items %}
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 8px;">{{ balance.material.name|truncatechars:20 }}</td>
+                    <td style="padding: 8px; text-align: right; color: #f44336; font-weight: bold;">
+                        {{ balance.quantity_pieces }} шт
+                    </td>
+                    <td style="padding: 8px; font-size: 12px; color: #666;">
+                        {{ balance.storage_location.get_source_name|truncatechars:15 }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" style="padding: 8px; text-align: center; color: #4caf50;">
+                        <i class="fas fa-check-circle"></i> Все в норме
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div style="margin-top: 15px;">
+            <a href="{% url 'admin:inventory_materialbalance_changelist' %}?quantity_pieces__lt=10" class="button" style="display: inline-block; background: #ff9800;">
+                <i class="fas fa-filter"></i> Все с низким запасом
+            </a>
+        </div>
+    </div>
+
+    <!-- Системная информация -->
+    <div class="dashboard-card">
+        <h3><i class="fas fa-info-circle"></i> Системная информация</h3>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            <li style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                <strong>Версия Django:</strong> {{ django_version }}
+            </li>
+            <li style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                <strong>Пользователь:</strong> {{ user.get_username }}
+            </li>
+            <li style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                <strong>Последний вход:</strong> {{ user.last_login|date:"d.m.Y H:i"|default:"Не входил" }}
+            </li>
+            <li style="padding: 8px 0;">
+                <strong>Дата и время:</strong> {% now "d.m.Y H:i" %}
+            </li>
+        </ul>
+        <div style="margin-top: 15px;">
+            <a href="{% url 'admin:password_change' %}" class="button" style="display: inline-block;">
+                <i class="fas fa-key"></i> Сменить пароль
+            </a>
+            <a href="{% url 'admin:logout' %}" class="button" style="display: inline-block; background: #f44336;">
+                <i class="fas fa-sign-out-alt"></i> Выйти
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.button {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #2196f3;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.button:hover {
+    background: #0b7dda;
+    color: white;
+    text-decoration: none;
+}
+</style>
+{% endblock %}

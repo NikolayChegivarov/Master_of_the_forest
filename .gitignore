@@ -1,0 +1,7 @@
+.venv
+.env
+/.idea/
+__pycache__/
+DRAFT.md
+Forest_app/media/products/*
+Forest_app/migrations/*

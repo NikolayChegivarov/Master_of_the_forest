@@ -1,12 +1,12 @@
 # admin_central/admin.py
 from django.contrib import admin
 
-# Импорт всех моделей из всех приложений
-from core.models import Position, Warehouse, Vehicle, Counterparty, Brigade
-from employees.models import Employee, WorkTimeRecord
-from forestry.models import Material, Forestry, CuttingArea, CuttingAreaContent
-from inventory.models import StorageLocation, MaterialMovement, MaterialBalance
-from operations.models import OperationType, OperationRecord
+# Импорт всех моделей из всех приложений с полным путем
+from Forest_apps.core.models import Position, Warehouse, Vehicle, Counterparty, Brigade
+from Forest_apps.employees.models import Employee, WorkTimeRecord
+from Forest_apps.forestry.models import Material, Forestry, CuttingArea, CuttingAreaContent
+from Forest_apps.inventory.models import StorageLocation, MaterialMovement, MaterialBalance
+from Forest_apps.operations.models import OperationType, OperationRecord
 
 # Регистрация моделей с группировкой по приложениям
 
@@ -109,7 +109,9 @@ class StorageLocationAdmin(admin.ModelAdmin):
 
 @admin.register(MaterialMovement)
 class MaterialMovementAdmin(admin.ModelAdmin):
-    list_display = ['accounting_type', 'date_time', 'material', 'quantity_display', 'is_completed']
+    list_display = ['accounting_type', 'date_time', 'material',
+                    'from_location', 'to_location', 'quantity_display',
+                    'is_completed', 'total_amount']
     list_filter = ['accounting_type', 'is_completed', 'date_time']
     search_fields = ['material__name']
     date_hierarchy = 'date_time'

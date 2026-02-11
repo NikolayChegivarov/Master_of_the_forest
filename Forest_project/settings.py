@@ -1,7 +1,10 @@
 # Forest_project/settings.py
 import sys
 import os
-from pathlib import Path
+from dotenv import load_dotenv  # Добавьте эту строку
+
+# Загружаем .env файл
+load_dotenv()
 
 # Путь к приложениям
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -29,15 +32,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Основные приложения
-    'core.apps.CoreConfig',
-    'employees.apps.EmployeesConfig',
-    'forestry.apps.ForestryConfig',
-    'inventory.apps.InventoryConfig',
-    'operations.apps.OperationsConfig',
-
-    # Централизованная админка
-    'admin_central.apps.AdminCentralConfig',
+    # ✅ Все приложения в Forest_apps
+    'Forest_apps.core.apps.CoreConfig',
+    'Forest_apps.employees.apps.EmployeesConfig',
+    'Forest_apps.forestry.apps.ForestryConfig',
+    'Forest_apps.inventory.apps.InventoryConfig',
+    'Forest_apps.operations.apps.OperationsConfig',
+    'Forest_apps.admin_central.apps.AdminCentralConfig',
 ]
 
 MIDDLEWARE = [
@@ -74,13 +75,17 @@ WSGI_APPLICATION = 'Forest_project.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+# Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv("NAME_DB"),
+        'HOST': 'localhost',
+        'PORT': '5432',
+        'USER': os.getenv('USER_DB'),
+        'PASSWORD': os.getenv('PASSWORD_DB'),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators

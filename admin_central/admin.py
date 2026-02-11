@@ -48,6 +48,19 @@ class EmployeeAdmin(admin.ModelAdmin):
     list_filter = ['position', 'warehouse', 'is_active']
     search_fields = ['last_name', 'first_name', 'middle_name']
     raw_id_fields = ['position', 'warehouse']
+    actions = ['activate_employees', 'deactivate_employees']
+
+    def activate_employees(self, request, queryset):
+        queryset.update(is_active=True)
+        self.message_user(request, f"Активировано {queryset.count()} сотрудников")
+
+    activate_employees.short_description = "Активировать выбранных сотрудников"
+
+    def deactivate_employees(self, request, queryset):
+        queryset.update(is_active=False)
+        self.message_user(request, f"Деактивировано {queryset.count()} сотрудников")
+
+    deactivate_employees.short_description = "Деактивировать выбранных сотрудников"
 
 @admin.register(WorkTimeRecord)
 class WorkTimeRecordAdmin(admin.ModelAdmin):

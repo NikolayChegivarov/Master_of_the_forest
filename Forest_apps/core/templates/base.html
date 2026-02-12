@@ -1,10 +1,129 @@
+<!-- Forest_apps/core/templates/base.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Лесное хозяйство{% endblock %}</title>
+
+    <!-- Базовые CSS стили -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+
+        header {
+            background: #2c5e2e;
+            color: white;
+            padding: 1rem 0;
+        }
+
+        nav {
+            background: #3a7a3c;
+            padding: 0.5rem 0;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+        }
+
+        nav ul li {
+            margin-right: 1.5rem;
+        }
+
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+        }
+
+        nav ul li a:hover {
+            text-decoration: underline;
+        }
+
+        main {
+            min-height: 70vh;
+            padding: 2rem 0;
+        }
+
+        footer {
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 1rem 0;
+            margin-top: 2rem;
+        }
+
+        .content {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+
+    <!-- Дополнительные CSS -->
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <header>
+        <div class="container">
+            <h1>{% block header %}Управление лесным хозяйством{% endblock %}</h1>
+        </div>
+    </header>
 
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="/">Главная</a></li>
+                {% block nav_items %}{% endblock %}
+            </ul>
+        </div>
+    </nav>
+
+    <main>
+        <div class="container">
+            <!-- Сообщения -->
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Основной контент -->
+            <div class="content">
+                {% block content %}
+                <!-- Контент будет подставляться в дочерних шаблонах -->
+                {% endblock %}
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; {% now "Y" %} Управление лесным хозяйством. Все права защищены.</p>
+        </div>
+    </footer>
+
+    <!-- Базовые JS скрипты -->
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

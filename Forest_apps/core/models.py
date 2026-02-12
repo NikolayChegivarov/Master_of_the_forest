@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 
 
-# ОСНОВНЫЕ СПРАВОЧНИКИ
+# ОСНОВНЫЕ СПРАВОЧНИКИ: должности/склады/ТС/бригада
 class Position(models.Model):
     """Должность"""
     name = models.CharField('Наименование', max_length=30)

@@ -6,88 +6,228 @@
 {% block header %}Панель руководителя{% endblock %}
 
 {% block nav_items %}
-    <li><a href="{% url 'core:supervisor_dashboard' %}">Главная</a></li>
+    <!-- Навигационное меню пустое - только три кнопки в центре -->
 {% endblock %}
 
 {% block content %}
-<div style="display: flex; justify-content: center; align-items: center; min-height: 50vh; gap: 30px; flex-wrap: wrap;">
+<div class="dashboard-container">
 
     <!-- Кнопка Сотрудники -->
-    <a href="{% url 'core:employees_list' %}" style="text-decoration: none; width: 250px; height: 250px;">
-        <div style="width: 100%; height: 100%; background: linear-gradient(145deg, #2c5e2e, #1e3f20);
-                    border-radius: 20px; display: flex; flex-direction: column;
-                    justify-content: center; align-items: center; color: white;
-                    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-                    transition: transform 0.3s, box-shadow 0.3s;
-                    cursor: pointer;">
-            <div style="font-size: 64px; margin-bottom: 20px;">👥</div>
-            <div style="font-size: 24px; font-weight: bold;">Сотрудники</div>
-            <div style="margin-top: 10px; font-size: 14px; opacity: 0.9;">Управление персоналом</div>
+    <a href="{% url 'core:employees_list' %}" class="dashboard-card">
+        <div class="card-content">
+            <div class="card-icon">👥</div>
+            <div class="card-title">Сотрудники</div>
+            <div class="card-description">Управление персоналом</div>
         </div>
     </a>
 
     <!-- Кнопка Контрагенты -->
-    <a href="{% url 'core:counterparties_list' %}" style="text-decoration: none; width: 250px; height: 250px;">
-        <div style="width: 100%; height: 100%; background: linear-gradient(145deg, #2c5e2e, #1e3f20);
-                    border-radius: 20px; display: flex; flex-direction: column;
-                    justify-content: center; align-items: center; color: white;
-                    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-                    transition: transform 0.3s, box-shadow 0.3s;
-                    cursor: pointer;">
-            <div style="font-size: 64px; margin-bottom: 20px;">🏢</div>
-            <div style="font-size: 24px; font-weight: bold;">Контрагенты</div>
-            <div style="margin-top: 10px; font-size: 14px; opacity: 0.9;">Клиенты и партнеры</div>
+    <a href="{% url 'core:counterparties_list' %}" class="dashboard-card">
+        <div class="card-content">
+            <div class="card-icon">🏢</div>
+            <div class="card-title">Контрагенты</div>
+            <div class="card-description">Клиенты и партнеры</div>
         </div>
     </a>
 
     <!-- Кнопка Сторонние интерфейсы -->
-    <a href="{% url 'core:external_interfaces' %}" style="text-decoration: none; width: 250px; height: 250px;">
-        <div style="width: 100%; height: 100%; background: linear-gradient(145deg, #2c5e2e, #1e3f20);
-                    border-radius: 20px; display: flex; flex-direction: column;
-                    justify-content: center; align-items: center; color: white;
-                    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-                    transition: transform 0.3s, box-shadow 0.3s;
-                    cursor: pointer;">
-            <div style="font-size: 64px; margin-bottom: 20px;">🔄</div>
-            <div style="font-size: 24px; font-weight: bold;">Сторонние</div>
-            <div style="font-size: 24px; font-weight: bold;">интерфейсы</div>
-            <div style="margin-top: 10px; font-size: 14px; opacity: 0.9;">Интеграции и внешние системы</div>
+    <a href="{% url 'core:external_interfaces' %}" class="dashboard-card">
+        <div class="card-content">
+            <div class="card-icon">🔄</div>
+            <div class="card-title">Сторонние интерфейсы</div>
+            <div class="card-description">Интеграции и внешние системы</div>
         </div>
     </a>
 
 </div>
 
 <style>
-    a:hover div[style*="linear-gradient"] {
-        transform: translateY(-10px);
-        box-shadow: 0 20px 30px rgba(0,0,0,0.3) !important;
-        background: linear-gradient(145deg, #3a7a3c, #2c5e2e) !important;
+    .dashboard-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        gap: 30px;
+        flex-wrap: wrap;
+        padding: 20px;
     }
 
-    @media (max-width: 900px) {
-        div[style*="display: flex; justify-content: center;"] {
+    .dashboard-card {
+        text-decoration: none;
+        width: 280px;
+        height: 280px;
+        transition: all 0.3s ease;
+    }
+
+    .card-content {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        border-radius: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+        cursor: pointer;
+        padding: 20px;
+        box-sizing: border-box;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .dashboard-card:hover .card-content {
+        transform: translateY(-12px);
+        box-shadow: 0 24px 36px rgba(0,0,0,0.25);
+        background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .card-icon {
+        font-size: 72px;
+        margin-bottom: 24px;
+        text-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .card-title {
+        font-size: 26px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        letter-spacing: 0.5px;
+        text-align: center;
+    }
+
+    .card-description {
+        font-size: 15px;
+        opacity: 0.9;
+        text-align: center;
+        line-height: 1.5;
+        max-width: 90%;
+        font-weight: 400;
+    }
+
+    /* Скрываем навигационное меню в шапке */
+    nav ul {
+        display: none;
+    }
+
+    /* Адаптация для планшетов */
+    @media (max-width: 1024px) {
+        .dashboard-card {
+            width: 250px;
+            height: 250px;
+        }
+
+        .card-icon {
+            font-size: 64px;
+        }
+
+        .card-title {
+            font-size: 24px;
+        }
+
+        .card-description {
+            font-size: 14px;
+        }
+    }
+
+    /* Адаптация для мобильных устройств */
+    @media (max-width: 768px) {
+        .dashboard-container {
             gap: 20px;
+            min-height: 50vh;
         }
-        a {
-            width: 200px !important;
-            height: 200px !important;
+
+        .dashboard-card {
+            width: 220px;
+            height: 220px;
         }
-        a div[style*="font-size: 64px;"] {
-            font-size: 48px !important;
+
+        .card-icon {
+            font-size: 56px;
+            margin-bottom: 16px;
         }
-        a div[style*="font-size: 24px;"] {
-            font-size: 20px !important;
+
+        .card-title {
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .card-description {
+            font-size: 13px;
         }
     }
 
-    @media (max-width: 600px) {
-        a {
-            width: 100% !important;
-            height: 150px !important;
-        }
-        div[style*="display: flex; justify-content: center;"] {
+    /* Адаптация для маленьких экранов */
+    @media (max-width: 480px) {
+        .dashboard-container {
             flex-direction: column;
-            gap: 15px;
+            gap: 16px;
+        }
+
+        .dashboard-card {
+            width: 100%;
+            height: auto;
+            min-height: 140px;
+        }
+
+        .card-content {
+            flex-direction: row;
+            justify-content: flex-start;
+            padding: 16px 24px;
+        }
+
+        .card-icon {
+            font-size: 48px;
+            margin-bottom: 0;
+            margin-right: 20px;
+            width: 60px;
+            text-align: center;
+        }
+
+        .card-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex: 1;
+        }
+
+        .card-title {
+            font-size: 20px;
+            margin-bottom: 4px;
+            text-align: left;
+        }
+
+        .card-description {
+            font-size: 13px;
+            text-align: left;
+            max-width: 100%;
+        }
+
+        .dashboard-card:hover .card-content {
+            transform: translateY(-4px);
+        }
+    }
+
+    /* Адаптация для сверхмаленьких экранов */
+    @media (max-width: 360px) {
+        .card-content {
+            padding: 12px 16px;
+        }
+
+        .card-icon {
+            font-size: 40px;
+            margin-right: 16px;
+            width: 50px;
+        }
+
+        .card-title {
+            font-size: 18px;
+        }
+
+        .card-description {
+            font-size: 12px;
         }
     }
 </style>

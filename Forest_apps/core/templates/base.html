@@ -117,6 +117,25 @@
         </div>
     </main>
 
+    <nav>
+        <div class="container">
+            <ul>
+                <li><a href="/">Главная</a></li>
+                {% if user.is_authenticated %}
+                    {% block nav_items %}
+                        <!-- Навигация будет подставляться в дочерних шаблонах -->
+                    {% endblock %}
+                    <li style="margin-left: auto;">
+                        <span style="color: white; margin-right: 15px;">
+                            {{ request.session.employee_name }} ({{ request.session.position_name }})
+                        </span>
+                        <a href="{% url 'core:logout' %}">Выйти</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
     <footer>
         <div class="container">
             <p>&copy; {% now "Y" %} Управление лесным хозяйством. Все права защищены.</p>

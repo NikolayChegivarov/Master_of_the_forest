@@ -1,21 +1,63 @@
-# Forest_apps/core/views/management.py
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.contrib import messages
 
-# Представление для панели руководителя
+@login_required
 def supervisor_dashboard(request):
-    """
-    Панель управления руководителя
-    """
-    return render(request, 'Management/supervisor.html')
+    """Панель руководителя"""
+    context = {
+        'title': 'Панель руководителя',
+        'employee_name': request.session.get('employee_name'),
+        'position': request.session.get('position_name'),
+    }
+    return render(request, 'Management/supervisor.html', context)
 
-# Заглушки для остальных страниц (пока просто возвращаем текст)
-def employees_list(request):
-    return HttpResponse("Список сотрудников - в разработке")
+@login_required
+def booker_dashboard(request):
+    """Панель бухгалтера"""
+    context = {
+        'title': 'Панель бухгалтера',
+        'employee_name': request.session.get('employee_name'),
+        'position': request.session.get('position_name'),
+    }
+    return render(request, 'Management/booker.html', context)
 
-def counterparties_list(request):
-    return HttpResponse("Список контрагентов - в разработке")
+@login_required
+def mechanic_dashboard(request):
+    """Панель механика"""
+    context = {
+        'title': 'Панель механика',
+        'employee_name': request.session.get('employee_name'),
+        'position': request.session.get('position_name'),
+    }
+    return render(request, 'Management/mechanic.html', context)
 
-def external_interfaces(request):
-    return HttpResponse("Сторонние интерфейсы - в разработке")
+@login_required
+def master_lpc_dashboard(request):
+    """Панель мастера ЛПЦ"""
+    context = {
+        'title': 'Панель мастера ЛПЦ',
+        'employee_name': request.session.get('employee_name'),
+        'position': request.session.get('position_name'),
+    }
+    return render(request, 'Management/master_LPC.html', context)
+
+@login_required
+def master_doc_dashboard(request):
+    """Панель мастера ДОЦ"""
+    context = {
+        'title': 'Панель мастера ДОЦ',
+        'employee_name': request.session.get('employee_name'),
+        'position': request.session.get('position_name'),
+    }
+    return render(request, 'Management/master_DOC.html', context)
+
+@login_required
+def master_railways_dashboard(request):
+    """Панель мастера ЖД"""
+    context = {
+        'title': 'Панель мастера ЖД',
+        'employee_name': request.session.get('employee_name'),
+        'position': request.session.get('position_name'),
+    }
+    return render(request, 'Management/master_Railways.html', context)

@@ -1,15 +1,15 @@
-# admin_central/views.py
 from django.shortcuts import render
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
 from django.db.models import Count, Sum, Q
 from datetime import timedelta
 
-from core.models import Position, Warehouse, Vehicle, Counterparty, Brigade
-from employees.models import Employee, WorkTimeRecord
-from forestry.models import Material, Forestry, CuttingArea, CuttingAreaContent
-from inventory.models import StorageLocation, MaterialMovement, MaterialBalance
-from operations.models import OperationType, OperationRecord
+# Импортируем с префиксом Forest_apps
+from Forest_apps.core.models import Position, Warehouse, Vehicle, Counterparty, Brigade
+from Forest_apps.employees.models import Employee, WorkTimeRecord
+from Forest_apps.forestry.models import Material, Forestry, CuttingArea, CuttingAreaContent
+from Forest_apps.inventory.models import StorageLocation, MaterialMovement, MaterialBalance
+from Forest_apps.operations.models import OperationType, OperationRecord
 
 
 @staff_member_required
@@ -66,7 +66,7 @@ def dashboard_view(request):
         'low_stock_items': low_stock_items,
         'pending_movements': pending_movements,
         'today_operations': today_operations,
-        'django_version': '3.2+',  # Можно получить реальную версию
+        'django_version': '3.2+',
         'user': request.user,
     }
 

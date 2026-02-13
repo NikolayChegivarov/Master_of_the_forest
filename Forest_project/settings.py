@@ -57,9 +57,7 @@ ROOT_URLCONF = 'Forest_project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [
-            os.path.join(BASE_DIR, 'Forest_apps', 'admin_central', 'templates'),
-        ],
+        'DIRS': [],  # Очистите это!
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

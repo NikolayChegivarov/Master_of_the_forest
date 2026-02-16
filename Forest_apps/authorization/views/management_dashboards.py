@@ -28,6 +28,16 @@ def booker_dashboard(request):
     return render(request, 'Management/booker.html', context)
 
 @login_required
+def master_forest_dashboard(request):
+    """Панель мастера леса"""
+    context = {
+        'title': 'Панель мастера леса',
+        'employee_name': request.session.get('employee_name'),
+        'position': request.session.get('position_name'),
+    }
+    return render(request, 'Management/master_Forest.html', context)
+
+@login_required
 def mechanic_dashboard(request):
     """Панель механика"""
     context = {

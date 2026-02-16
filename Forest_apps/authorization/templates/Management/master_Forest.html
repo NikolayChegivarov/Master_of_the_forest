@@ -1,0 +1,76 @@
+<!-- Forest_apps/authorization/templates/Management/master_Forest.html -->
+{% extends "base.html" %}
+
+{% block title %}Мастер леса - Панель управления{% endblock %}
+
+{% block header %}Панель мастера леса{% endblock %}
+
+{% block nav_items %}
+    <!-- Навигационное меню пустое - только стандартные пункты из base.html -->
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Заглушка для будущих кнопок -->
+    <div class="placeholder-message">
+        <h2>Добро пожаловать, {{ employee_name }}!</h2>
+        <p>Здесь будет располагаться панель управления мастера леса.</p>
+        <p class="placeholder-note">Содержимое страницы будет добавлено позже.</p>
+    </div>
+</div>
+
+<style>
+    .dashboard-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 20px;
+    }
+
+    .placeholder-message {
+        text-align: center;
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        color: white;
+        padding: 60px 40px;
+        border-radius: 24px;
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        max-width: 600px;
+        width: 100%;
+    }
+
+    .placeholder-message h2 {
+        font-size: 32px;
+        margin-bottom: 20px;
+        font-weight: 700;
+    }
+
+    .placeholder-message p {
+        font-size: 18px;
+        margin-bottom: 15px;
+        opacity: 0.9;
+    }
+
+    .placeholder-note {
+        font-size: 14px;
+        opacity: 0.7;
+        margin-top: 30px;
+        font-style: italic;
+    }
+
+    /* Адаптация для мобильных */
+    @media (max-width: 768px) {
+        .placeholder-message {
+            padding: 40px 20px;
+        }
+
+        .placeholder-message h2 {
+            font-size: 24px;
+        }
+
+        .placeholder-message p {
+            font-size: 16px;
+        }
+    }
+</style>
+{% endblock %}

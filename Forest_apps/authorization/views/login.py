@@ -17,12 +17,14 @@ def login_view(request):
             return redirect('authorization:booker_dashboard')
         elif position_name == 'механик':
             return redirect('authorization:mechanic_dashboard')
-        elif 'мастер лпц' in position_name:
+        elif position_name == 'мастер лпц':
             return redirect('authorization:master_lpc_dashboard')
-        elif 'мастер доц' in position_name:
+        elif position_name == 'мастер доц':
             return redirect('authorization:master_doc_dashboard')
-        elif 'мастер жд' in position_name:
+        elif position_name == 'мастер жд':
             return redirect('authorization:master_railways_dashboard')
+        elif position_name == 'мастер леса':
+            return redirect('authorization:master_forest_dashboard')
 
     if request.method == 'POST':
         form = CustomLoginForm(request.POST)
@@ -51,12 +53,18 @@ def login_view(request):
                 return redirect('authorization:booker_dashboard')
             elif position_name == 'механик':
                 return redirect('authorization:mechanic_dashboard')
-            elif 'мастер лпц' in position_name:
+            elif position_name == 'мастер лпц':
                 return redirect('authorization:master_lpc_dashboard')
-            elif 'мастер доц' in position_name:
+            elif position_name == 'мастер доц':
                 return redirect('authorization:master_doc_dashboard')
-            elif 'мастер жд' in position_name:
+            elif position_name == 'мастер жд':
                 return redirect('authorization:master_railways_dashboard')
+            elif position_name == 'мастер леса':
+                return redirect('authorization:master_forest_dashboard')
+            else:
+                # Если должность не найдена, перенаправляем на страницу входа
+                messages.error(request, 'Для вашей должности не настроена панель управления')
+                return redirect('authorization:login')
     else:
         form = CustomLoginForm()
 
@@ -67,7 +75,6 @@ def logout_view(request):
     """Выход из системы"""
     print(f"Logging out user: {request.user}")  # Отладка
     logout(request)
-    # Очищаем сессию полностью
-    request.session.flush()  # Добавьте эту строку для полной очистки
+    request.session.flush()  # Полная очистка сессии
     messages.info(request, 'Вы вышли из системы')
     return redirect('authorization:login')

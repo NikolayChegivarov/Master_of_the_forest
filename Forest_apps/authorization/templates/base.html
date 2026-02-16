@@ -42,6 +42,8 @@
             display: flex;
             flex-wrap: wrap;
             align-items: center;
+            margin: 0;
+            padding: 0;
         }
 
         nav ul li {
@@ -108,6 +110,28 @@
         .ml-auto {
             margin-left: auto;
         }
+
+        .user-info {
+            color: white;
+            margin-right: 15px;
+            font-weight: 500;
+        }
+
+        .logout-btn {
+            background: #c0392b;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background 0.3s;
+            display: inline-block;
+        }
+
+        .logout-btn:hover {
+            background: #a93226;
+            text-decoration: none;
+        }
     </style>
 
     <!-- Дополнительные CSS -->
@@ -124,15 +148,20 @@
         <div class="container">
             <ul>
                 <li><a href="/">Главная</a></li>
-                {% if user.is_authenticated %}
+                <!-- Проверяем наличие employee_name в сессии -->
+                {% if request.session.employee_name %}
                     {% block nav_items %}
                         <!-- Навигация будет подставляться в дочерних шаблонах -->
                     {% endblock %}
                     <li class="ml-auto">
-                        <span style="color: white; margin-right: 15px;">
+                        <span class="user-info">
                             {{ request.session.employee_name }} ({{ request.session.position_name }})
                         </span>
-                        <a href="{% url 'authorization:logout' %}">Выйти</a>
+                        <a href="{% url 'authorization:logout' %}" class="logout-btn">Выйти</a>
+                    </li>
+                {% else %}
+                    <li class="ml-auto">
+                        <a href="{% url 'authorization:login' %}">Войти</a>
                     </li>
                 {% endif %}
             </ul>

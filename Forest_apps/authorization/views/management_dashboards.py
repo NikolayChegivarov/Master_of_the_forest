@@ -5,10 +5,15 @@ from django.contrib.auth.decorators import login_required
 @login_required
 def supervisor_dashboard(request):
     """Панель руководителя"""
+    # Добавим отладочную печать
+    print(f"User authenticated: {request.user.is_authenticated}")
+    print(f"Session data: {request.session.items()}")
+
     context = {
         'title': 'Панель руководителя',
         'employee_name': request.session.get('employee_name'),
         'position': request.session.get('position_name'),
+        'user': request.user,  # Явно передаем user в контекст
     }
     return render(request, 'Management/supervisor.html', context)
 

@@ -1,4 +1,4 @@
-<!-- Forest_apps/core/templates/base.html -->
+<!-- Forest_apps/authorization/templates/base.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -40,6 +40,8 @@
         nav ul {
             list-style: none;
             display: flex;
+            flex-wrap: wrap;
+            align-items: center;
         }
 
         nav ul li {
@@ -74,6 +76,38 @@
             border-radius: 5px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
+
+        .messages {
+            margin-bottom: 20px;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .ml-auto {
+            margin-left: auto;
+        }
     </style>
 
     <!-- Дополнительные CSS -->
@@ -90,7 +124,17 @@
         <div class="container">
             <ul>
                 <li><a href="/">Главная</a></li>
-                {% block nav_items %}{% endblock %}
+                {% if user.is_authenticated %}
+                    {% block nav_items %}
+                        <!-- Навигация будет подставляться в дочерних шаблонах -->
+                    {% endblock %}
+                    <li class="ml-auto">
+                        <span style="color: white; margin-right: 15px;">
+                            {{ request.session.employee_name }} ({{ request.session.position_name }})
+                        </span>
+                        <a href="{% url 'authorization:logout' %}">Выйти</a>
+                    </li>
+                {% endif %}
             </ul>
         </div>
     </nav>
@@ -116,25 +160,6 @@
             </div>
         </div>
     </main>
-
-    <nav>
-        <div class="container">
-            <ul>
-                <li><a href="/">Главная</a></li>
-                {% if user.is_authenticated %}
-                    {% block nav_items %}
-                        <!-- Навигация будет подставляться в дочерних шаблонах -->
-                    {% endblock %}
-                    <li style="margin-left: auto;">
-                        <span style="color: white; margin-right: 15px;">
-                            {{ request.session.employee_name }} ({{ request.session.position_name }})
-                        </span>
-                        <a href="{% url 'core:logout' %}">Выйти</a>
-                    </li>
-                {% endif %}
-            </ul>
-        </div>
-    </nav>
 
     <footer>
         <div class="container">

@@ -56,18 +56,16 @@ class EmployeeAdminForm(forms.ModelForm):
         model = apps.get_model('employees', 'Employee')
         fields = '__all__'
 
+    # Убираем __init__, пусть Django сам подгружает
+
     def save(self, commit=True):
         instance = super().save(commit=False)
-
-        # Если пароль был введен, хешируем его
         password = self.cleaned_data.get('password')
         if password:
             instance.password = make_password(password)
-
         if commit:
             instance.save()
             self.save_m2m()
-
         return instance
 
 
@@ -77,7 +75,9 @@ class EmployeeAdmin(admin.ModelAdmin):
     list_display = ['last_name', 'first_name', 'middle_name', 'position', 'warehouse', 'is_active', 'has_user']
     list_filter = ['position', 'warehouse', 'is_active']
     search_fields = ['last_name', 'first_name', 'middle_name']
-    raw_id_fields = ['position', 'warehouse']
+
+    # Убираем raw_id_fields для position, оставляем только для warehouse если нужно
+    raw_id_fields = []  # Временно пусто
 
     fieldsets = (
         ('Личная информация', {
@@ -89,27 +89,10 @@ class EmployeeAdmin(admin.ModelAdmin):
         ('Аутентификация', {
             'fields': ('password',),
             'classes': ('wide',),
-            'description': 'Пароль для входа в систему (только для руководящих должностей)'
         }),
     )
 
-    def get_fieldsets(self, request, obj=None):
-        """Показываем поле пароля только для руководящих должностей"""
-        fieldsets = super().get_fieldsets(request, obj)
-
-        руководящие_должности = [
-            'Руководитель', 'Бухгалтер', 'Механик',
-            'Мастер ЛПЦ', 'Мастер ДОЦ', 'Мастер ЖД'
-        ]
-
-        if obj and obj.position and obj.position.name not in руководящие_должности:
-            # Убираем поле пароля для не-руководящих должностей
-            return [fs for fs in fieldsets if fs[0] != 'Аутентификация']
-
-        return fieldsets
-
     def has_user(self, obj):
-        """Проверяет, есть ли у сотрудника связанный User"""
         try:
             User.objects.get(username=f"employee_{obj.id}")
             return True
@@ -120,10 +103,8 @@ class EmployeeAdmin(admin.ModelAdmin):
     has_user.boolean = True
 
     def save_model(self, request, obj, form, change):
-        """Переопределяем сохранение для создания User"""
         super().save_model(request, obj, form, change)
 
-        # Создаем пользователя только для руководящих должностей
         руководящие_должности = [
             'Руководитель', 'Бухгалтер', 'Механик',
             'Мастер ЛПЦ', 'Мастер ДОЦ', 'Мастер ЖД'
@@ -131,22 +112,17 @@ class EmployeeAdmin(admin.ModelAdmin):
 
         if obj.position and obj.position.name in руководящие_должности:
             username = f"employee_{obj.id}"
-
             user, created = User.objects.get_or_create(
                 username=username,
                 defaults={
                     'first_name': obj.first_name,
                     'last_name': obj.last_name,
-                    'email': f"{obj.id}@forest.local"
                 }
             )
-
-            # Если пароль был введен, обновляем его
             password = form.cleaned_data.get('password')
             if password:
                 user.set_password(password)
-
-            user.is_staff = True  # Доступ к админке
+            user.is_staff = True
             user.save()
 
 # ========== 2.1. WORK TIME RECORDS (Учет рабочего времени) ==========

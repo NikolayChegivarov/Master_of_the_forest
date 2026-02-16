@@ -26,16 +26,33 @@ class CustomLoginForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Фильтруем только руководящие должности
+
+        # Сначала получим все руководящие должности для отладки
         руководящие_должности = [
-            'Руководитель',
-            'Бухгалтер',
-            'Механик',
-            'Мастер ЛПЦ',
-            'Мастер ДОЦ',
-            'Мастер ЖД'
+            'руководитель',
+            'бухгалтер',
+            'механик',
+            'мастер ЛПЦ',
+            'мастер ДОЦ',
+            'мастер ЖД'
         ]
 
+        # Для отладки - выведем все должности в консоль
+        from Forest_apps.core.models import Position
+        print("=== ВСЕ ДОЛЖНОСТИ В БД ===")
+        for pos in Position.objects.all():
+            print(f"ID: {pos.id}, Название: '{pos.name}', Активна: {pos.is_active}")
+
+        print("=== СОТРУДНИКИ С РУКОВОДЯЩИМИ ДОЛЖНОСТЯМИ ===")
+        employees = Employee.objects.filter(
+            is_active=True,
+            position__name__in=руководящие_должности
+        ).select_related('position')
+
+        for emp in employees:
+            print(f"Сотрудник: {emp.last_name} {emp.first_name}, Должность: '{emp.position.name}'")
+
+        # Фильтруем только руководящие должности
         self.fields['employee'].queryset = Employee.objects.filter(
             is_active=True,
             position__name__in=руководящие_должности

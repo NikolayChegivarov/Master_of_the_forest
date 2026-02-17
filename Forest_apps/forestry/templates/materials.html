@@ -1,0 +1,162 @@
+<!-- Forest_apps/forestry/templates/materials.html -->
+{% extends "base.html" %}
+
+{% block title %}Управление материалами{% endblock %}
+
+{% block header %}Материалы{% endblock %}
+
+{% block content %}
+<div class="materials-container">
+    <div class="action-buttons">
+        <!-- Первый ряд - 4 кнопки -->
+        <div class="button-row">
+            <!-- Создание материалов -->
+            <a href="#" class="action-card">
+                <div class="action-icon">➕</div>
+                <div class="action-title">Создание материалов</div>
+            </a>
+
+            <!-- Поставить на баланс -->
+            <a href="#" class="action-card">
+                <div class="action-icon">💰</div>
+                <div class="action-title">Поставить на баланс</div>
+            </a>
+
+            <!-- Отправление материалов -->
+            <a href="#" class="action-card">
+                <div class="action-icon">📤</div>
+                <div class="action-title">Отправление материалов</div>
+            </a>
+
+            <!-- Получение материалов -->
+            <a href="#" class="action-card">
+                <div class="action-icon">📥</div>
+                <div class="action-title">Получение материалов</div>
+            </a>
+        </div>
+
+        <!-- Второй ряд - 4 кнопки -->
+        <div class="button-row">
+            <!-- Реализация материалов -->
+            <a href="#" class="action-card">
+                <div class="action-icon">💵</div>
+                <div class="action-title">Реализация материалов</div>
+            </a>
+
+            <!-- Списание материалов -->
+            <a href="#" class="action-card">
+                <div class="action-icon">📝</div>
+                <div class="action-title">Списание материалов</div>
+            </a>
+
+            <!-- Просмотр баланса -->
+            <a href="#" class="action-card">
+                <div class="action-icon">📊</div>
+                <div class="action-title">Просмотр баланса</div>
+            </a>
+
+            <!-- Просмотр перемещений -->
+            <a href="#" class="action-card">
+                <div class="action-icon">🔄</div>
+                <div class="action-title">Просмотр перемещений</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="placeholder-message">
+        <h2>Учет материалов</h2>
+        <p>Здесь будет отображаться информация о материалах, остатках и движениях.</p>
+        <p class="placeholder-note">Функционал в разработке</p>
+    </div>
+</div>
+
+<style>
+    .materials-container {
+        padding: 20px;
+    }
+
+    .action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        margin-bottom: 40px;
+    }
+
+    .button-row {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .action-card {
+        text-decoration: none;
+        width: 180px;
+        padding: 20px;
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: white;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+        background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
+    }
+
+    .action-icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+
+    .action-title {
+        font-size: 14px;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .placeholder-message {
+        text-align: center;
+        background: #f5f5f5;
+        padding: 40px;
+        border-radius: 16px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .placeholder-message h2 {
+        color: #2c5e2e;
+        margin-bottom: 15px;
+    }
+
+    .placeholder-message p {
+        color: #666;
+        margin-bottom: 10px;
+    }
+
+    .placeholder-note {
+        font-style: italic;
+        color: #999;
+    }
+
+    @media (max-width: 768px) {
+        .action-card {
+            width: 150px;
+            padding: 15px;
+        }
+
+        .action-icon {
+            font-size: 36px;
+        }
+
+        .action-title {
+            font-size: 12px;
+        }
+    }
+</style>
+{% endblock %}

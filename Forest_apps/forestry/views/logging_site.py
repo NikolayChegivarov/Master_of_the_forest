@@ -9,4 +9,4 @@ def logging_site_view(request):
         'title': 'Лесосека',
         'employee_name': request.session.get('employee_name'),
     }
-    return render(request, 'logging_site.html', context)
+    return render(request, 'logging_site/logging_site.html', context)

@@ -1,4 +1,5 @@
 # Forest_apps/forestry/models.py
+# Материалы/Лесосеки/Лесничества
 from django.db import models
 from django.core.validators import MinValueValidator
 

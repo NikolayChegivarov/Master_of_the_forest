@@ -9,4 +9,4 @@ def materials_view(request):
         'title': 'Материалы',
         'employee_name': request.session.get('employee_name'),
     }
-    return render(request, 'materials.html', context)
+    return render(request, 'materials/materials.html', context)

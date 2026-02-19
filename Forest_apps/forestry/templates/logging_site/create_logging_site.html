@@ -1,0 +1,244 @@
+<!-- Forest_apps/forestry/templates/logging_site/create_logging_site.html -->
+{% extends "base.html" %}
+
+{% block title %}Создание лесосеки{% endblock %}
+
+{% block header %}Создание новой лесосеки{% endblock %}
+
+{% block content %}
+<div class="create-container">
+    <div class="create-form">
+        <h2>Новая лесосека</h2>
+
+        <!-- Отображение сообщений -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Форма создания -->
+        <form method="post" action="{% url 'forestry:create_logging_site' %}">
+            {% csrf_token %}
+
+            <!-- Отображение ошибок формы -->
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Поле выбора лесничества -->
+            <div class="form-group">
+                <label for="{{ form.forestry.id_for_label }}">{{ form.forestry.label }}:</label>
+                {{ form.forestry }}
+                {% if form.forestry.errors %}
+                    <div class="field-error">
+                        {% for error in form.forestry.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Поле номера квартала -->
+            <div class="form-group">
+                <label for="{{ form.quarter_number.id_for_label }}">{{ form.quarter_number.label }}:</label>
+                {{ form.quarter_number }}
+                {% if form.quarter_number.errors %}
+                    <div class="field-error">
+                        {% for error in form.quarter_number.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Введите номер квартала (например: 1, 2, 3...)</small>
+            </div>
+
+            <!-- Поле номера выдела -->
+            <div class="form-group">
+                <label for="{{ form.division_number.id_for_label }}">{{ form.division_number.label }}:</label>
+                {{ form.division_number }}
+                {% if form.division_number.errors %}
+                    <div class="field-error">
+                        {% for error in form.division_number.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Введите номер выдела (например: 1, 2, 3...)</small>
+            </div>
+
+            <!-- Поле площади -->
+            <div class="form-group">
+                <label for="{{ form.area_hectares.id_for_label }}">{{ form.area_hectares.label }}:</label>
+                {{ form.area_hectares }}
+                {% if form.area_hectares.errors %}
+                    <div class="field-error">
+                        {% for error in form.area_hectares.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Введите площадь в гектарах (например: 5.5, 10.0)</small>
+            </div>
+
+            <!-- Кнопки -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Создать лесосеку</button>
+                <a href="{% url 'forestry:logging_site' %}" class="btn btn-secondary">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .create-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 20px;
+    }
+
+    .create-form {
+        background: white;
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 500px;
+    }
+
+    .create-form h2 {
+        color: #2c5e2e;
+        margin-bottom: 30px;
+        text-align: center;
+        font-size: 28px;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+        background: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .form-text {
+        display: block;
+        margin-top: 5px;
+        font-size: 14px;
+        color: #666;
+    }
+
+    .field-error {
+        color: #dc3545;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+
+    .alert {
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    /* Адаптация для мобильных */
+    @media (max-width: 768px) {
+        .create-form {
+            padding: 30px 20px;
+        }
+
+        .create-form h2 {
+            font-size: 24px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

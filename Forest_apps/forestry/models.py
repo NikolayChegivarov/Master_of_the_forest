@@ -19,6 +19,7 @@ class Material(models.Model):
         choices=MATERIAL_TYPE_CHOICES
     )
     name = models.CharField('Номенклатура', max_length=200)
+    is_active = models.BooleanField('Активен', default=True)
 
     class Meta:
         verbose_name = 'Материал'

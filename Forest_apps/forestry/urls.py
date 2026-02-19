@@ -15,7 +15,13 @@ from Forest_apps.forestry.views.logging_site import (
     remove_material_from_cutting_area_view,
     update_material_quantity_view,
 )
-from Forest_apps.forestry.views.materials import materials_view
+from Forest_apps.forestry.views.materials import (
+    materials_view,
+    create_material_view,
+    edit_material_view,
+    deactivate_material_view,
+    activate_material_view,
+)
 
 app_name = 'forestry'
 
@@ -41,4 +47,8 @@ urlpatterns = [
 
     # Материалы
     path('materials/', materials_view, name='materials'),
+    path('materials/create/', create_material_view, name='create_material'),
+    path('materials/<int:material_id>/edit/', edit_material_view, name='edit_material'),
+    path('materials/<int:material_id>/deactivate/', deactivate_material_view, name='deactivate_material'),
+    path('materials/<int:material_id>/activate/', activate_material_view, name='activate_material'),
 ]

@@ -1,0 +1,328 @@
+<!-- Forest_apps/forestry/templates/logging_site/fill_logging_site.html -->
+{% extends "base.html" %}
+
+{% block title %}Наполнение лесосеки{% endblock %}
+
+{% block header %}Наполнение лесосеки материалами{% endblock %}
+
+{% block content %}
+<div class="fill-container">
+    <div class="cutting-area-info">
+        <h2>{{ cutting_area.full_address }}</h2>
+        <p class="info-text">Лесничество: {{ cutting_area.forestry.name }}</p>
+        <p class="info-text">Площадь: {{ cutting_area.area_hectares }} Га</p>
+    </div>
+
+    <div class="fill-form">
+        <h3>Добавить материал</h3>
+
+        <!-- Отображение сообщений -->
+        {% if messages %}
+            <div class="messages-container">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Форма добавления материала -->
+        <form method="post" action="{% url 'forestry:fill_logging_site' cutting_area.id %}">
+            {% csrf_token %}
+
+            <!-- Отображение ошибок формы -->
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Поле выбора материала -->
+            <div class="form-group">
+                <label for="{{ form.material.id_for_label }}">{{ form.material.label }}:</label>
+                {{ form.material }}
+                {% if form.material.errors %}
+                    <div class="field-error">
+                        {% for error in form.material.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Поле количества -->
+            <div class="form-group">
+                <label for="{{ form.quantity.id_for_label }}">{{ form.quantity.label }}:</label>
+                {{ form.quantity }}
+                {% if form.quantity.errors %}
+                    <div class="field-error">
+                        {% for error in form.quantity.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Введите количество в соответствующих единицах измерения</small>
+            </div>
+
+            <!-- Кнопки -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Добавить материал</button>
+                <a href="{% url 'forestry:view_logging_site' cutting_area.id %}" class="btn btn-secondary">Просмотр содержимого</a>
+                <a href="{% url 'forestry:logging_site' %}" class="btn btn-secondary">К списку лесосек</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Быстрый выбор материалов (опционально) -->
+    {% if materials %}
+    <div class="quick-select">
+        <h3>Быстрый выбор материалов</h3>
+        <div class="materials-grid">
+            {% for material in materials %}
+            <div class="material-card" onclick="selectMaterial('{{ material.id }}', '{{ material.name }}')">
+                <div class="material-type">{{ material.get_material_type_display }}</div>
+                <div class="material-name">{{ material.name }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function selectMaterial(materialId, materialName) {
+    // Устанавливаем выбранный материал в селект
+    const select = document.getElementById('{{ form.material.id_for_label }}');
+    for (let i = 0; i < select.options.length; i++) {
+        if (select.options[i].value == materialId) {
+            select.selectedIndex = i;
+            break;
+        }
+    }
+    // Прокручиваем к форме и фокусируемся на поле количества
+    document.getElementById('{{ form.quantity.id_for_label }}').focus();
+
+    // Показываем сообщение
+    alert(`Выбран материал: ${materialName}`);
+}
+</script>
+
+<style>
+    .fill-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .cutting-area-info {
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        color: white;
+        padding: 30px;
+        border-radius: 16px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .cutting-area-info h2 {
+        font-size: 28px;
+        margin-bottom: 15px;
+    }
+
+    .info-text {
+        font-size: 18px;
+        opacity: 0.9;
+        margin: 5px 0;
+    }
+
+    .fill-form {
+        background: white;
+        padding: 30px;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+
+    .fill-form h3 {
+        color: #2c5e2e;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .form-group select,
+    .form-group input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+        background: white;
+    }
+
+    .form-group select:focus,
+    .form-group input:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .form-text {
+        display: block;
+        margin-top: 5px;
+        font-size: 14px;
+        color: #666;
+    }
+
+    .field-error {
+        color: #dc3545;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+
+    .messages-container {
+        margin-bottom: 20px;
+    }
+
+    .alert {
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    .quick-select {
+        background: white;
+        padding: 30px;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+
+    .quick-select h3 {
+        color: #2c5e2e;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .materials-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+    }
+
+    .material-card {
+        background: #f8f9fa;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 15px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .material-card:hover {
+        border-color: #2c5e2e;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .material-type {
+        font-size: 14px;
+        color: #666;
+        margin-bottom: 5px;
+    }
+
+    .material-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    @media (max-width: 768px) {
+        .cutting-area-info h2 {
+            font-size: 24px;
+        }
+
+        .info-text {
+            font-size: 16px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+
+        .materials-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}

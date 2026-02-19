@@ -1,0 +1,313 @@
+<!-- Forest_apps/forestry/templates/logging_site/view_logging_site.html -->
+{% extends "base.html" %}
+
+{% block title %}Просмотр лесосеки{% endblock %}
+
+{% block header %}Содержимое лесосеки{% endblock %}
+
+{% block content %}
+<div class="view-container">
+    <div class="cutting-area-header">
+        <div class="header-info">
+            <h2>{{ cutting_area.full_address }}</h2>
+            <p class="info-text">Лесничество: {{ cutting_area.forestry.name }}</p>
+            <p class="info-text">Площадь: {{ cutting_area.area_hectares }} Га</p>
+            <p class="info-text">Дата создания: {{ cutting_area.created_at|date:"d.m.Y H:i" }}</p>
+            <p class="info-text">Статус:
+                {% if cutting_area.is_active %}
+                    <span class="badge active">Активна</span>
+                {% else %}
+                    <span class="badge inactive">Неактивна</span>
+                {% endif %}
+            </p>
+        </div>
+        <div class="header-actions">
+            <a href="{% url 'forestry:fill_logging_site' cutting_area.id %}" class="btn btn-primary">➕ Добавить материал</a>
+            <a href="{% url 'forestry:edit_logging_site' cutting_area.id %}" class="btn btn-secondary">✏️ Редактировать</a>
+            <a href="{% url 'forestry:logging_site' %}" class="btn btn-secondary">← К списку</a>
+        </div>
+    </div>
+
+    <!-- Отображение сообщений -->
+    {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Список материалов -->
+    <div class="materials-section">
+        <h3>Материалы в лесосеке</h3>
+
+        {% if materials %}
+            <div class="summary-info">
+                <p>Всего материалов: <strong>{{ materials|length }}</strong> видов</p>
+                <p>Общее количество: <strong>{{ total_quantity }}</strong> ед.</p>
+            </div>
+
+            <table class="materials-table">
+                <thead>
+                    <tr>
+                        <th>Тип материала</th>
+                        <th>Наименование</th>
+                        <th>Количество</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in materials %}
+                    <tr>
+                        <td>{{ item.material_type_display }}</td>
+                        <td>{{ item.material.name }}</td>
+                        <td class="quantity">{{ item.quantity }}</td>
+                        <td class="actions">
+                            <a href="{% url 'forestry:update_material_quantity' cutting_area.id item.material.id %}" class="btn-action" title="Изменить количество">✏️</a>
+                            <a href="{% url 'forestry:remove_material' cutting_area.id item.material.id %}" class="btn-action" title="Удалить" onclick="return confirm('Вы уверены, что хотите удалить материал «{{ item.material.name }}» из лесосеки?');">❌</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2"><strong>Итого:</strong></td>
+                        <td><strong>{{ total_quantity }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        {% else %}
+            <div class="empty-message">
+                <p>В этой лесосеке пока нет материалов.</p>
+                <a href="{% url 'forestry:fill_logging_site' cutting_area.id %}" class="btn btn-primary">Добавить первый материал</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .view-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .cutting-area-header {
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        color: white;
+        padding: 30px;
+        border-radius: 16px;
+        margin-bottom: 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+
+    .header-info h2 {
+        font-size: 28px;
+        margin-bottom: 10px;
+    }
+
+    .info-text {
+        font-size: 16px;
+        opacity: 0.9;
+        margin: 5px 0;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .badge.active {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge.inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .messages-container {
+        margin-bottom: 20px;
+    }
+
+    .alert {
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .materials-section {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+
+    .materials-section h3 {
+        color: #2c5e2e;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .summary-info {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 30px;
+        flex-wrap: wrap;
+    }
+
+    .summary-info p {
+        margin: 0;
+        font-size: 16px;
+    }
+
+    .summary-info strong {
+        color: #2c5e2e;
+    }
+
+    .materials-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .materials-table th {
+        background: #2c5e2e;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .materials-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .materials-table tr:hover {
+        background: #f5f5f5;
+    }
+
+    .materials-table tfoot td {
+        background: #f8f9fa;
+        font-weight: 600;
+        border-top: 2px solid #2c5e2e;
+    }
+
+    .quantity {
+        font-weight: 600;
+        color: #2c5e2e;
+    }
+
+    .actions {
+        white-space: nowrap;
+    }
+
+    .btn-action {
+        text-decoration: none;
+        margin: 0 5px;
+        font-size: 18px;
+        opacity: 0.7;
+        transition: opacity 0.3s;
+        display: inline-block;
+    }
+
+    .btn-action:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s, transform 0.2s;
+        display: inline-block;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 60px 40px;
+        color: #666;
+        font-style: italic;
+    }
+
+    .empty-message p {
+        margin-bottom: 20px;
+        font-size: 18px;
+    }
+
+    @media (max-width: 768px) {
+        .cutting-area-header {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .header-actions {
+            justify-content: center;
+        }
+
+        .materials-table {
+            display: block;
+            overflow-x: auto;
+        }
+
+        .summary-info {
+            flex-direction: column;
+            gap: 10px;
+        }
+    }
+</style>
+{% endblock %}

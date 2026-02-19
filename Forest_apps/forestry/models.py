@@ -102,6 +102,19 @@ class Forestry(models.Model):
             raise ValueError(f"Лесничество с ID {forestry_id} не найдено")
 
     @classmethod
+    def deactivate_forestry(cls, forestry_id):
+        """
+        Деактивация конкретного лесничества по ID
+        """
+        try:
+            forestry = cls.objects.get(id=forestry_id)
+            forestry.is_active = False
+            forestry.save()
+            return forestry
+        except cls.DoesNotExist:
+            raise ValueError(f"Лесничество с ID {forestry_id} не найдено")
+
+    @classmethod
     def get_active_forestries(cls):
         """
         Получение всех активных лесничеств

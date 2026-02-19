@@ -7,15 +7,22 @@ from Forest_apps.forestry.forms.material_forms import MaterialCreateForm, Materi
 
 @login_required
 def materials_view(request):
-    """Страница управления материалами"""
+    """Страница управления материалами с фильтрацией по типу"""
 
-    # Получаем все материалы, отсортированные по типу и названию
-    all_materials = Material.get_all_materials()
+    # Получаем параметр фильтра из GET-запроса
+    material_type = request.GET.get('type', 'all')
+
+    # Базовый запрос
+    if material_type == 'all':
+        materials = Material.get_all_materials()
+    else:
+        materials = Material.get_materials_by_type(material_type)
 
     context = {
         'title': 'Материалы',
         'employee_name': request.session.get('employee_name'),
-        'materials': all_materials,
+        'materials': materials,
+        'current_filter': material_type,  # Для подсветки выбранного фильтра
     }
     return render(request, 'materials/materials.html', context)
 
@@ -30,7 +37,7 @@ def create_material_view(request):
             # Сохраняем материал
             material = form.save()
 
-            # Добавляем сообщение об успехе
+            # Добавляем сообщение об успехе (только одно!)
             messages.success(
                 request,
                 f'Материал "{material.name}" ({material.get_material_type_display()}) успешно создан!'
@@ -86,7 +93,6 @@ def deactivate_material_view(request, material_id):
     try:
         material = get_object_or_404(Material, id=material_id)
 
-        # В модели Material нет встроенного метода деактивации, поэтому делаем вручную
         if material.is_active:
             material.is_active = False
             material.save()

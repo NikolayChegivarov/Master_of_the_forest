@@ -15,20 +15,28 @@
         </a>
     </div>
 
-    <!-- Отображение сообщений -->
-    {% if messages %}
-        <div class="messages-container">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
+    <!-- Фильтр по типу материала -->
+    <div class="filter-container">
+        <form method="get" action="{% url 'forestry:materials' %}" class="filter-form">
+            <label for="type-filter">Фильтр по типу:</label>
+            <select name="type" id="type-filter" class="filter-select" onchange="this.form.submit()">
+                <option value="all" {% if current_filter == 'all' %}selected{% endif %}>Все материалы</option>
+                <option value="древесина" {% if current_filter == 'древесина' %}selected{% endif %}>Древесина</option>
+                <option value="ГСМ" {% if current_filter == 'ГСМ' %}selected{% endif %}>ГСМ</option>
+                <option value="запчасти" {% if current_filter == 'запчасти' %}selected{% endif %}>Запчасти</option>
+            </select>
+        </form>
+    </div>
 
     <!-- Список материалов -->
     <div class="materials-list">
-        <h3>Все материалы</h3>
+        <h3>
+            {% if current_filter == 'all' %}
+                Все материалы
+            {% else %}
+                {{ current_filter|capfirst }}
+            {% endif %}
+        </h3>
 
         {% if materials %}
             <table class="materials-table">
@@ -66,7 +74,7 @@
             </table>
         {% else %}
             <div class="empty-message">
-                <p>Пока нет ни одного материала. Создайте первый материал!</p>
+                <p>Нет материалов в данной категории.</p>
             </div>
         {% endif %}
     </div>
@@ -140,6 +148,43 @@
         background: #f8d7da;
         color: #721c24;
         border: 1px solid #f5c6cb;
+    }
+
+    .filter-container {
+        margin-bottom: 20px;
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .filter-form {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .filter-form label {
+        font-weight: 600;
+        color: #2c5e2e;
+        font-size: 16px;
+    }
+
+    .filter-select {
+        padding: 10px 15px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        min-width: 200px;
+        background: white;
+        cursor: pointer;
+        transition: border-color 0.3s;
+    }
+
+    .filter-select:focus {
+        outline: none;
+        border-color: #2c5e2e;
     }
 
     .materials-list {
@@ -233,6 +278,15 @@
 
         .create-icon {
             font-size: 20px;
+        }
+
+        .filter-form {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .filter-select {
+            width: 100%;
         }
     }
 </style>

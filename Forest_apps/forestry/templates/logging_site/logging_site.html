@@ -15,17 +15,6 @@
         </a>
     </div>
 
-    <!-- Отображение сообщений -->
-    {% if messages %}
-        <div class="messages-container">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
     <!-- Список лесосек -->
     <div class="cutting-areas-list">
         <h3>Активные лесосеки</h3>

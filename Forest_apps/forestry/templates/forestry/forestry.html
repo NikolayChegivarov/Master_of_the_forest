@@ -7,11 +7,11 @@
 
 {% block content %}
 <div class="forestry-container">
-    <div class="action-buttons">
-        <!-- Кнопка Создать лесничество (единственная) -->
-        <a href="{% url 'forestry:create_forestry' %}" class="action-card">
-            <div class="action-icon">➕</div>
-            <div class="action-title">Создать лесничество</div>
+    <!-- Кнопка Создать лесничество на всю ширину -->
+    <div class="create-button-container">
+        <a href="{% url 'forestry:create_forestry' %}" class="create-button">
+            <span class="create-icon">➕</span>
+            <span class="create-text">Создать новое лесничество</span>
         </a>
     </div>
 
@@ -73,43 +73,47 @@
         padding: 20px;
     }
 
-    .action-buttons {
-        display: flex;
-        justify-content: center;
-        gap: 30px;
-        margin-bottom: 40px;
-        flex-wrap: wrap;
+    .create-button-container {
+        margin-bottom: 30px;
+        width: 100%;
     }
 
-    .action-card {
-        text-decoration: none;
-        width: 200px;
-        padding: 20px;
-        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
-        border-radius: 16px;
+    .create-button {
         display: flex;
-        flex-direction: column;
         align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        padding: 16px 24px;
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        border-radius: 12px;
         color: white;
-        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-        transition: transform 0.3s, box-shadow 0.3s;
-    }
-
-    .action-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.2);
-        background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
-    }
-
-    .action-icon {
-        font-size: 48px;
-        margin-bottom: 10px;
-    }
-
-    .action-title {
+        text-decoration: none;
         font-size: 18px;
         font-weight: 600;
-        text-align: center;
+        box-shadow: 0 4px 12px rgba(44, 94, 46, 0.3);
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .create-button:hover {
+        background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(44, 94, 46, 0.4);
+    }
+
+    .create-button:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(44, 94, 46, 0.3);
+    }
+
+    .create-icon {
+        font-size: 24px;
+    }
+
+    .create-text {
+        letter-spacing: 0.5px;
     }
 
     .messages-container {
@@ -218,9 +222,13 @@
             overflow-x: auto;
         }
 
-        .action-card {
-            width: 100%;
-            max-width: 300px;
+        .create-button {
+            padding: 14px 20px;
+            font-size: 16px;
+        }
+
+        .create-icon {
+            font-size: 20px;
         }
     }
 </style>

@@ -11,43 +11,115 @@
 
 {% block content %}
 <div class="dashboard-container">
-    <!-- Кнопка Лесничества -->
-    <a href="{% url 'forestry:forestry' %}" class="dashboard-card">
-        <div class="card-content">
-            <div class="card-icon">🌲</div>
-            <div class="card-title">Лесничества</div>
-            <div class="card-description">Управление лесничествами</div>
-        </div>
-    </a>
+    <!-- Первый ряд кнопок -->
+    <div class="dashboard-row">
+        <!-- Кнопка Лесничества (существующая) -->
+        <a href="{% url 'forestry:forestry' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🌲</div>
+                <div class="card-title">Лесничества</div>
+                <div class="card-description">Управление лесничествами</div>
+            </div>
+        </a>
 
-    <!-- Кнопка Лесосека -->
-    <a href="{% url 'forestry:logging_site' %}" class="dashboard-card">
-        <div class="card-content">
-            <div class="card-icon">🪓</div>
-            <div class="card-title">Лесосека</div>
-            <div class="card-description">Управление лесосеками</div>
-        </div>
-    </a>
+        <!-- Кнопка Лесосека (существующая) -->
+        <a href="{% url 'forestry:logging_site' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🪓</div>
+                <div class="card-title">Лесосека</div>
+                <div class="card-description">Управление лесосеками</div>
+            </div>
+        </a>
 
-    <!-- Кнопка Материалы -->
-    <a href="{% url 'forestry:materials' %}" class="dashboard-card">
-        <div class="card-content">
-            <div class="card-icon">📦</div>
-            <div class="card-title">Материалы</div>
-            <div class="card-description">Учет и движение материалов</div>
+        <!-- Кнопка Материалы (существующая) -->
+        <a href="{% url 'forestry:materials' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">📦</div>
+                <div class="card-title">Материалы</div>
+                <div class="card-description">Учет и движение материалов</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Второй ряд кнопок (новые) -->
+    <div class="dashboard-row">
+        <!-- Кнопка Склады (заглушка) -->
+        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+            <div class="card-content">
+                <div class="card-icon">🏭</div>
+                <div class="card-title">Склады</div>
+                <div class="card-description">Управление складами и местами хранения</div>
+                <div class="card-badge">В разработке</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Остатки в месте хранения (заглушка) -->
+        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+            <div class="card-content">
+                <div class="card-icon">📊</div>
+                <div class="card-title">Остатки</div>
+                <div class="card-description">Остатки в местах хранения</div>
+                <div class="card-badge">В разработке</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Перемещение материалов (заглушка) -->
+        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+            <div class="card-content">
+                <div class="card-icon">🔄</div>
+                <div class="card-title">Перемещение</div>
+                <div class="card-description">Перемещение материалов между складами</div>
+                <div class="card-badge">В разработке</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Третий ряд кнопок (новые) -->
+    <div class="dashboard-row">
+        <!-- Кнопка Конвертация материалов (заглушка) -->
+        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+            <div class="card-content">
+                <div class="card-icon">⚙️</div>
+                <div class="card-title">Конвертация</div>
+                <div class="card-description">Переработка сырья в готовую продукцию</div>
+                <div class="card-badge">В разработке</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Техпроцессы (заглушка) -->
+        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+            <div class="card-content">
+                <div class="card-icon">🔧</div>
+                <div class="card-title">Техпроцессы</div>
+                <div class="card-description">Управление технологическими процессами</div>
+                <div class="card-badge">В разработке</div>
+            </div>
+        </a>
+
+        <!-- Резервное место для будущей кнопки (можно убрать или оставить) -->
+        <div class="dashboard-card disabled">
+            <div class="card-content">
+                <div class="card-icon">⏳</div>
+                <div class="card-title">Скоро</div>
+                <div class="card-description">Дополнительный функционал</div>
+            </div>
         </div>
-    </a>
+    </div>
 </div>
 
 <style>
     .dashboard-container {
         display: flex;
+        flex-direction: column;
+        gap: 30px;
+        padding: 20px;
+    }
+
+    .dashboard-row {
+        display: flex;
         justify-content: center;
-        align-items: center;
-        min-height: 60vh;
         gap: 30px;
         flex-wrap: wrap;
-        padding: 20px;
     }
 
     .dashboard-card {
@@ -73,6 +145,18 @@
         padding: 20px;
         box-sizing: border-box;
         border: 1px solid rgba(255,255,255,0.1);
+        position: relative;
+    }
+
+    .dashboard-card.placeholder .card-content {
+        background: linear-gradient(145deg, #4a6b4c, #2c4a2e);
+        opacity: 0.9;
+    }
+
+    .dashboard-card.disabled .card-content {
+        background: linear-gradient(145deg, #6c757d, #495057);
+        cursor: not-allowed;
+        opacity: 0.7;
     }
 
     .dashboard-card:hover .card-content {
@@ -80,6 +164,10 @@
         box-shadow: 0 24px 36px rgba(0,0,0,0.25);
         background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
         border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .dashboard-card.placeholder:hover .card-content {
+        background: linear-gradient(145deg, #5a7e5c, #3a5a3c);
     }
 
     .card-icon {
@@ -103,6 +191,20 @@
         line-height: 1.5;
         max-width: 90%;
         font-weight: 400;
+    }
+
+    .card-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        backdrop-filter: blur(4px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
     }
 
     /* Адаптация для планшетов */
@@ -129,7 +231,10 @@
     @media (max-width: 768px) {
         .dashboard-container {
             gap: 20px;
-            min-height: 50vh;
+        }
+
+        .dashboard-row {
+            gap: 20px;
         }
 
         .dashboard-card {
@@ -154,11 +259,6 @@
 
     /* Адаптация для маленьких экранов */
     @media (max-width: 480px) {
-        .dashboard-container {
-            flex-direction: column;
-            gap: 16px;
-        }
-
         .dashboard-card {
             width: 100%;
             height: auto;
@@ -198,8 +298,35 @@
             max-width: 100%;
         }
 
+        .card-badge {
+            position: static;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
         .dashboard-card:hover .card-content {
             transform: translateY(-4px);
+        }
+    }
+
+    /* Адаптация для сверхмаленьких экранов */
+    @media (max-width: 360px) {
+        .card-content {
+            padding: 12px 16px;
+        }
+
+        .card-icon {
+            font-size: 40px;
+            margin-right: 16px;
+            width: 50px;
+        }
+
+        .card-title {
+            font-size: 18px;
+        }
+
+        .card-description {
+            font-size: 12px;
         }
     }
 </style>

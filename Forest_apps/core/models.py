@@ -10,6 +10,14 @@ class Position(models.Model):
     """Должность"""
     name = models.CharField('Наименование', max_length=30)
     is_active = models.BooleanField('Активность', default=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_positions'
+    )
 
     class Meta:
         verbose_name = 'Должность'
@@ -58,6 +66,14 @@ class Warehouse(models.Model):
     name = models.CharField('Наименование', max_length=30)
     is_active = models.BooleanField('Активность', default=True)
     created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_warehouses'
+    )
 
     class Meta:
         verbose_name = 'Склад'
@@ -114,6 +130,14 @@ class Vehicle(models.Model):
     license_plate = models.CharField('Гос номер', max_length=20, unique=True)
     is_active = models.BooleanField('Активность', default=True)
     created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_vehicles'
+    )
 
     class Meta:
         verbose_name = 'Транспортное средство'
@@ -190,6 +214,14 @@ class Counterparty(models.Model):
     ogrn = models.CharField('ОГРН', max_length=15, unique=True)
     is_active = models.BooleanField('Активность', default=True)
     created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_counterparties'
+    )
 
     class Meta:
         verbose_name = 'Контрагент'
@@ -255,6 +287,14 @@ class Brigade(models.Model):
     name = models.CharField('Наименование', max_length=200)
     is_active = models.BooleanField('Активность', default=True)
     created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_brigades'
+    )
 
     class Meta:
         verbose_name = 'Бригада'

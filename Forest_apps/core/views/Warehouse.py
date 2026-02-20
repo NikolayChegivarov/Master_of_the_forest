@@ -28,16 +28,18 @@ def warehouse_create_view(request):
     if request.method == 'POST':
         form = WarehouseCreateForm(request.POST)
         if form.is_valid():
-            # Сохраняем склад
-            warehouse = form.save()
+            # Сохраняем склад, но пока не коммитим
+            warehouse = form.save(commit=False)
+            # Добавляем создателя
+            warehouse.created_by = request.user
+            # Сохраняем
+            warehouse.save()
 
-            # Добавляем сообщение об успехе
             messages.success(
                 request,
                 f'Склад "{warehouse.name}" успешно создан!'
             )
 
-            # Перенаправляем на страницу со списком складов
             return redirect('core:warehouse_list')
     else:
         form = WarehouseCreateForm()
@@ -48,7 +50,6 @@ def warehouse_create_view(request):
         'employee_name': request.session.get('employee_name'),
     }
 
-    # ИСПРАВЛЕНО: убрали core/ из пути
     return render(request, 'Warehouse/warehouse_create.html', context)
 
 

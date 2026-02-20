@@ -1,17 +1,17 @@
-<!-- Forest_apps/core/templates/Warehouse/warehouse_list.html -->
+<!-- Forest_apps/core/templates/Position/position_list.html -->
 {% extends "base.html" %}
 
-{% block title %}Управление складами{% endblock %}
+{% block title %}Управление должностями{% endblock %}
 
-{% block header %}Склады{% endblock %}
+{% block header %}Должности{% endblock %}
 
 {% block content %}
-<div class="warehouse-container">
+<div class="position-container">
     <div class="action-buttons">
-        <!-- Кнопка Создать склад -->
-        <a href="{% url 'core:warehouse_create' %}" class="action-card">
+        <!-- Кнопка Создать должность -->
+        <a href="{% url 'core:position_create' %}" class="action-card">
             <div class="action-icon">➕</div>
-            <div class="action-title">Создать склад</div>
+            <div class="action-title">Создать должность</div>
         </a>
     </div>
 
@@ -26,12 +26,12 @@
         </div>
     {% endif %}
 
-    <!-- Список складов -->
-    <div class="warehouses-list">
-        <h3>Активные склады</h3>
+    <!-- Список должностей -->
+    <div class="positions-list">
+        <h3>Активные должности</h3>
 
-        {% if warehouses %}
-            <table class="warehouses-table">
+        {% if positions %}
+            <table class="positions-table">
                 <thead>
                     <tr>
                         <th>Название</th>
@@ -41,26 +41,26 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for warehouse in warehouses %}
+                    {% for position in positions %}
                     <tr>
-                        <td>{{ warehouse.name }}</td>
+                        <td>{{ position.name }}</td>
                         <td>
-                            {% if warehouse.is_active %}
+                            {% if position.is_active %}
                                 <span class="badge active">Активно</span>
                             {% else %}
                                 <span class="badge inactive">Неактивно</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if warehouse.created_by %}
-                                {{ warehouse.created_by.last_name }} {{ warehouse.created_by.first_name|first }}.
+                            {% if position.created_by %}
+                                {{ position.created_by.last_name }} {{ position.created_by.first_name|first }}.
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
                         <td class="actions">
-                            <a href="{% url 'core:warehouse_edit' warehouse.id %}" class="btn-action" title="Редактировать">✏️</a>
-                            <a href="{% url 'core:warehouse_deactivate' warehouse.id %}" class="btn-action" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать склад «{{ warehouse.name }}»?');">❌</a>
+                            <a href="{% url 'core:position_edit' position.id %}" class="btn-action" title="Редактировать">✏️</a>
+                            <a href="{% url 'core:position_deactivate' position.id %}" class="btn-action" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать должность «{{ position.name }}»?');">❌</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -68,14 +68,14 @@
             </table>
         {% else %}
             <div class="empty-message">
-                <p>Пока нет ни одного склада. Создайте первый склад!</p>
+                <p>Пока нет ни одной должности. Создайте первую должность!</p>
             </div>
         {% endif %}
     </div>
 </div>
 
 <style>
-    .warehouse-container {
+    .position-container {
         padding: 20px;
     }
 
@@ -146,25 +146,25 @@
         border: 1px solid #bee5eb;
     }
 
-    .warehouses-list {
+    .positions-list {
         background: white;
         border-radius: 16px;
         padding: 30px;
         box-shadow: 0 8px 16px rgba(0,0,0,0.1);
     }
 
-    .warehouses-list h3 {
+    .positions-list h3 {
         color: #2c5e2e;
         margin-bottom: 20px;
         font-size: 24px;
     }
 
-    .warehouses-table {
+    .positions-table {
         width: 100%;
         border-collapse: collapse;
     }
 
-    .warehouses-table th {
+    .positions-table th {
         background: #2c5e2e;
         color: white;
         padding: 12px;
@@ -172,13 +172,13 @@
         font-weight: 600;
     }
 
-    .warehouses-table td {
+    .positions-table td {
         padding: 12px;
         border-bottom: 1px solid #e0e0e0;
         vertical-align: middle;
     }
 
-    .warehouses-table tr:hover {
+    .positions-table tr:hover {
         background: #f5f5f5;
     }
 
@@ -231,7 +231,7 @@
     }
 
     @media (max-width: 768px) {
-        .warehouses-table {
+        .positions-table {
             display: block;
             overflow-x: auto;
         }

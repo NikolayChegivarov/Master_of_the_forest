@@ -1,0 +1,109 @@
+
+
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Первый ряд кнопок -->
+    <div class="dashboard-row">
+        <!-- Кнопка Лесничества (существующая) -->
+        <a href="{% url 'forestry:forestry' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🌲</div>
+                <div class="card-title">Лесничества</div>
+                <div class="card-description">Управление лесничествами</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Лесосека (существующая) -->
+        <a href="{% url 'forestry:logging_site' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🪓</div>
+                <div class="card-title">Лесосека</div>
+                <div class="card-description">Управление лесосеками</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Материалы (существующая) -->
+        <a href="{% url 'forestry:materials' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">📦</div>
+                <div class="card-title">Материалы</div>
+                <div class="card-description">Учет и движение материалов</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Второй ряд кнопок (новые) -->
+    <div class="dashboard-row">
+        <!-- Кнопка Склады -->
+        <a href="{% url 'core:warehouse_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🏭</div>
+                <div class="card-title">Склады</div>
+                <div class="card-description">Управление складами</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Остатки в месте хранения (заглушка) -->
+        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+            <div class="card-content">
+                <div class="card-icon">📊</div>
+                <div class="card-title">Остатки</div>
+                <div class="card-description">Остатки в местах хранения</div>
+                <div class="card-badge">В разработке</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Перемещение материалов (заглушка) -->
+        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+            <div class="card-content">
+                <div class="card-icon">🚚</div>
+                <div class="card-title">Перемещение</div>
+                <div class="card-description">Перемещение материалов между складами</div>
+                <div class="card-badge">В разработке</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Третий ряд кнопок (новые) -->
+    <div class="dashboard-row">
+        <!-- Кнопка Конвертация материалов (заглушка) -->
+        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+            <div class="card-content">
+                <div class="card-icon">🔄</div>
+                <div class="card-title">Конвертация</div>
+                <div class="card-description">Переработка сырья в готовую продукцию</div>
+                <div class="card-badge">В разработке</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Техпроцессы (заглушка) -->
+        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+            <div class="card-content">
+                <div class="card-icon">🏗️️</div>
+                <div class="card-title">Техпроцессы</div>
+                <div class="card-description">Управление технологическими процессами</div>
+                <div class="card-badge">В разработке</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Должности -->
+        <a href="{% url 'core:position_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">👤</div>
+                <div class="card-title">Должности</div>
+                <div class="card-description">Управление должностями</div>
+            </div>
+        </a>
+
+                <!-- Резервное место для будущей кнопки (можно убрать или оставить) -->
+        <div class="dashboard-card disabled">
+            <div class="card-content">
+                <div class="card-icon">⏳</div>
+                <div class="card-title">Скоро</div>
+                <div class="card-description">Дополнительный функционал</div>
+            </div>
+        </div>
+
+    </div>
+</div>

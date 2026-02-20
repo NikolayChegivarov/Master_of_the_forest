@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<!-- Forest_apps/employees/templates/WorkTimeRecord/worktime_employee_report.html -->
+{% extends "base.html" %}
+
+{% block title %}Отчет по сотруднику{% endblock %}
+
+{% block header %}Отчет по сотруднику{% endblock %}
+
+{% block content %}
+<div class="report-container">
+    <div class="report-header">
+        <div class="employee-info">
+            <div class="employee-avatar">👤</div>
+            <div class="employee-details">
+                <h2>{{ employee.last_name }} {{ employee.first_name }} {{ employee.middle_name }}</h2>
+                <p class="employee-position">{{ employee.position.name }}</p>
+                <p class="employee-warehouse">Склад: {{ employee.warehouse.name|default:"Не привязан" }}</p>
+            </div>
+        </div>
+
+        <div class="report-actions">
+            <a href="{% url 'employees:employee_detail' employee.id %}" class="btn btn-secondary">← К карточке</a>
+        </div>
+    </div>
+
+    <!-- Период -->
+    <div class="period-selector">
+        <form method="get" class="period-form">
+            <div class="period-group">
+                <label>С:</label>
+                <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="period-input">
+            </div>
+            <div class="period-group">
+                <label>По:</label>
+                <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="period-input">
+            </div>
+            <button type="submit" class="period-btn">Обновить</button>
+        </form>
+    </div>
+
+    <!-- Статистика -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_hours|floatformat:1 }}</div>
+                <div class="stat-label">Всего часов</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📅</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ days_count }}</div>
+                <div class="stat-label">Дней в периоде</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⚖️</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ avg_hours|floatformat:1 }}</div>
+                <div class="stat-label">Среднее в день</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ records.count }}</div>
+                <div class="stat-label">Записей</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Дневная статистика -->
+    <div class="daily-stats">
+        <h3>Дневная статистика</h3>
+
+        <table class="daily-table">
+            <thead>
+                <tr>
+                    <th>Дата</th>
+                    <th>Часы</th>
+                    <th>Склад</th>
+                    <th>Детали</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for day in daily_stats %}
+                <tr>
+                    <td>{{ day.date|date:"d.m.Y (l)" }}</td>
+                    <td><strong>{{ day.hours|floatformat:1 }}</strong></td>
+                    <td>
+                        {% if day.records %}
+                            {% with first=day.records.first %}
+                                {{ first.warehouse.name }}
+                            {% endwith %}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if day.records %}
+                            <a href="#" onclick="toggleDetails('day-{{ day.date|date:"Ymd" }}'); return false;" class="details-link">Показать</a>
+                            <div id="day-{{ day.date|date:"Ymd" }}" class="day-details" style="display: none;">
+                                {% for record in day.records %}
+                                    <div class="record-detail">
+                                        {{ record.date_time|time:"H:i" }} - {{ record.hours|floatformat:1 }} ч
+                                        ({{ record.warehouse.name }})
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Все записи -->
+    <div class="all-records">
+        <h3>Все записи за период</h3>
+
+        {% if records %}
+            <table class="records-table">
+                <thead>
+                    <tr>
+                        <th>Дата и время</th>
+                        <th>Склад</th>
+                        <th>Часы</th>
+                        <th>Кто создал</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.date_time|date:"d.m.Y H:i" }}</td>
+                        <td>{{ record.warehouse.name }}</td>
+                        <td>{{ record.hours|floatformat:1 }}</td>
+                        <td>
+                            {% if record.created_by %}
+                                {{ record.created_by.last_name }} {{ record.created_by.first_name|first }}.
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td colspan="2"><strong>Итого:</strong></td>
+                        <td><strong>{{ total_hours|floatformat:1 }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        {% else %}
+            <div class="empty-message">
+                <p>За выбранный период записей нет.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .report-container {
+        padding: 20px;
+    }
+
+    .report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .employee-info {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .employee-avatar {
+        font-size: 60px;
+        color: #2c5e2e;
+    }
+
+    .employee-details h2 {
+        color: #2c5e2e;
+        margin-bottom: 5px;
+        font-size: 28px;
+    }
+
+    .employee-position {
+        color: #666;
+        margin-bottom: 3px;
+    }
+
+    .employee-warehouse {
+        color: #999;
+        font-size: 14px;
+    }
+
+    .period-selector {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .period-form {
+        display: flex;
+        gap: 15px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .period-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .period-group label {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .period-input {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .period-input:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .period-btn {
+        padding: 8px 24px;
+        background: #2c5e2e;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+    }
+
+    .period-btn:hover {
+        background: #1e4220;
+    }
+
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        transition: transform 0.3s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+    }
+
+    .stat-icon {
+        font-size: 40px;
+        color: #2c5e2e;
+    }
+
+    .stat-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #2c5e2e;
+        line-height: 1.2;
+    }
+
+    .stat-label {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .daily-stats, .all-records {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .daily-stats h3, .all-records h3 {
+        color: #2c5e2e;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .daily-table, .records-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .daily-table th, .records-table th {
+        background: #2c5e2e;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .daily-table td, .records-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+        vertical-align: top;
+    }
+
+    .daily-table tr:hover, .records-table tr:hover {
+        background: #f5f5f5;
+    }
+
+    .details-link {
+        color: #2c5e2e;
+        text-decoration: none;
+        font-size: 14px;
+    }
+
+    .details-link:hover {
+        text-decoration: underline;
+    }
+
+    .day-details {
+        margin-top: 10px;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .record-detail {
+        padding: 5px 0;
+        border-bottom: 1px dashed #ddd;
+    }
+
+    .record-detail:last-child {
+        border-bottom: none;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s;
+        display: inline-block;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    @media (max-width: 768px) {
+        .report-header {
+            flex-direction: column;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .employee-info {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .daily-table, .records-table {
+            display: block;
+            overflow-x: auto;
+        }
+
+        .period-form {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .period-group {
+            width: 100%;
+        }
+    }
+</style>
+
+<script>
+function toggleDetails(id) {
+    var element = document.getElementById(id);
+    if (element.style.display === "none") {
+        element.style.display = "block";
+    } else {
+        element.style.display = "none";
+    }
+}
+</script>
+{% endblock %}
+</body>
+</html>

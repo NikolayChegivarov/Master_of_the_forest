@@ -43,13 +43,12 @@
 
     <!-- Второй ряд кнопок (новые) -->
     <div class="dashboard-row">
-        <!-- Кнопка Склады (заглушка) -->
-        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+        <!-- Кнопка Склады -->
+        <a href="{% url 'core:warehouse_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">🏭</div>
                 <div class="card-title">Склады</div>
-                <div class="card-description">Управление складами и местами хранения</div>
-                <div class="card-badge">В разработке</div>
+                <div class="card-description">Управление складами</div>
             </div>
         </a>
 
@@ -66,7 +65,7 @@
         <!-- Кнопка Перемещение материалов (заглушка) -->
         <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
             <div class="card-content">
-                <div class="card-icon">🔄</div>
+                <div class="card-icon">🚚</div>
                 <div class="card-title">Перемещение</div>
                 <div class="card-description">Перемещение материалов между складами</div>
                 <div class="card-badge">В разработке</div>
@@ -79,7 +78,7 @@
         <!-- Кнопка Конвертация материалов (заглушка) -->
         <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
             <div class="card-content">
-                <div class="card-icon">⚙️</div>
+                <div class="card-icon">🔄</div>
                 <div class="card-title">Конвертация</div>
                 <div class="card-description">Переработка сырья в готовую продукцию</div>
                 <div class="card-badge">В разработке</div>
@@ -89,7 +88,7 @@
         <!-- Кнопка Техпроцессы (заглушка) -->
         <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
             <div class="card-content">
-                <div class="card-icon">🔧</div>
+                <div class="card-icon">🏗️️</div>
                 <div class="card-title">Техпроцессы</div>
                 <div class="card-description">Управление технологическими процессами</div>
                 <div class="card-badge">В разработке</div>

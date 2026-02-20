@@ -39,11 +39,25 @@ class Position(models.Model):
     # for position in active_positions:
     #     print(position)
 
+    @classmethod
+    def deactivate_position(cls, position_id):
+        """
+        Деактивация конкретной должности по ID
+        """
+        try:
+            position = cls.objects.get(id=position_id)
+            position.is_active = False
+            position.save()
+            return position
+        except cls.DoesNotExist:
+            raise ValueError(f"Должность с ID {position_id} не найдена")
+
 
 class Warehouse(models.Model):
     """Склад"""
     name = models.CharField('Наименование', max_length=30)
     is_active = models.BooleanField('Активность', default=True)
+    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
 
     class Meta:
         verbose_name = 'Склад'

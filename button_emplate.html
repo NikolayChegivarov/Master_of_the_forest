@@ -96,6 +96,33 @@
             </div>
         </a>
 
+        <!-- Кнопка Контрагенты -->
+        <a href="{% url 'core:counterparty_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🏢</div>
+                <div class="card-title">Контрагенты</div>
+                <div class="card-description">Управление контрагентами</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Бригады -->
+        <a href="{% url 'core:brigade_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">👷</div>
+                <div class="card-title">Бригады</div>
+                <div class="card-description">Управление бригадами</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Транспорт -->
+        <a href="{% url 'core:vehicle_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🚛</div>
+                <div class="card-title">Транспорт</div>
+                <div class="card-description">Управление ТС</div>
+            </div>
+        </a>
+
                 <!-- Резервное место для будущей кнопки (можно убрать или оставить) -->
         <div class="dashboard-card disabled">
             <div class="card-content">

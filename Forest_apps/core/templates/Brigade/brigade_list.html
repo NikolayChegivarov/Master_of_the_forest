@@ -1,0 +1,241 @@
+<!-- Forest_apps/core/templates/Brigade/brigade_list.html -->
+{% extends "base.html" %}
+
+{% block title %}Управление бригадами{% endblock %}
+
+{% block header %}Бригады{% endblock %}
+
+{% block content %}
+<div class="brigade-container">
+    <div class="action-buttons">
+        <!-- Кнопка Создать бригаду -->
+        <a href="{% url 'core:brigade_create' %}" class="action-card">
+            <div class="action-icon">👥</div>
+            <div class="action-title">Создать бригаду</div>
+        </a>
+    </div>
+
+    <!-- Отображение сообщений -->
+    {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Список бригад -->
+    <div class="brigades-list">
+        <h3>Активные бригады</h3>
+
+        {% if brigades %}
+            <table class="brigades-table">
+                <thead>
+                    <tr>
+                        <th>Название</th>
+                        <th>Статус</th>
+                        <th>Кто создал</th>
+                        <th>Дата создания</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for brigade in brigades %}
+                    <tr>
+                        <td><strong>{{ brigade.name }}</strong></td>
+                        <td>
+                            {% if brigade.is_active %}
+                                <span class="badge active">Активно</span>
+                            {% else %}
+                                <span class="badge inactive">Неактивно</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if brigade.created_by %}
+                                {{ brigade.created_by.last_name }} {{ brigade.created_by.first_name|first }}.
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ brigade.created_at|date:"d.m.Y" }}</td>
+                        <td class="actions">
+                            <a href="{% url 'core:brigade_edit' brigade.id %}" class="btn-action" title="Редактировать">✏️</a>
+                            <a href="{% url 'core:brigade_deactivate' brigade.id %}" class="btn-action" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать бригаду «{{ brigade.name }}»?');">❌</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-message">
+                <p>Пока нет ни одной бригады. Создайте первую бригаду!</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .brigade-container {
+        padding: 20px;
+    }
+
+    .action-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        margin-bottom: 40px;
+        flex-wrap: wrap;
+    }
+
+    .action-card {
+        text-decoration: none;
+        width: 200px;
+        padding: 20px;
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: white;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+        background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
+    }
+
+    .action-icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+
+    .action-title {
+        font-size: 18px;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .messages-container {
+        margin-bottom: 30px;
+    }
+
+    .alert {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .brigades-list {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .brigades-list h3 {
+        color: #2c5e2e;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .brigades-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .brigades-table th {
+        background: #2c5e2e;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .brigades-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+        vertical-align: middle;
+    }
+
+    .brigades-table tr:hover {
+        background: #f5f5f5;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .badge.active {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge.inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
+    .actions {
+        white-space: nowrap;
+    }
+
+    .btn-action {
+        text-decoration: none;
+        margin: 0 5px;
+        font-size: 18px;
+        opacity: 0.7;
+        transition: opacity 0.3s, transform 0.2s;
+        display: inline-block;
+    }
+
+    .btn-action:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+        font-style: italic;
+    }
+
+    @media (max-width: 768px) {
+        .brigades-table {
+            display: block;
+            overflow-x: auto;
+        }
+
+        .action-card {
+            width: 100%;
+            max-width: 300px;
+        }
+    }
+</style>
+{% endblock %}

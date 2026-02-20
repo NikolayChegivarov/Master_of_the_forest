@@ -1,0 +1,254 @@
+<!-- Forest_apps/employees/templates/Employee/employee_detail.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ employee.short_name }}{% endblock %}
+
+{% block header %}Карточка сотрудника{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+    <div class="detail-card">
+        <div class="detail-header">
+            <div class="employee-avatar">👤</div>
+            <h2>{{ employee.last_name }} {{ employee.first_name }} {{ employee.middle_name }}</h2>
+            <div class="employee-status">
+                {% if employee.is_active %}
+                    <span class="badge active">Активный сотрудник</span>
+                {% else %}
+                    <span class="badge inactive">Неактивный сотрудник</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="detail-content">
+            <table class="detail-table">
+                <tr>
+                    <th>Должность:</th>
+                    <td>{{ employee.position.name }}</td>
+                </tr>
+                <tr>
+                    <th>Склад:</th>
+                    <td>{{ employee.warehouse.name|default:"—" }}</td>
+                </tr>
+                <tr>
+                    <th>ФИО полностью:</th>
+                    <td>{{ employee.last_name }} {{ employee.first_name }} {{ employee.middle_name }}</td>
+                </tr>
+                <tr>
+                    <th>Короткое имя:</th>
+                    <td>{{ employee.short_name }}</td>
+                </tr>
+                <tr>
+                    <th>ID сотрудника:</th>
+                    <td>{{ employee.id }}</td>
+                </tr>
+                <tr>
+                    <th>Дата создания:</th>
+                    <td>{{ employee.created_at|date:"d.m.Y H:i" }}</td>
+                </tr>
+                <tr>
+                    <th>Кто создал:</th>
+                    <td>
+                        {% if employee.created_by %}
+                            {{ employee.created_by.last_name }} {{ employee.created_by.first_name }} {{ employee.created_by.middle_name|default:"" }}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="detail-actions">
+            <a href="{% url 'employees:employee_edit' employee.id %}" class="btn btn-primary">✏️ Редактировать</a>
+            {% if employee.is_active %}
+                <a href="{% url 'employees:employee_deactivate' employee.id %}" class="btn btn-danger" onclick="return confirm('Вы уверены, что хотите деактивировать сотрудника {{ employee.short_name }}?');">❌ Деактивировать</a>
+            {% endif %}
+            <a href="{% url 'employees:employee_list' %}" class="btn btn-secondary">← К списку</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .detail-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 20px;
+    }
+
+    .detail-card {
+        background: white;
+        border-radius: 24px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 600px;
+        overflow: hidden;
+    }
+
+    .detail-header {
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+
+    .employee-avatar {
+        font-size: 80px;
+        margin-bottom: 20px;
+    }
+
+    .detail-header h2 {
+        font-size: 28px;
+        margin-bottom: 15px;
+        word-break: break-word;
+    }
+
+    .employee-status {
+        margin-top: 10px;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .badge.active {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge.inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .detail-content {
+        padding: 30px;
+    }
+
+    .detail-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .detail-table tr {
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .detail-table tr:last-child {
+        border-bottom: none;
+    }
+
+    .detail-table th {
+        padding: 12px 15px 12px 0;
+        text-align: left;
+        font-weight: 600;
+        color: #555;
+        width: 40%;
+    }
+
+    .detail-table td {
+        padding: 12px 0 12px 15px;
+        color: #333;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
+    .detail-actions {
+        display: flex;
+        gap: 15px;
+        padding: 0 30px 30px 30px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s, transform 0.2s;
+        display: inline-block;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    @media (max-width: 768px) {
+        .detail-card {
+            margin: 10px;
+        }
+
+        .detail-header h2 {
+            font-size: 24px;
+        }
+
+        .employee-avatar {
+            font-size: 60px;
+        }
+
+        .detail-table th,
+        .detail-table td {
+            display: block;
+            width: 100%;
+            padding: 8px 0;
+        }
+
+        .detail-table th {
+            padding-top: 15px;
+        }
+
+        .detail-table td {
+            padding-bottom: 15px;
+        }
+
+        .detail-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

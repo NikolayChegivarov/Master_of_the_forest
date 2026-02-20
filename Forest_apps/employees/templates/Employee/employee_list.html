@@ -1,0 +1,358 @@
+<!-- Forest_apps/employees/templates/Employee/employee_list.html -->
+{% extends "base.html" %}
+
+{% block title %}Управление сотрудниками{% endblock %}
+
+{% block header %}Сотрудники{% endblock %}
+
+{% block content %}
+<div class="employee-container">
+    <div class="action-buttons">
+        <!-- Кнопка Создать сотрудника -->
+        <a href="{% url 'employees:employee_create' %}" class="action-card">
+            <div class="action-icon">👤</div>
+            <div class="action-title">Создать сотрудника</div>
+        </a>
+    </div>
+
+    <!-- Поиск -->
+    <div class="search-container">
+        <form method="get" action="{% url 'employees:employee_list' %}" class="search-form">
+            <input type="text" name="search" placeholder="Поиск по фамилии, имени, должности..." value="{{ search_query }}" class="search-input">
+            <button type="submit" class="search-btn">🔍 Найти</button>
+            {% if search_query %}
+                <a href="{% url 'employees:employee_list' %}" class="search-clear">✖ Сбросить</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Отображение сообщений -->
+    {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Список сотрудников -->
+    <div class="employees-list">
+        <h3>Активные сотрудники</h3>
+
+        {% if employees %}
+            <table class="employees-table">
+                <thead>
+                    <tr>
+                        <th>ФИО</th>
+                        <th>Должность</th>
+                        <th>Склад</th>
+                        <th>Статус</th>
+                        <th>Кто создал</th>
+                        <th>Дата создания</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'employees:employee_detail' employee.id %}" class="employee-link">
+                                <strong>{{ employee.last_name }} {{ employee.first_name }} {{ employee.middle_name }}</strong>
+                            </a>
+                        </td>
+                        <td>{{ employee.position.name }}</td>
+                        <td>{{ employee.warehouse.name|default:"—" }}</td>
+                        <td>
+                            {% if employee.is_active %}
+                                <span class="badge active">Активно</span>
+                            {% else %}
+                                <span class="badge inactive">Неактивно</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if employee.created_by %}
+                                {{ employee.created_by.last_name }} {{ employee.created_by.first_name|first }}.
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ employee.created_at|date:"d.m.Y" }}</td>
+                        <td class="actions">
+                            <a href="{% url 'employees:employee_detail' employee.id %}" class="btn-action" title="Просмотр">👁️</a>
+                            <a href="{% url 'employees:employee_edit' employee.id %}" class="btn-action" title="Редактировать">✏️</a>
+                            <a href="{% url 'employees:employee_deactivate' employee.id %}" class="btn-action" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать сотрудника {{ employee.short_name }}?');">❌</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-message">
+                {% if search_query %}
+                    <p>По запросу "{{ search_query }}" ничего не найдено.</p>
+                    <a href="{% url 'employees:employee_list' %}" class="btn btn-secondary">Сбросить поиск</a>
+                {% else %}
+                    <p>Пока нет ни одного сотрудника. Создайте первого сотрудника!</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .employee-container {
+        padding: 20px;
+    }
+
+    .action-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+    }
+
+    .action-card {
+        text-decoration: none;
+        width: 200px;
+        padding: 20px;
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: white;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .action-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+        background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
+    }
+
+    .action-icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+
+    .action-title {
+        font-size: 18px;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    .search-container {
+        margin-bottom: 30px;
+    }
+
+    .search-form {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .search-input {
+        padding: 10px 15px;
+        width: 300px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .search-btn {
+        padding: 10px 20px;
+        background: #2c5e2e;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    .search-btn:hover {
+        background: #1e4220;
+    }
+
+    .search-clear {
+        color: #666;
+        text-decoration: none;
+        padding: 5px 10px;
+    }
+
+    .search-clear:hover {
+        text-decoration: underline;
+    }
+
+    .messages-container {
+        margin-bottom: 30px;
+    }
+
+    .alert {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .employees-list {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .employees-list h3 {
+        color: #2c5e2e;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .employees-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .employees-table th {
+        background: #2c5e2e;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .employees-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+        vertical-align: middle;
+    }
+
+    .employees-table tr:hover {
+        background: #f5f5f5;
+    }
+
+    .employee-link {
+        color: #2c5e2e;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .employee-link:hover {
+        text-decoration: underline;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .badge.active {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge.inactive {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
+    .actions {
+        white-space: nowrap;
+    }
+
+    .btn-action {
+        text-decoration: none;
+        margin: 0 5px;
+        font-size: 18px;
+        opacity: 0.7;
+        transition: opacity 0.3s, transform 0.2s;
+        display: inline-block;
+    }
+
+    .btn-action:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+        font-style: italic;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s;
+        display: inline-block;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    @media (max-width: 768px) {
+        .employees-table {
+            display: block;
+            overflow-x: auto;
+        }
+
+        .action-card {
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .search-input {
+            width: 100%;
+        }
+
+        .search-form {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,15 +1,21 @@
 from django.urls import path
-from . import views
+from Forest_apps.employees.views.employee import (
+    employee_list_view,
+    employee_detail_view,
+    employee_create_view,
+    employee_edit_view,
+    employee_deactivate_view,
+    employee_activate_view,
+)
 
-app_name = 'employees'  # 👈 Это регистрирует namespace
+app_name = 'employees'
 
 urlpatterns = [
-    # Список сотрудников
-    # path('', views.employees_list, name='employees_list'),
-
-    # Добавьте другие URL-ы по необходимости
-    # path('<int:pk>/', views.employee_detail, name='employee_detail'),
-    # path('add/', views.employee_add, name='employee_add'),
-    # path('<int:pk>/edit/', views.employee_edit, name='employee_edit'),
-    # path('<int:pk>/delete/', views.employee_delete, name='employee_delete'),
+    # Сотрудники
+    path('', employee_list_view, name='employee_list'),
+    path('create/', employee_create_view, name='employee_create'),
+    path('<int:employee_id>/', employee_detail_view, name='employee_detail'),
+    path('<int:employee_id>/edit/', employee_edit_view, name='employee_edit'),
+    path('<int:employee_id>/deactivate/', employee_deactivate_view, name='employee_deactivate'),
+    path('<int:employee_id>/activate/', employee_activate_view, name='employee_activate'),
 ]

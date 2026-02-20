@@ -1,0 +1,252 @@
+<!-- Forest_apps/employees/templates/Employee/employee_edit.html -->
+{% extends "base.html" %}
+
+{% block title %}Редактирование сотрудника{% endblock %}
+
+{% block header %}Редактирование сотрудника{% endblock %}
+
+{% block content %}
+<div class="edit-container">
+    <div class="edit-form">
+        <h2>Редактирование: {{ employee.short_name }}</h2>
+
+        <!-- Отображение сообщений -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Форма редактирования -->
+        <form method="post" action="{% url 'employees:employee_edit' employee.id %}">
+            {% csrf_token %}
+
+            <!-- Отображение ошибок формы -->
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Поле Фамилия -->
+            <div class="form-group">
+                <label for="{{ form.last_name.id_for_label }}">{{ form.last_name.label }}:</label>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}
+                    <div class="field-error">
+                        {% for error in form.last_name.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Поле Имя -->
+            <div class="form-group">
+                <label for="{{ form.first_name.id_for_label }}">{{ form.first_name.label }}:</label>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}
+                    <div class="field-error">
+                        {% for error in form.first_name.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Поле Отчество -->
+            <div class="form-group">
+                <label for="{{ form.middle_name.id_for_label }}">{{ form.middle_name.label }}:</label>
+                {{ form.middle_name }}
+                {% if form.middle_name.errors %}
+                    <div class="field-error">
+                        {% for error in form.middle_name.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Необязательное поле</small>
+            </div>
+
+            <!-- Поле Должность -->
+            <div class="form-group">
+                <label for="{{ form.position.id_for_label }}">{{ form.position.label }}:</label>
+                {{ form.position }}
+                {% if form.position.errors %}
+                    <div class="field-error">
+                        {% for error in form.position.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Поле Склад -->
+            <div class="form-group">
+                <label for="{{ form.warehouse.id_for_label }}">{{ form.warehouse.label }}:</label>
+                {{ form.warehouse }}
+                {% if form.warehouse.errors %}
+                    <div class="field-error">
+                        {% for error in form.warehouse.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Необязательное поле</small>
+            </div>
+
+            <!-- Кнопки -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                <a href="{% url 'employees:employee_detail' employee.id %}" class="btn btn-secondary">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .edit-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 20px;
+    }
+
+    .edit-form {
+        background: white;
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 500px;
+    }
+
+    .edit-form h2 {
+        color: #2c5e2e;
+        margin-bottom: 30px;
+        text-align: center;
+        font-size: 28px;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .form-group input, .form-group select {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+    }
+
+    .form-group input:focus, .form-group select:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .form-text {
+        display: block;
+        margin-top: 5px;
+        font-size: 14px;
+        color: #666;
+    }
+
+    .field-error {
+        color: #dc3545;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+
+    .alert {
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    @media (max-width: 768px) {
+        .edit-form {
+            padding: 30px 20px;
+        }
+
+        .edit-form h2 {
+            font-size: 24px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

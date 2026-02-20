@@ -2,6 +2,10 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.conf import settings
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
 
 # СОТРУДНИКИ И УЧЕТ РАБОЧЕГО ВРЕМЕНИ
 class Employee(models.Model):
@@ -23,6 +27,14 @@ class Employee(models.Model):
     middle_name = models.CharField('Отчество', max_length=100, blank=True)
     is_active = models.BooleanField('Активность', default=True)
     created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_employees'
+    )
 
     class Meta:
         verbose_name = 'Сотрудник'
@@ -38,9 +50,19 @@ class Employee(models.Model):
     def full_name(self):
         return f"{self.last_name} {self.first_name} {self.middle_name}".strip()
 
+    @property
+    def short_name(self):
+        """Короткое имя (Фамилия И.О.)"""
+        initials = ''
+        if self.first_name:
+            initials += self.first_name[0] + '.'
+        if self.middle_name:
+            initials += self.middle_name[0] + '.'
+        return f"{self.last_name} {initials}".strip()
+
     @classmethod
     def create_employee(cls, position, last_name, first_name, middle_name='',
-                        warehouse=None, is_active=True):
+                        warehouse=None, created_by=None, is_active=True):
         """
         Создание нового сотрудника
         """
@@ -50,19 +72,9 @@ class Employee(models.Model):
             first_name=first_name,
             middle_name=middle_name,
             warehouse=warehouse,
-            is_active=is_active
+            is_active=is_active,
+            created_by=created_by
         )
-    # Создание сотрудника
-    # position = Position.objects.get(name='Водитель')
-    # warehouse = Warehouse.objects.get(name='Основной склад')
-    # employee = Employee.create_employee(
-    #     position=position,
-    #     last_name='Иванов',
-    #     first_name='Иван',
-    #     middle_name='Иванович',
-    #     warehouse=warehouse,
-    #     is_active=True
-    # )
 
     @classmethod
     def deactivate_employee(cls, employee_id):
@@ -76,12 +88,6 @@ class Employee(models.Model):
             return employee
         except cls.DoesNotExist:
             raise ValueError(f"Сотрудник с ID {employee_id} не найден")
-    # Деактивация сотрудника по ID
-    # try:
-    #     deactivated = Employee.deactivate_employee(employee_id=1)
-    #     print(f"Сотрудник '{deactivated.full_name}' деактивирован")
-    # except ValueError as e:
-    #     print(e)
 
     @classmethod
     def get_active_employees(cls):
@@ -89,10 +95,6 @@ class Employee(models.Model):
         Получение всех активных сотрудников
         """
         return cls.objects.filter(is_active=True).order_by('last_name', 'first_name')
-    # Получение всех активных сотрудников
-    # active_employees = Employee.get_active_employees()
-    # for employee in active_employees:
-    #     print(employee)
 
     @classmethod
     def get_employees_by_position(cls, position_name):
@@ -103,10 +105,6 @@ class Employee(models.Model):
             position__name__iexact=position_name,
             is_active=True
         ).order_by('last_name', 'first_name')
-    # Получение водителей
-    # drivers = Employee.get_employees_by_position('водитель')
-    # for driver in drivers:
-    #     print(driver)
 
     @classmethod
     def get_employees_by_warehouse(cls, warehouse_id):
@@ -117,13 +115,10 @@ class Employee(models.Model):
             warehouse_id=warehouse_id,
             is_active=True
         ).order_by('last_name', 'first_name')
-    # Получение сотрудников склада
-    # warehouse_employees = Employee.get_employees_by_warehouse(warehouse_id=1)
-    # for employee in warehouse_employees:
-    #     print(employee)
 
 
 class WorkTimeRecord(models.Model):
+    """Запись рабочего времени"""
     date_time = models.DateTimeField('Дата-время')
     warehouse = models.ForeignKey(
         'core.Warehouse',  # СТРОКОВАЯ ССЫЛКА!
@@ -131,7 +126,7 @@ class WorkTimeRecord(models.Model):
         verbose_name='Склад'
     )
     employee = models.ForeignKey(
-        'employees.Employee',  # Внутри приложения - нормально
+        Employee,  # Можно использовать прямой импорт
         on_delete=models.PROTECT,
         verbose_name='Сотрудник'
     )
@@ -140,6 +135,15 @@ class WorkTimeRecord(models.Model):
         max_digits=5,
         decimal_places=2,
         validators=[MinValueValidator(0)]
+    )
+    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_worktimerecords'
     )
 
     class Meta:
@@ -150,10 +154,10 @@ class WorkTimeRecord(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.employee} - {self.date_time.date()} - {self.hours} ч"
+        return f"{self.employee.short_name} - {self.date_time.date()} - {self.hours} ч"
 
     @classmethod
-    def create_work_time_record(cls, date_time, warehouse, employee, hours):
+    def create_work_time_record(cls, date_time, warehouse, employee, hours, created_by=None):
         """
         Создание новой записи рабочего времени
 
@@ -162,6 +166,7 @@ class WorkTimeRecord(models.Model):
             warehouse: Склад (Warehouse instance)
             employee: Сотрудник (Employee instance)
             hours: Количество часов (decimal)
+            created_by: Кто создал запись (User instance)
 
         Returns:
             WorkTimeRecord instance
@@ -173,29 +178,9 @@ class WorkTimeRecord(models.Model):
             date_time=date_time,
             warehouse=warehouse,
             employee=employee,
-            hours=hours
+            hours=hours,
+            created_by=created_by
         )
-
-    # # Получаем объекты
-    # warehouse = Warehouse.objects.get(name='Основной склад')
-    # employee = Employee.objects.get(last_name='Иванов')
-    #
-    # # Создаём запись
-    # record = WorkTimeRecord.create_work_time_record(
-    #     date_time=timezone.now(),
-    #     warehouse=warehouse,
-    #     employee=employee,
-    #     hours=8.5
-    # )
-    #
-    # # Создание на конкретную дату
-    # specific_time = datetime(2024, 1, 15, 9, 0, 0)
-    # record = WorkTimeRecord.create_work_time_record(
-    #     date_time=specific_time,
-    #     warehouse=warehouse,
-    #     employee=employee,
-    #     hours=7.75
-    # )
 
     @classmethod
     def get_records_by_employee(cls, employee_id, start_date=None, end_date=None):
@@ -224,6 +209,20 @@ class WorkTimeRecord(models.Model):
         return queryset.order_by('date_time')
 
     @classmethod
+    def get_records_by_creator(cls, user_id, start_date=None, end_date=None):
+        """
+        Получение записей, созданных конкретным пользователем
+        """
+        queryset = cls.objects.filter(created_by_id=user_id)
+
+        if start_date:
+            queryset = queryset.filter(created_at__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(created_at__lte=end_date)
+
+        return queryset.order_by('-created_at')
+
+    @classmethod
     def get_total_hours_by_employee(cls, employee_id, start_date=None, end_date=None):
         """
         Получение общего количества часов по сотруднику
@@ -236,6 +235,21 @@ class WorkTimeRecord(models.Model):
             queryset = queryset.filter(date_time__gte=start_date)
         if end_date:
             queryset = queryset.filter(date_time__lte=end_date)
+
+        total = queryset.aggregate(total_hours=Sum('hours'))['total_hours']
+        return total or 0
+
+    @classmethod
+    def get_total_hours_by_warehouse(cls, warehouse_id, date=None):
+        """
+        Получение общего количества часов по складу за дату
+        """
+        from django.db.models import Sum
+
+        queryset = cls.objects.filter(warehouse_id=warehouse_id)
+
+        if date:
+            queryset = queryset.filter(date_time__date=date)
 
         total = queryset.aggregate(total_hours=Sum('hours'))['total_hours']
         return total or 0

@@ -137,15 +137,16 @@ def worktime_edit_view(request, record_id):
 
 @login_required
 def worktime_delete_view(request, record_id):
-    """Удаление записи рабочего времени (мягкое удаление - деактивация)"""
+    """Удаление записи рабочего времени (полное удаление из БД)"""
 
     try:
         record = get_object_or_404(WorkTimeRecord, id=record_id)
-        record.is_active = False
-        record.save()
+        employee_name = record.employee.short_name
+        record_date = record.date_time.date()
+        record.delete()  # 👈 Полное удаление из БД
         messages.success(
             request,
-            f'Запись для {record.employee.short_name} на {record.date_time.date()} удалена!'
+            f'Запись для {employee_name} на {record_date} удалена!'
         )
     except Exception as e:
         messages.error(request, str(e))

@@ -68,8 +68,7 @@ class WorkTimeRecordCreateForm(forms.ModelForm):
         if date_time and employee:
             existing_record = WorkTimeRecord.objects.filter(
                 employee=employee,
-                date_time__date=date_time.date(),
-                is_active=True
+                date_time__date=date_time.date()
             ).exists()
 
             if existing_record:
@@ -145,8 +144,7 @@ class WorkTimeRecordEditForm(forms.ModelForm):
         if date_time and employee:
             existing_record = WorkTimeRecord.objects.filter(
                 employee=employee,
-                date_time__date=date_time.date(),
-                is_active=True
+                date_time__date=date_time.date()
             ).exclude(id=instance.id).exists()
 
             if existing_record:

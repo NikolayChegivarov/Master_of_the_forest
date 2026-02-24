@@ -1,8 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
-from django.db.models import Q
 from Forest_apps.inventory.models import StorageLocation, MaterialBalance
-from Forest_apps.inventory.forms.storage_location import StorageLocationFilterForm
+from Forest_apps.inventory.forms.storage_location import StorageLocationTypeForm, StorageLocationSearchForm
 
 
 @login_required
@@ -12,20 +11,24 @@ def storage_location_list_view(request):
     # Получаем все записи
     locations = StorageLocation.objects.all().order_by('source_type', 'id')
 
-    # Фильтрация
-    filter_form = StorageLocationFilterForm(request.GET or None)
+    # Инициализируем формы
+    type_form = StorageLocationTypeForm(request.GET or None)
+    search_form = StorageLocationSearchForm(request.GET or None)
 
     # Инициализируем переменные
     source_type = None
     search = None
 
-    if filter_form.is_valid():
-        source_type = filter_form.cleaned_data.get('source_type')
-        search = filter_form.cleaned_data.get('search')
+    # Получаем значения из форм
+    if type_form.is_valid():
+        source_type = type_form.cleaned_data.get('source_type')
 
-        # Фильтруем по типу в БД
-        if source_type:
-            locations = locations.filter(source_type=source_type)
+    if search_form.is_valid():
+        search = search_form.cleaned_data.get('search')
+
+    # Фильтруем по типу в БД
+    if source_type:
+        locations = locations.filter(source_type=source_type)
 
     # Получаем все объекты с уже примененным фильтром по типу
     all_locations = list(locations)
@@ -78,7 +81,8 @@ def storage_location_list_view(request):
         'title': 'Места хранения',
         'employee_name': request.session.get('employee_name'),
         'locations': locations_with_names,
-        'filter_form': filter_form,
+        'type_form': type_form,
+        'search_form': search_form,
         'stats': stats,
     }
 

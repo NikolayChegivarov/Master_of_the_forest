@@ -1,4 +1,4 @@
-<!-- Forest_apps/inventory/templates/inventory/storage_location_list.html -->
+<!-- Forest_apps/inventory/templates/StorageLocation/storage_location_list.html -->
 {% extends "base.html" %}
 
 {% block title %}Места хранения{% endblock %}
@@ -48,19 +48,42 @@
 
     <!-- Фильтры -->
     <div class="filters-container">
-        <form method="get" class="filters-form">
-            <div class="filters-row">
+        <!-- Форма для фильтрации по типу (автоматическая) -->
+        <form method="get" class="type-form" id="type-form">
+            {% for key, value in request.GET.items %}
+                {% if key != 'source_type' and key != 'search' %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endif %}
+            {% endfor %}
+
+            <div class="filter-row">
                 <div class="filter-group">
-                    {{ filter_form.source_type.label_tag }}
-                    {{ filter_form.source_type }}
-                </div>
-                <div class="filter-group">
-                    {{ filter_form.search.label_tag }}
-                    {{ filter_form.search }}
+                    <label for="{{ type_form.source_type.id_for_label }}">Тип:</label>
+                    {{ type_form.source_type }}
                 </div>
                 <div class="filter-group">
                     <label>&nbsp;</label>
-                    <button type="submit" class="filter-btn">🔍 Применить</button>
+                    <span class="auto-submit-hint">(изменяется автоматически)</span>
+                </div>
+            </div>
+        </form>
+
+        <!-- Форма для поиска по названию (с кнопкой) -->
+        <form method="get" class="search-form" id="search-form">
+            {% for key, value in request.GET.items %}
+                {% if key != 'search' %}
+                    <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endif %}
+            {% endfor %}
+
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="{{ search_form.search.id_for_label }}">Поиск по названию:</label>
+                    {{ search_form.search }}
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="filter-btn">🔍 Найти</button>
                 </div>
                 <div class="filter-group">
                     <label>&nbsp;</label>
@@ -172,13 +195,15 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
 
-    .filters-form {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
+    .type-form, .search-form {
+        margin-bottom: 15px;
     }
 
-    .filters-row {
+    .type-form:last-child, .search-form:last-child {
+        margin-bottom: 0;
+    }
+
+    .filter-row {
         display: flex;
         gap: 15px;
         flex-wrap: wrap;
@@ -213,8 +238,16 @@
         border-color: #2c5e2e;
     }
 
+    .auto-submit-hint {
+        font-size: 12px;
+        color: #999;
+        font-style: italic;
+        display: block;
+        margin-top: 5px;
+    }
+
     .filter-btn {
-        padding: 8px 16px;
+        padding: 8px 24px;
         background: #2c5e2e;
         color: white;
         border: none;
@@ -223,6 +256,7 @@
         font-size: 14px;
         transition: background 0.3s;
         white-space: nowrap;
+        height: 38px;
     }
 
     .filter-btn:hover {
@@ -239,6 +273,8 @@
         transition: background 0.3s;
         display: inline-block;
         white-space: nowrap;
+        height: 38px;
+        line-height: 22px;
     }
 
     .filter-clear:hover {
@@ -346,7 +382,7 @@
             overflow-x: auto;
         }
 
-        .filters-row {
+        .filter-row {
             flex-direction: column;
             gap: 10px;
         }
@@ -354,6 +390,23 @@
         .filter-group {
             width: 100%;
         }
+
+        .filter-btn, .filter-clear {
+            width: 100%;
+            text-align: center;
+        }
     }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Автоматическая отправка формы при изменении типа
+        const typeSelect = document.querySelector('#type-form select[name="source_type"]');
+        if (typeSelect) {
+            typeSelect.addEventListener('change', function() {
+                document.getElementById('type-form').submit();
+            });
+        }
+    });
+</script>
 {% endblock %}

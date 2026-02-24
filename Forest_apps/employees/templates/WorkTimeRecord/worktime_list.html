@@ -7,11 +7,11 @@
 
 {% block content %}
 <div class="worktime-container">
-    <div class="action-buttons">
-        <!-- Кнопка Добавить запись -->
-        <a href="{% url 'employees:worktime_create' %}" class="action-card">
-            <div class="action-icon">➕</div>
-            <div class="action-title">Добавить запись</div>
+    <!-- Кнопка Добавить запись на всю ширину -->
+    <div class="create-button-container">
+        <a href="{% url 'employees:worktime_create' %}" class="create-button">
+            <span class="create-icon">⏱️</span>
+            <span class="create-text">Добавить запись рабочего времени</span>
         </a>
     </div>
 
@@ -161,43 +161,42 @@
         padding: 20px;
     }
 
-    .action-buttons {
-        display: flex;
-        justify-content: center;
-        gap: 30px;
+    /* Стили для кнопки создания на всю ширину */
+    .create-button-container {
+        width: 100%;
         margin-bottom: 30px;
-        flex-wrap: wrap;
     }
 
-    .action-card {
-        text-decoration: none;
-        width: 200px;
+    .create-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
         padding: 20px;
         background: linear-gradient(145deg, #2c5e2e, #1e3f20);
         border-radius: 16px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        text-decoration: none;
         color: white;
         box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-        transition: transform 0.3s, box-shadow 0.3s;
+        transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+        gap: 15px;
     }
 
-    .action-card:hover {
+    .create-button:hover {
         transform: translateY(-5px);
         box-shadow: 0 12px 24px rgba(0,0,0,0.2);
         background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
     }
 
-    .action-icon {
-        font-size: 48px;
-        margin-bottom: 10px;
+    .create-icon {
+        font-size: 32px;
+        line-height: 1;
     }
 
-    .action-title {
-        font-size: 18px;
+    .create-text {
+        font-size: 20px;
         font-weight: 600;
-        text-align: center;
+        letter-spacing: 0.5px;
     }
 
     .stats-cards {
@@ -306,6 +305,7 @@
         font-size: 14px;
         transition: background 0.3s;
         white-space: nowrap;
+        width: 100%;
     }
 
     .filter-btn:hover {
@@ -322,6 +322,9 @@
         transition: background 0.3s;
         display: inline-block;
         white-space: nowrap;
+        width: 100%;
+        text-align: center;
+        border: 1px solid #ddd;
     }
 
     .filter-clear:hover {
@@ -515,11 +518,6 @@
             overflow-x: auto;
         }
 
-        .action-card {
-            width: 100%;
-            max-width: 300px;
-        }
-
         .filters-row {
             flex-direction: column;
             gap: 10px;
@@ -531,6 +529,23 @@
 
         .stat-card {
             width: 100%;
+        }
+
+        .create-button {
+            padding: 15px;
+        }
+
+        .create-icon {
+            font-size: 28px;
+        }
+
+        .create-text {
+            font-size: 18px;
+        }
+
+        .search-row {
+            flex-direction: column;
+            align-items: stretch;
         }
     }
 </style>

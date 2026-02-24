@@ -7,11 +7,11 @@
 
 {% block content %}
 <div class="balance-container">
-    <!-- Кнопка добавления -->
-    <div class="action-buttons">
-        <a href="{% url 'inventory:material_balance_create' %}" class="action-card">
-            <div class="action-icon">➕</div>
-            <div class="action-title">Добавить остаток</div>
+    <!-- Кнопка добавления на всю ширину -->
+    <div class="create-button-container">
+        <a href="{% url 'inventory:material_balance_create' %}" class="create-button">
+            <span class="create-icon">➕</span>
+            <span class="create-text">Добавить новый остаток</span>
         </a>
     </div>
 
@@ -148,41 +148,42 @@
         padding: 20px;
     }
 
-    .action-buttons {
-        display: flex;
-        justify-content: center;
+    /* Стили для кнопки создания на всю ширину */
+    .create-button-container {
+        width: 100%;
         margin-bottom: 30px;
     }
 
-    .action-card {
-        text-decoration: none;
-        width: 200px;
+    .create-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
         padding: 20px;
         background: linear-gradient(145deg, #2c5e2e, #1e3f20);
         border-radius: 16px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        text-decoration: none;
         color: white;
         box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-        transition: transform 0.3s, box-shadow 0.3s;
+        transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+        gap: 15px;
     }
 
-    .action-card:hover {
+    .create-button:hover {
         transform: translateY(-5px);
         box-shadow: 0 12px 24px rgba(0,0,0,0.2);
         background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
     }
 
-    .action-icon {
-        font-size: 48px;
-        margin-bottom: 10px;
+    .create-icon {
+        font-size: 32px;
+        line-height: 1;
     }
 
-    .action-title {
-        font-size: 18px;
+    .create-text {
+        font-size: 20px;
         font-weight: 600;
-        text-align: center;
+        letter-spacing: 0.5px;
     }
 
     .stats-cards {
@@ -488,9 +489,16 @@
             grid-template-columns: 1fr;
         }
 
-        .action-card {
-            width: 100%;
-            max-width: 300px;
+        .create-button {
+            padding: 15px;
+        }
+
+        .create-icon {
+            font-size: 28px;
+        }
+
+        .create-text {
+            font-size: 18px;
         }
     }
 </style>

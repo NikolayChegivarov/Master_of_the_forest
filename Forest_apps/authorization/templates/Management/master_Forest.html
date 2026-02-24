@@ -52,13 +52,12 @@
             </div>
         </a>
 
-        <!-- Кнопка Остатки в месте хранения (заглушка) -->
-        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+        <!-- Кнопка Остатки материалов -->
+        <a href="{% url 'inventory:material_balance_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">📊</div>
                 <div class="card-title">Остатки</div>
-                <div class="card-description">Остатки в местах хранения</div>
-                <div class="card-badge">В разработке</div>
+                <div class="card-description">Материалы на складах</div>
             </div>
         </a>
 

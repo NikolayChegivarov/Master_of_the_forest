@@ -1,0 +1,146 @@
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.db.models import Q, Sum
+from Forest_apps.inventory.models import MaterialBalance, StorageLocation
+from Forest_apps.forestry.models import Material
+from Forest_apps.inventory.forms.material_balance import (
+    MaterialBalanceCreateForm,
+    MaterialBalanceFilterForm
+)
+
+
+@login_required
+def material_balance_list_view(request):
+    """Список остатков материалов"""
+
+    # Базовый запрос
+    balances = MaterialBalance.objects.select_related(
+        'storage_location', 'material'
+    ).order_by('storage_location__source_type', 'material__material_type', 'material__name')
+
+    # Фильтрация
+    filter_form = MaterialBalanceFilterForm(request.GET or None)
+
+    if filter_form.is_valid():
+        storage_location = filter_form.cleaned_data.get('storage_location')
+        material_type = filter_form.cleaned_data.get('material_type')
+        material = filter_form.cleaned_data.get('material')
+        search = filter_form.cleaned_data.get('search')
+
+        if storage_location:
+            balances = balances.filter(storage_location=storage_location)
+
+        if material_type:
+            balances = balances.filter(material__material_type=material_type)
+
+        if material:
+            balances = balances.filter(material=material)
+
+        if search:
+            balances = balances.filter(
+                Q(material__name__icontains=search) |
+                Q(storage_location__source_type__icontains=search)
+            )
+
+    # Подсчет итогов
+    total_pieces = balances.aggregate(total=Sum('quantity_pieces'))['total'] or 0
+    total_meters = balances.aggregate(total=Sum('quantity_meters'))['total'] or 0
+    total_cubic = balances.aggregate(total=Sum('quantity_cubic'))['total'] or 0
+
+    context = {
+        'title': 'Остатки материалов',
+        'employee_name': request.session.get('employee_name'),
+        'balances': balances,
+        'filter_form': filter_form,
+        'total_pieces': total_pieces,
+        'total_meters': total_meters,
+        'total_cubic': total_cubic,
+    }
+
+    return render(request, 'MaterialBalance/material_balance_list.html', context)
+
+
+@login_required
+def material_balance_create_view(request):
+    """Создание нового остатка материала"""
+
+    if request.method == 'POST':
+        form = MaterialBalanceCreateForm(request.POST)
+        if form.is_valid():
+            balance = form.save()
+            messages.success(
+                request,
+                f'Остаток для {balance.material.name} на {balance.storage_location.get_source_name()} успешно создан!'
+            )
+            return redirect('inventory:material_balance_list')
+    else:
+        form = MaterialBalanceCreateForm()
+
+    context = {
+        'title': 'Добавление остатка',
+        'form': form,
+        'employee_name': request.session.get('employee_name'),
+    }
+
+    return render(request, 'MaterialBalance/material_balance_create.html', context)
+
+
+@login_required
+def material_balance_edit_view(request, balance_id):
+    """Редактирование остатка материала"""
+
+    balance = get_object_or_404(MaterialBalance, id=balance_id)
+
+    if request.method == 'POST':
+        form = MaterialBalanceCreateForm(request.POST, instance=balance)
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request,
+                f'Остаток для {balance.material.name} успешно обновлен!'
+            )
+            return redirect('inventory:material_balance_list')
+    else:
+        form = MaterialBalanceCreateForm(instance=balance)
+
+    context = {
+        'title': 'Редактирование остатка',
+        'form': form,
+        'balance': balance,
+        'employee_name': request.session.get('employee_name'),
+    }
+
+    return render(request, 'MaterialBalance/material_balance_edit.html', context)
+
+
+@login_required
+def material_balance_delete_view(request, balance_id):
+    """Удаление остатка материала"""
+
+    try:
+        balance = get_object_or_404(MaterialBalance, id=balance_id)
+        balance.delete()
+        messages.success(request, 'Остаток успешно удален!')
+    except Exception as e:
+        messages.error(request, str(e))
+
+    return redirect('inventory:material_balance_list')
+
+
+@login_required
+def material_balance_detail_view(request, balance_id):
+    """Детальный просмотр остатка"""
+
+    balance = get_object_or_404(
+        MaterialBalance.objects.select_related('storage_location', 'material'),
+        id=balance_id
+    )
+
+    context = {
+        'title': f'Остаток: {balance.material.name}',
+        'employee_name': request.session.get('employee_name'),
+        'balance': balance,
+    }
+
+    return render(request, 'MaterialBalance/material_balance_detail.html', context)

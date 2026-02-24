@@ -40,10 +40,11 @@
         </div>
     </div>
 
-    <!-- Фильтры и поиск -->
+    <!-- Фильтры -->
     <div class="filters-container">
-        <form method="get" action="{% url 'employees:worktime_list' %}" class="filters-form">
-            <div class="filters-row">
+        <form method="get" class="filters-form" id="filter-form">
+            <!-- Автоматические фильтры (отправляются при изменении) -->
+            <div class="auto-filters-row">
                 <div class="filter-group">
                     {{ filter_form.date_from.label_tag }}
                     {{ filter_form.date_from }}
@@ -62,19 +63,25 @@
                 </div>
                 <div class="filter-group">
                     <label>&nbsp;</label>
-                    <button type="submit" class="filter-btn">🔍 Применить</button>
-                </div>
-                <div class="filter-group">
-                    <label>&nbsp;</label>
-                    <a href="{% url 'employees:worktime_list' %}" class="filter-clear">✖ Сбросить</a>
+                    <a href="{% url 'employees:worktime_list' %}" class="filter-clear">✖ Сбросить всё</a>
                 </div>
             </div>
 
+            <!-- Поиск с кнопкой -->
             <div class="search-row">
-                <input type="text" name="search" placeholder="Поиск по сотруднику или складу..." value="{{ search_query }}" class="search-input">
-                <button type="submit" class="search-btn">Найти</button>
-                {% if search_query %}
-                    <a href="{% url 'employees:worktime_list' %}" class="search-clear">✖ Сбросить</a>
+                <div class="search-group">
+                    {{ filter_form.search.label_tag }}
+                    {{ filter_form.search }}
+                </div>
+                <div class="search-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="search-btn">🔍 Найти</button>
+                </div>
+                {% if filter_form.search.value %}
+                <div class="search-group">
+                    <label>&nbsp;</label>
+                    <a href="{% url 'employees:worktime_list' %}" class="search-clear">✖ Очистить поиск</a>
+                </div>
                 {% endif %}
             </div>
         </form>
@@ -144,7 +151,7 @@
             </table>
         {% else %}
             <div class="empty-message">
-                {% if search_query or filter_form.has_changed %}
+                {% if filter_form.data.date_from or filter_form.data.date_to or filter_form.data.employee or filter_form.data.warehouse or filter_form.data.search %}
                     <p>По заданным критериям ничего не найдено.</p>
                     <a href="{% url 'employees:worktime_list' %}" class="btn btn-secondary">Сбросить фильтры</a>
                 {% else %}
@@ -257,10 +264,10 @@
     .filters-form {
         display: flex;
         flex-direction: column;
-        gap: 15px;
+        gap: 20px;
     }
 
-    .filters-row {
+    .auto-filters-row {
         display: flex;
         gap: 15px;
         flex-wrap: wrap;
@@ -295,23 +302,6 @@
         border-color: #2c5e2e;
     }
 
-    .filter-btn {
-        padding: 8px 16px;
-        background: #2c5e2e;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-        transition: background 0.3s;
-        white-space: nowrap;
-        width: 100%;
-    }
-
-    .filter-btn:hover {
-        background: #1e4220;
-    }
-
     .filter-clear {
         padding: 8px 16px;
         background: #f8f9fa;
@@ -333,25 +323,41 @@
 
     .search-row {
         display: flex;
-        gap: 10px;
-        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        border-top: 1px solid #eee;
+        padding-top: 20px;
     }
 
-    .search-input {
+    .search-group {
         flex: 1;
+        min-width: 200px;
+    }
+
+    .search-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .search-group input {
+        width: 100%;
         padding: 8px 12px;
         border: 1px solid #ddd;
         border-radius: 6px;
         font-size: 14px;
     }
 
-    .search-input:focus {
+    .search-group input:focus {
         outline: none;
         border-color: #2c5e2e;
     }
 
     .search-btn {
-        padding: 8px 20px;
+        padding: 8px 24px;
         background: #2c5e2e;
         color: white;
         border: none;
@@ -359,6 +365,8 @@
         cursor: pointer;
         font-size: 14px;
         transition: background 0.3s;
+        white-space: nowrap;
+        width: 100%;
     }
 
     .search-btn:hover {
@@ -366,14 +374,22 @@
     }
 
     .search-clear {
+        padding: 8px 16px;
+        background: #f8f9fa;
         color: #666;
         text-decoration: none;
-        padding: 5px 10px;
+        border-radius: 6px;
         font-size: 14px;
+        transition: background 0.3s;
+        display: inline-block;
+        white-space: nowrap;
+        width: 100%;
+        text-align: center;
+        border: 1px solid #ddd;
     }
 
     .search-clear:hover {
-        text-decoration: underline;
+        background: #e9ecef;
     }
 
     .messages-container {
@@ -518,7 +534,7 @@
             overflow-x: auto;
         }
 
-        .filters-row {
+        .auto-filters-row {
             flex-direction: column;
             gap: 10px;
         }
@@ -545,8 +561,45 @@
 
         .search-row {
             flex-direction: column;
-            align-items: stretch;
+            gap: 10px;
+        }
+
+        .search-group {
+            width: 100%;
         }
     }
 </style>
+
+<!-- JavaScript для автоматической отправки -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('filter-form');
+        const autoSubmitFields = document.querySelectorAll('.auto-submit');
+        const searchInput = document.querySelector('input[name="search"]');
+
+        // Автоматическая отправка при изменении auto-submit полей
+        autoSubmitFields.forEach(field => {
+            field.addEventListener('change', function() {
+                form.submit();
+            });
+
+            // Для date полей также отправляем по изменению
+            if (field.type === 'date') {
+                field.addEventListener('change', function() {
+                    form.submit();
+                });
+            }
+        });
+
+        // Для поиска используем кнопку или Enter
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    form.submit();
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

@@ -30,6 +30,7 @@ def worktime_list_view(request):
         date_to = filter_form.cleaned_data.get('date_to')
         employee = filter_form.cleaned_data.get('employee')
         warehouse = filter_form.cleaned_data.get('warehouse')
+        search = filter_form.cleaned_data.get('search')
 
         if date_from:
             records = records.filter(date_time__date__gte=date_from)
@@ -39,15 +40,12 @@ def worktime_list_view(request):
             records = records.filter(employee=employee)
         if warehouse:
             records = records.filter(warehouse=warehouse)
-
-    # Поиск по тексту
-    search_query = request.GET.get('search', '')
-    if search_query:
-        records = records.filter(
-            Q(employee__last_name__icontains=search_query) |
-            Q(employee__first_name__icontains=search_query) |
-            Q(warehouse__name__icontains=search_query)
-        )
+        if search:
+            records = records.filter(
+                Q(employee__last_name__icontains=search) |
+                Q(employee__first_name__icontains=search) |
+                Q(warehouse__name__icontains=search)
+            )
 
     # Подсчет итогов
     total_hours = records.aggregate(total=Sum('hours'))['total'] or 0
@@ -65,14 +63,12 @@ def worktime_list_view(request):
         'employee_name': request.session.get('employee_name'),
         'records': records,
         'filter_form': filter_form,
-        'search_query': search_query,
         'total_hours': total_hours,
         'today_hours': today_hours,
         'today_employees': today_employees,
         'today': today,
     }
     return render(request, 'WorkTimeRecord/worktime_list.html', context)
-
 
 @login_required
 def worktime_create_view(request):

@@ -162,7 +162,7 @@ class WorkTimeRecordFilterForm(forms.Form):
         label='Дата с',
         required=False,
         widget=forms.DateInput(attrs={
-            'class': 'form-control',
+            'class': 'form-control auto-submit',
             'type': 'date'
         })
     )
@@ -170,7 +170,7 @@ class WorkTimeRecordFilterForm(forms.Form):
         label='Дата по',
         required=False,
         widget=forms.DateInput(attrs={
-            'class': 'form-control',
+            'class': 'form-control auto-submit',
             'type': 'date'
         })
     )
@@ -178,11 +178,24 @@ class WorkTimeRecordFilterForm(forms.Form):
         label='Сотрудник',
         required=False,
         queryset=Employee.get_active_employees(),
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={
+            'class': 'form-control auto-submit'
+        })
     )
     warehouse = forms.ModelChoiceField(
         label='Склад',
         required=False,
         queryset=Warehouse.get_active_warehouses(),
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={
+            'class': 'form-control auto-submit'
+        })
+    )
+
+    search = forms.CharField(
+        label='Поиск по тексту',
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Поиск по сотруднику или складу...'
+        })
     )

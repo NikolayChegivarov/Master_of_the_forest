@@ -1,0 +1,350 @@
+<!-- Forest_apps/inventory/templates/MaterialMovement/material_movement_detail.html -->
+{% extends "base.html" %}
+
+{% block title %}Движение №{{ movement.id }}{% endblock %}
+
+{% block header %}Движение материалов{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+    <div class="detail-card">
+        <div class="detail-header">
+            <div class="movement-icon">
+                {% if movement.accounting_type == 'Перемещение' %}🔄
+                {% elif movement.accounting_type == 'Реализация' %}💰
+                {% elif movement.accounting_type == 'Списание' %}🗑️
+                {% endif %}
+            </div>
+            <h2>Движение №{{ movement.id }}</h2>
+            <div class="movement-type">
+                <span class="badge type-{{ movement.accounting_type }}">
+                    {{ movement.accounting_type }}
+                </span>
+                <span class="badge {% if movement.is_completed %}completed{% else %}pending{% endif %}">
+                    {% if movement.is_completed %}Выполнено{% else %}Ожидает выполнения{% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div class="detail-content">
+            <table class="detail-table">
+                <tr>
+                    <th>Дата и время:</th>
+                    <td>{{ movement.date_time|date:"d.m.Y H:i" }}</td>
+                </tr>
+                <tr>
+                    <th>Тип движения:</th>
+                    <td>{{ movement.get_accounting_type_display }}</td>
+                </tr>
+                <tr>
+                    <th>Откуда:</th>
+                    <td>{{ movement.from_location.get_source_name }}</td>
+                </tr>
+                <tr>
+                    <th>Куда:</th>
+                    <td>
+                        {% if movement.to_location %}
+                            {{ movement.to_location.get_source_name }}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Материал:</th>
+                    <td>{{ movement.material.name }}</td>
+                </tr>
+                <tr>
+                    <th>Тип материала:</th>
+                    <td>{{ movement.material.get_material_type_display }}</td>
+                </tr>
+                <tr>
+                    <th>Количество:</th>
+                    <td>
+                        {% if movement.quantity_pieces %}
+                            {{ movement.quantity_pieces|floatformat:1 }} шт<br>
+                        {% endif %}
+                        {% if movement.quantity_meters %}
+                            {{ movement.quantity_meters|floatformat:1 }} м.п.<br>
+                        {% endif %}
+                        {% if movement.quantity_cubic %}
+                            {{ movement.quantity_cubic|floatformat:1 }} м³
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Водитель:</th>
+                    <td>
+                        {% if movement.employee %}
+                            {{ movement.employee.short_name }}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <th>Транспорт:</th>
+                    <td>
+                        {% if movement.vehicle %}
+                            {{ movement.vehicle }}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if movement.accounting_type == 'Реализация' %}
+                <tr>
+                    <th>Цена:</th>
+                    <td>{{ movement.price|floatformat:2 }} ₽</td>
+                </tr>
+                <tr>
+                    <th>Сумма:</th>
+                    <td><strong>{{ movement.total_amount|floatformat:2 }} ₽</strong></td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <th>Автор:</th>
+                    <td>
+                        {% if movement.author %}
+                            {{ movement.author.last_name }} {{ movement.author.first_name }}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% if movement.is_completed %}
+                <tr>
+                    <th>Дата выполнения:</th>
+                    <td>{{ movement.completed_at|date:"d.m.Y H:i" }}</td>
+                </tr>
+                {% endif %}
+            </table>
+        </div>
+
+        <div class="detail-actions">
+            <a href="{% url 'inventory:material_movement_list' %}" class="btn btn-secondary">← К списку</a>
+            {% if not movement.is_completed %}
+                <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn btn-primary">✏️ Редактировать</a>
+                <a href="{% url 'inventory:material_movement_execute' movement.id %}" class="btn btn-success" onclick="return confirm('Выполнить это движение?')">✅ Выполнить</a>
+                <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn btn-danger" onclick="return confirm('Удалить это движение?')">🗑️ Удалить</a>
+            {% else %}
+                <a href="{% url 'inventory:material_movement_cancel' movement.id %}" class="btn btn-warning" onclick="return confirm('Отменить выполнение движения?')">↩️ Отменить</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .detail-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 20px;
+    }
+
+    .detail-card {
+        background: white;
+        border-radius: 24px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 600px;
+        overflow: hidden;
+    }
+
+    .detail-header {
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+
+    .movement-icon {
+        font-size: 60px;
+        margin-bottom: 15px;
+    }
+
+    .detail-header h2 {
+        font-size: 28px;
+        margin-bottom: 15px;
+    }
+
+    .movement-type {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .badge.type-Перемещение {
+        background: #cce5ff;
+        color: #004085;
+    }
+
+    .badge.type-Реализация {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge.type-Списание {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .badge.completed {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge.pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .detail-content {
+        padding: 30px;
+    }
+
+    .detail-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .detail-table tr {
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .detail-table tr:last-child {
+        border-bottom: none;
+    }
+
+    .detail-table th {
+        padding: 12px 15px 12px 0;
+        text-align: left;
+        font-weight: 600;
+        color: #555;
+        width: 40%;
+    }
+
+    .detail-table td {
+        padding: 12px 0 12px 15px;
+        color: #333;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
+    .detail-actions {
+        display: flex;
+        gap: 10px;
+        padding: 0 30px 30px 30px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s, transform 0.2s;
+        display: inline-block;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    .btn-success {
+        background: #28a745;
+        color: white;
+    }
+
+    .btn-success:hover {
+        background: #218838;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+    .btn-warning {
+        background: #ffc107;
+        color: #212529;
+    }
+
+    .btn-warning:hover {
+        background: #e0a800;
+    }
+
+    @media (max-width: 768px) {
+        .detail-header h2 {
+            font-size: 24px;
+        }
+
+        .movement-icon {
+            font-size: 50px;
+        }
+
+        .detail-table th,
+        .detail-table td {
+            display: block;
+            width: 100%;
+            padding: 8px 0;
+        }
+
+        .detail-table th {
+            padding-top: 15px;
+        }
+
+        .detail-table td {
+            padding-bottom: 15px;
+        }
+
+        .detail-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

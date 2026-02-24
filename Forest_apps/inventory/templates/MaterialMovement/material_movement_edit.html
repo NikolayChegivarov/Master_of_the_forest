@@ -1,0 +1,327 @@
+<!-- Forest_apps/inventory/templates/MaterialMovement/material_movement_edit.html -->
+{% extends "base.html" %}
+
+{% block title %}Редактирование движения №{{ movement.id }}{% endblock %}
+
+{% block header %}Редактирование движения материалов{% endblock %}
+
+{% block content %}
+<div class="edit-container">
+    <div class="edit-form">
+        <h2>Редактирование движения №{{ movement.id }}</h2>
+
+        <!-- Форма редактирования -->
+        <form method="post" action="{% url 'inventory:material_movement_edit' movement.id %}">
+            {% csrf_token %}
+
+            <!-- Отображение ошибок формы -->
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Поле Тип движения -->
+            <div class="form-group">
+                <label for="{{ form.accounting_type.id_for_label }}">{{ form.accounting_type.label }}:</label>
+                {{ form.accounting_type }}
+                {% if form.accounting_type.errors %}
+                    <div class="field-error">
+                        {% for error in form.accounting_type.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Поле Откуда -->
+            <div class="form-group">
+                <label for="{{ form.from_location.id_for_label }}">{{ form.from_location.label }}:</label>
+                {{ form.from_location }}
+                {% if form.from_location.errors %}
+                    <div class="field-error">
+                        {% for error in form.from_location.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Поле Куда -->
+            <div class="form-group">
+                <label for="{{ form.to_location.id_for_label }}">{{ form.to_location.label }}:</label>
+                {{ form.to_location }}
+                {% if form.to_location.errors %}
+                    <div class="field-error">
+                        {% for error in form.to_location.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Для списания оставьте пустым</small>
+            </div>
+
+            <!-- Поле Материал -->
+            <div class="form-group">
+                <label for="{{ form.material.id_for_label }}">{{ form.material.label }}:</label>
+                {{ form.material }}
+                {% if form.material.errors %}
+                    <div class="field-error">
+                        {% for error in form.material.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Поля количества -->
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="{{ form.quantity_pieces.id_for_label }}">{{ form.quantity_pieces.label }}:</label>
+                    {{ form.quantity_pieces }}
+                    {% if form.quantity_pieces.errors %}
+                        <div class="field-error">
+                            {% for error in form.quantity_pieces.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group half">
+                    <label for="{{ form.quantity_meters.id_for_label }}">{{ form.quantity_meters.label }}:</label>
+                    {{ form.quantity_meters }}
+                    {% if form.quantity_meters.errors %}
+                        <div class="field-error">
+                            {% for error in form.quantity_meters.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.quantity_cubic.id_for_label }}">{{ form.quantity_cubic.label }}:</label>
+                {{ form.quantity_cubic }}
+                {% if form.quantity_cubic.errors %}
+                    <div class="field-error">
+                        {% for error in form.quantity_cubic.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Поле Водитель -->
+            <div class="form-group">
+                <label for="{{ form.employee.id_for_label }}">{{ form.employee.label }}:</label>
+                {{ form.employee }}
+                {% if form.employee.errors %}
+                    <div class="field-error">
+                        {% for error in form.employee.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Необязательное поле</small>
+            </div>
+
+            <!-- Поле Транспорт -->
+            <div class="form-group">
+                <label for="{{ form.vehicle.id_for_label }}">{{ form.vehicle.label }}:</label>
+                {{ form.vehicle }}
+                {% if form.vehicle.errors %}
+                    <div class="field-error">
+                        {% for error in form.vehicle.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Необязательное поле</small>
+            </div>
+
+            <!-- Поле Цена -->
+            <div class="form-group">
+                <label for="{{ form.price.id_for_label }}">{{ form.price.label }}:</label>
+                {{ form.price }}
+                {% if form.price.errors %}
+                    <div class="field-error">
+                        {% for error in form.price.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Обязательно только для реализации</small>
+            </div>
+
+            <div class="form-text">
+                Укажите хотя бы одно количество. Для списания оставьте поле "Куда" пустым.
+            </div>
+
+            <!-- Кнопки -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                <a href="{% url 'inventory:material_movement_detail' movement.id %}" class="btn btn-secondary">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .edit-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 20px;
+    }
+
+    .edit-form {
+        background: white;
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 600px;
+    }
+
+    .edit-form h2 {
+        color: #2c5e2e;
+        margin-bottom: 30px;
+        text-align: center;
+        font-size: 28px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .form-group.half {
+        flex: 1;
+        margin-bottom: 0;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .form-text {
+        margin-top: 10px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        color: #666;
+        font-style: italic;
+    }
+
+    .field-error {
+        color: #dc3545;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+
+    .alert {
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    @media (max-width: 768px) {
+        .edit-form {
+            padding: 30px 20px;
+        }
+
+        .edit-form h2 {
+            font-size: 24px;
+        }
+
+        .form-row {
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

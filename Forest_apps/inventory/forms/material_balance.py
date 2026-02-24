@@ -70,28 +70,34 @@ class MaterialBalanceFilterForm(forms.Form):
         label='Место хранения',
         required=False,
         queryset=StorageLocation.objects.all(),
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={
+            'class': 'form-control auto-submit'
+        })
     )
 
     material_type = forms.ChoiceField(
         label='Тип материала',
         required=False,
         choices=[('', 'Все типы')] + Material.MATERIAL_TYPE_CHOICES,
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={
+            'class': 'form-control auto-submit'
+        })
     )
 
     material = forms.ModelChoiceField(
         label='Материал',
         required=False,
         queryset=Material.objects.all(),
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={
+            'class': 'form-control auto-submit'
+        })
     )
 
     search = forms.CharField(
-        label='Поиск',
+        label='Поиск по названию',
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Поиск по материалу или месту...'
+            'placeholder': 'Введите название для поиска...'
         })
     )

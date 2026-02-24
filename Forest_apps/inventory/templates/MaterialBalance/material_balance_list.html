@@ -49,7 +49,7 @@
 
     <!-- Фильтры -->
     <div class="filters-container">
-        <form method="get" class="filters-form">
+        <form method="get" class="filters-form" id="filter-form">
             <div class="filters-row">
                 <div class="filter-group">
                     {{ filter_form.storage_location.label_tag }}
@@ -69,7 +69,7 @@
                 </div>
                 <div class="filter-group">
                     <label>&nbsp;</label>
-                    <button type="submit" class="filter-btn">🔍 Применить</button>
+                    <button type="submit" class="filter-btn" id="search-btn">🔍 Найти</button>
                 </div>
                 <div class="filter-group">
                     <label>&nbsp;</label>
@@ -283,6 +283,7 @@
         font-size: 14px;
         transition: background 0.3s;
         white-space: nowrap;
+        width: 100%;
     }
 
     .filter-btn:hover {
@@ -299,6 +300,9 @@
         transition: background 0.3s;
         display: inline-block;
         white-space: nowrap;
+        width: 100%;
+        text-align: center;
+        border: 1px solid #ddd;
     }
 
     .filter-clear:hover {
@@ -325,6 +329,12 @@
         background: #f8d7da;
         color: #721c24;
         border: 1px solid #f5c6cb;
+    }
+
+    .alert-info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
     }
 
     .balances-list {
@@ -473,6 +483,50 @@
             width: 100%;
             text-align: center;
         }
+
+        .stats-cards {
+            grid-template-columns: 1fr;
+        }
+
+        .action-card {
+            width: 100%;
+            max-width: 300px;
+        }
     }
 </style>
+
+<!-- JavaScript для автоматической отправки -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('filter-form');
+        const autoSubmitFields = document.querySelectorAll('select[name="storage_location"], select[name="material_type"], select[name="material"]');
+        const searchInput = document.querySelector('input[name="search"]');
+        const searchBtn = document.getElementById('search-btn');
+
+        // Автоматическая отправка при изменении select-полей
+        autoSubmitFields.forEach(field => {
+            field.addEventListener('change', function() {
+                form.submit();
+            });
+        });
+
+        // Для поиска используем кнопку или Enter
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    form.submit();
+                }
+            });
+        }
+
+        // Кнопка поиска
+        if (searchBtn) {
+            searchBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                form.submit();
+            });
+        }
+    });
+</script>
 {% endblock %}

@@ -13,10 +13,10 @@ class StorageLocationFilterForm(forms.Form):
     )
 
     search = forms.CharField(
-        label='Поиск',
+        label='Поиск по названию',
         required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Поиск по названию...'
+            'placeholder': 'Введите название для поиска...'
         })
     )

@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.db.models import Q
-from Forest_apps.inventory.models import StorageLocation
+from Forest_apps.inventory.models import StorageLocation, MaterialBalance
 from Forest_apps.inventory.forms.storage_location import StorageLocationFilterForm
 
 
@@ -15,24 +15,40 @@ def storage_location_list_view(request):
     # Фильтрация
     filter_form = StorageLocationFilterForm(request.GET or None)
 
+    # Инициализируем переменные
+    source_type = None
+    search = None
+
     if filter_form.is_valid():
         source_type = filter_form.cleaned_data.get('source_type')
         search = filter_form.cleaned_data.get('search')
 
+        # Фильтруем по типу в БД
         if source_type:
             locations = locations.filter(source_type=source_type)
 
-        if search:
-            # Фильтруем по названию источника (через get_source_name нельзя, фильтруем по ID)
-            # Для поиска по ID или типу
-            locations = locations.filter(
-                Q(source_id__icontains=search) |
-                Q(source_type__icontains=search)
-            )
+    # Получаем все объекты с уже примененным фильтром по типу
+    all_locations = list(locations)
+
+    # Если есть поисковый запрос, фильтруем по названиям в памяти
+    if search:
+        filtered_locations = []
+        for location in all_locations:
+            try:
+                source_name = location.get_source_name().lower()
+                if search.lower() in source_name:
+                    filtered_locations.append(location)
+            except:
+                # Если не удалось получить название, проверяем по ID
+                if str(location.source_id) == search:
+                    filtered_locations.append(location)
+        locations_to_show = filtered_locations
+    else:
+        locations_to_show = all_locations
 
     # Добавляем название источника к каждой записи
     locations_with_names = []
-    for location in locations:
+    for location in locations_to_show:
         try:
             source_name = location.get_source_name()
         except:
@@ -47,14 +63,14 @@ def storage_location_list_view(request):
             'obj': location
         })
 
-    # Статистика
+    # Статистика (только для отфильтрованных записей)
     stats = {
-        'total': locations.count(),
+        'total': len(locations_to_show),
         'by_type': {
-            'склад': locations.filter(source_type='склад').count(),
-            'автомобиль': locations.filter(source_type='автомобиль').count(),
-            'контрагент': locations.filter(source_type='контрагент').count(),
-            'бригады': locations.filter(source_type='бригады').count(),
+            'склад': sum(1 for l in locations_to_show if l.source_type == 'склад'),
+            'автомобиль': sum(1 for l in locations_to_show if l.source_type == 'автомобиль'),
+            'контрагент': sum(1 for l in locations_to_show if l.source_type == 'контрагент'),
+            'бригады': sum(1 for l in locations_to_show if l.source_type == 'бригады'),
         }
     }
 
@@ -73,9 +89,7 @@ def storage_location_list_view(request):
 def storage_location_detail_view(request, location_id):
     """Детальный просмотр места хранения с остатками"""
 
-    from Forest_apps.inventory.models import MaterialBalance
-
-    location = StorageLocation.objects.get(id=location_id)
+    location = get_object_or_404(StorageLocation, id=location_id)
     source_name = location.get_source_name()
 
     # Получаем остатки для этого места хранения

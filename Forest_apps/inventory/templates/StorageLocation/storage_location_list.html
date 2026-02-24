@@ -1,0 +1,359 @@
+<!-- Forest_apps/inventory/templates/inventory/storage_location_list.html -->
+{% extends "base.html" %}
+
+{% block title %}Места хранения{% endblock %}
+
+{% block header %}Места хранения{% endblock %}
+
+{% block content %}
+<div class="storage-container">
+    <!-- Статистика -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats.total }}</div>
+                <div class="stat-label">Всего мест</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🏭</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats.by_type.склад }}</div>
+                <div class="stat-label">Склады</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🚛</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats.by_type.автомобиль }}</div>
+                <div class="stat-label">Автомобили</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🏢</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats.by_type.контрагент }}</div>
+                <div class="stat-label">Контрагенты</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ stats.by_type.бригады }}</div>
+                <div class="stat-label">Бригады</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="filters-container">
+        <form method="get" class="filters-form">
+            <div class="filters-row">
+                <div class="filter-group">
+                    {{ filter_form.source_type.label_tag }}
+                    {{ filter_form.source_type }}
+                </div>
+                <div class="filter-group">
+                    {{ filter_form.search.label_tag }}
+                    {{ filter_form.search }}
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="filter-btn">🔍 Применить</button>
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <a href="{% url 'inventory:storage_location_list' %}" class="filter-clear">✖ Сбросить</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Таблица мест хранения -->
+    <div class="locations-list">
+        <h3>Все места хранения</h3>
+
+        {% if locations %}
+            <table class="locations-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Тип</th>
+                        <th>ID источника</th>
+                        <th>Название</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loc in locations %}
+                    <tr>
+                        <td>{{ loc.id }}</td>
+                        <td>
+                            <span class="badge type-{{ loc.source_type_raw }}">
+                                {{ loc.source_type }}
+                            </span>
+                        </td>
+                        <td>{{ loc.source_id }}</td>
+                        <td>
+                            <strong>{{ loc.source_name }}</strong>
+                        </td>
+                        <td class="actions">
+                            <a href="{% url 'inventory:storage_location_detail' loc.id %}" class="btn-action" title="Просмотр остатков">📦</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-message">
+                <p>Места хранения не найдены.</p>
+                <p class="text-muted">Они создаются автоматически при создании складов, автомобилей, контрагентов и бригад.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .storage-container {
+        padding: 20px;
+    }
+
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        transition: transform 0.3s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .stat-icon {
+        font-size: 36px;
+        color: #2c5e2e;
+    }
+
+    .stat-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #2c5e2e;
+        line-height: 1.2;
+    }
+
+    .stat-label {
+        font-size: 13px;
+        color: #666;
+    }
+
+    .filters-container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .filters-form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .filters-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .filter-btn {
+        padding: 8px 16px;
+        background: #2c5e2e;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+        white-space: nowrap;
+    }
+
+    .filter-btn:hover {
+        background: #1e4220;
+    }
+
+    .filter-clear {
+        padding: 8px 16px;
+        background: #f8f9fa;
+        color: #666;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: background 0.3s;
+        display: inline-block;
+        white-space: nowrap;
+    }
+
+    .filter-clear:hover {
+        background: #e9ecef;
+    }
+
+    .locations-list {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .locations-list h3 {
+        color: #2c5e2e;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .locations-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .locations-table th {
+        background: #2c5e2e;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .locations-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+        vertical-align: middle;
+    }
+
+    .locations-table tr:hover {
+        background: #f5f5f5;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .badge.type-склад {
+        background: #cce5ff;
+        color: #004085;
+    }
+
+    .badge.type-автомобиль {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge.type-контрагент {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .badge.type-бригады {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .actions {
+        white-space: nowrap;
+    }
+
+    .btn-action {
+        text-decoration: none;
+        margin: 0 5px;
+        font-size: 18px;
+        opacity: 0.7;
+        transition: opacity 0.3s, transform 0.2s;
+        display: inline-block;
+    }
+
+    .btn-action:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+        font-style: italic;
+    }
+
+    .text-muted {
+        color: #999;
+        font-size: 14px;
+        margin-top: 10px;
+    }
+
+    @media (max-width: 768px) {
+        .locations-table {
+            display: block;
+            overflow-x: auto;
+        }
+
+        .filters-row {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-group {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

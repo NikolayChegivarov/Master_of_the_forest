@@ -1,6 +1,8 @@
 # Forest_apps/core/models.py
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 User = get_user_model()
 
@@ -28,24 +30,15 @@ class Position(models.Model):
         return self.name
 
     @classmethod
-    def create_position(cls, name, is_active=True):
+    def create_position(cls, name, created_by=None, is_active=True):
         """
         Функция создания должности
         """
-        return cls.objects.create(name=name, is_active=is_active)
-    # Создание активной должности
-    # position = Position.create_position(name="Водитель")
-
-    @classmethod
-    def get_active_positions(cls):
-        """
-        Получение всех активных должностей
-        """
-        return cls.objects.filter(is_active=True).order_by('name')
-    # Получение всех активных должностей
-    # active_positions = Position.get_active_positions()
-    # for position in active_positions:
-    #     print(position)
+        return cls.objects.create(
+            name=name,
+            is_active=is_active,
+            created_by=created_by
+        )
 
     @classmethod
     def deactivate_position(cls, position_id):
@@ -60,12 +53,18 @@ class Position(models.Model):
         except cls.DoesNotExist:
             raise ValueError(f"Должность с ID {position_id} не найдена")
 
+    @classmethod
+    def get_active_positions(cls):
+        """
+        Получение всех активных должностей
+        """
+        return cls.objects.filter(is_active=True).order_by('name')
+
 
 class Warehouse(models.Model):
     """Склад"""
     name = models.CharField('Наименование', max_length=30)
     is_active = models.BooleanField('Активность', default=True)
-    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
     created_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -83,14 +82,36 @@ class Warehouse(models.Model):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        """Переопределяем save для автоматического создания/обновления места хранения"""
+        # Сначала сохраняем склад
+        super().save(*args, **kwargs)
+
+        # После сохранения создаем или обновляем место хранения
+        self.update_storage_location()
+
+    def update_storage_location(self):
+        """Создание или обновление места хранения"""
+        from Forest_apps.inventory.models import StorageLocation
+
+        StorageLocation.objects.update_or_create(
+            source_type='склад',
+            source_id=self.id,
+            defaults={'source_type': 'склад', 'source_id': self.id}
+        )
+
     @classmethod
-    def create_warehouse(cls, name, is_active=True):
+    def create_warehouse(cls, name, created_by=None, is_active=True):
         """
         Создание нового склада
         """
-        return cls.objects.create(name=name, is_active=is_active)
-    # Создание нового склада
-    # warehouse = Warehouse.create_warehouse(name="Основной склад")
+        warehouse = cls.objects.create(
+            name=name,
+            is_active=is_active,
+            created_by=created_by
+        )
+        # Место хранения создается автоматически через save()
+        return warehouse
 
     @classmethod
     def deactivate_warehouse(cls, warehouse_id):
@@ -101,15 +122,10 @@ class Warehouse(models.Model):
             warehouse = cls.objects.get(id=warehouse_id)
             warehouse.is_active = False
             warehouse.save()
+            # Место хранения остается, но склад деактивирован
             return warehouse
         except cls.DoesNotExist:
             raise ValueError(f"Склад с ID {warehouse_id} не найден")
-    # Деактивация склада по ID
-    # try:
-    #     deactivated = Warehouse.deactivate_warehouse(warehouse_id=1)
-    #     print(f"Склад '{deactivated.name}' деактивирован")
-    # except ValueError as e:
-    #     print(e)
 
     @classmethod
     def get_active_warehouses(cls):
@@ -117,10 +133,6 @@ class Warehouse(models.Model):
         Получение всех активных складов
         """
         return cls.objects.filter(is_active=True).order_by('name')
-    # Получение всех активных складов
-    # active_warehouses = Warehouse.get_active_warehouses()
-    # for warehouse in active_warehouses:
-    #     print(warehouse)
 
 
 class Vehicle(models.Model):
@@ -142,29 +154,43 @@ class Vehicle(models.Model):
     class Meta:
         verbose_name = 'Транспортное средство'
         verbose_name_plural = 'Транспортные средства'
-        ordering = ['brand']  # Исправлено с ['name'] на ['brand']
+        ordering = ['brand']
 
     def __str__(self):
         return f"{self.brand} {self.model} ({self.license_plate})"
 
+    def save(self, *args, **kwargs):
+        """Переопределяем save для автоматического создания/обновления места хранения"""
+        # Сначала сохраняем ТС
+        super().save(*args, **kwargs)
+
+        # После сохранения создаем или обновляем место хранения
+        self.update_storage_location()
+
+    def update_storage_location(self):
+        """Создание или обновление места хранения"""
+        from Forest_apps.inventory.models import StorageLocation
+
+        StorageLocation.objects.update_or_create(
+            source_type='автомобиль',
+            source_id=self.id,
+            defaults={'source_type': 'автомобиль', 'source_id': self.id}
+        )
+
     @classmethod
-    def create_vehicle(cls, brand, model, license_plate, is_active=True):
+    def create_vehicle(cls, brand, model, license_plate, created_by=None, is_active=True):
         """
         Создание нового транспортного средства
         """
-        return cls.objects.create(
+        vehicle = cls.objects.create(
             brand=brand,
             model=model,
             license_plate=license_plate,
-            is_active=is_active
+            is_active=is_active,
+            created_by=created_by
         )
-    # Создание транспортного средства
-    # vehicle = Vehicle.create_vehicle(
-    #     brand="Toyota",
-    #     model="Hilux",
-    #     license_plate="А123ВС77",
-    #     is_active=True
-    # )
+        # Место хранения создается автоматически через save()
+        return vehicle
 
     @classmethod
     def deactivate_vehicle(cls, vehicle_id):
@@ -178,12 +204,6 @@ class Vehicle(models.Model):
             return vehicle
         except cls.DoesNotExist:
             raise ValueError(f"Транспортное средство с ID {vehicle_id} не найдено")
-    # Деактивация транспортного средства по ID
-    # try:
-    #     deactivated = Vehicle.deactivate_vehicle(vehicle_id=1)
-    #     print(f"ТС '{deactivated.brand} {deactivated.model}' деактивировано")
-    # except ValueError as e:
-    #     print(e)
 
     @classmethod
     def get_active_vehicles(cls):
@@ -191,10 +211,6 @@ class Vehicle(models.Model):
         Получение всех активных транспортных средств
         """
         return cls.objects.filter(is_active=True).order_by('brand', 'model')
-    # Получение всех активных ТС
-    # active_vehicles = Vehicle.get_active_vehicles()
-    # for vehicle in active_vehicles:
-    #     print(vehicle)
 
 
 class Counterparty(models.Model):
@@ -230,26 +246,39 @@ class Counterparty(models.Model):
     def __str__(self):
         return f"{self.get_legal_form_display()} {self.name}"
 
+    def save(self, *args, **kwargs):
+        """Переопределяем save для автоматического создания/обновления места хранения"""
+        # Сначала сохраняем контрагента
+        super().save(*args, **kwargs)
+
+        # После сохранения создаем или обновляем место хранения
+        self.update_storage_location()
+
+    def update_storage_location(self):
+        """Создание или обновление места хранения"""
+        from Forest_apps.inventory.models import StorageLocation
+
+        StorageLocation.objects.update_or_create(
+            source_type='контрагент',
+            source_id=self.id,
+            defaults={'source_type': 'контрагент', 'source_id': self.id}
+        )
+
     @classmethod
-    def create_counterparty(cls, legal_form, name, inn, ogrn, is_active=True):
+    def create_counterparty(cls, legal_form, name, inn, ogrn, created_by=None, is_active=True):
         """
         Создание нового контрагента
         """
-        return cls.objects.create(
+        counterparty = cls.objects.create(
             legal_form=legal_form,
             name=name,
             inn=inn,
             ogrn=ogrn,
-            is_active=is_active
+            is_active=is_active,
+            created_by=created_by
         )
-    # Создание контрагента
-    # counterparty = Counterparty.create_counterparty(
-    #     legal_form='ООО',
-    #     name='Лесная компания',
-    #     inn='1234567890',
-    #     ogrn='123456789012345',
-    #     is_active=True
-    # )
+        # Место хранения создается автоматически через save()
+        return counterparty
 
     @classmethod
     def deactivate_counterparty(cls, counterparty_id):
@@ -263,12 +292,6 @@ class Counterparty(models.Model):
             return counterparty
         except cls.DoesNotExist:
             raise ValueError(f"Контрагент с ID {counterparty_id} не найден")
-    # Деактивация контрагента по ID
-    # try:
-    #     deactivated = Counterparty.deactivate_counterparty(counterparty_id=1)
-    #     print(f"Контрагент '{deactivated.name}' деактивирован")
-    # except ValueError as e:
-    #     print(e)
 
     @classmethod
     def get_active_counterparties(cls):
@@ -276,10 +299,6 @@ class Counterparty(models.Model):
         Получение всех активных контрагентов
         """
         return cls.objects.filter(is_active=True).order_by('name')
-    # Получение всех активных контрагентов
-    # active_counterparties = Counterparty.get_active_counterparties()
-    # for counterparty in active_counterparties:
-    #     print(counterparty)
 
 
 class Brigade(models.Model):
@@ -303,14 +322,36 @@ class Brigade(models.Model):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        """Переопределяем save для автоматического создания/обновления места хранения"""
+        # Сначала сохраняем бригаду
+        super().save(*args, **kwargs)
+
+        # После сохранения создаем или обновляем место хранения
+        self.update_storage_location()
+
+    def update_storage_location(self):
+        """Создание или обновление места хранения"""
+        from Forest_apps.inventory.models import StorageLocation
+
+        StorageLocation.objects.update_or_create(
+            source_type='бригады',
+            source_id=self.id,
+            defaults={'source_type': 'бригады', 'source_id': self.id}
+        )
+
     @classmethod
-    def create_brigade(cls, name, is_active=True):
+    def create_brigade(cls, name, created_by=None, is_active=True):
         """
         Создание новой бригады
         """
-        return cls.objects.create(name=name, is_active=is_active)
-    # Создание бригады
-    # brigade = Brigade.create_brigade(name="Бригада лесорубов")
+        brigade = cls.objects.create(
+            name=name,
+            is_active=is_active,
+            created_by=created_by
+        )
+        # Место хранения создается автоматически через save()
+        return brigade
 
     @classmethod
     def deactivate_brigade(cls, brigade_id):
@@ -324,12 +365,6 @@ class Brigade(models.Model):
             return brigade
         except cls.DoesNotExist:
             raise ValueError(f"Бригада с ID {brigade_id} не найдена")
-    # Деактивация бригады по ID
-    # try:
-    #     deactivated = Brigade.deactivate_brigade(brigade_id=1)
-    #     print(f"Бригада '{deactivated.name}' деактивирована")
-    # except ValueError as e:
-    #     print(e)
 
     @classmethod
     def get_active_brigades(cls):
@@ -337,7 +372,48 @@ class Brigade(models.Model):
         Получение всех активных бригад
         """
         return cls.objects.filter(is_active=True).order_by('name')
-    # Получение всех активных бригад
-    # active_brigades = Brigade.get_active_brigades()
-    # for brigade in active_brigades:
-    #     print(brigade)
+
+
+# Сигналы для создания мест хранения при создании объектов через админку
+@receiver(post_save, sender=Warehouse)
+def create_warehouse_storage_location(sender, instance, created, **kwargs):
+    """Сигнал для создания места хранения при создании склада"""
+    if created:
+        from Forest_apps.inventory.models import StorageLocation
+        StorageLocation.objects.get_or_create(
+            source_type='склад',
+            source_id=instance.id
+        )
+
+
+@receiver(post_save, sender=Vehicle)
+def create_vehicle_storage_location(sender, instance, created, **kwargs):
+    """Сигнал для создания места хранения при создании ТС"""
+    if created:
+        from Forest_apps.inventory.models import StorageLocation
+        StorageLocation.objects.get_or_create(
+            source_type='автомобиль',
+            source_id=instance.id
+        )
+
+
+@receiver(post_save, sender=Counterparty)
+def create_counterparty_storage_location(sender, instance, created, **kwargs):
+    """Сигнал для создания места хранения при создании контрагента"""
+    if created:
+        from Forest_apps.inventory.models import StorageLocation
+        StorageLocation.objects.get_or_create(
+            source_type='контрагент',
+            source_id=instance.id
+        )
+
+
+@receiver(post_save, sender=Brigade)
+def create_brigade_storage_location(sender, instance, created, **kwargs):
+    """Сигнал для создания места хранения при создании бригады"""
+    if created:
+        from Forest_apps.inventory.models import StorageLocation
+        StorageLocation.objects.get_or_create(
+            source_type='бригады',
+            source_id=instance.id
+        )

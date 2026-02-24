@@ -17,7 +17,6 @@ def warehouse_list_view(request):
         'employee_name': request.session.get('employee_name'),
         'warehouses': active_warehouses,
     }
-    # ИСПРАВЛЕНО: убрали core/ из пути
     return render(request, 'Warehouse/warehouse_list.html', context)
 
 
@@ -32,7 +31,7 @@ def warehouse_create_view(request):
             warehouse = form.save(commit=False)
             # Добавляем создателя
             warehouse.created_by = request.user
-            # Сохраняем
+            # Сохраняем (место хранения создастся автоматически в save())
             warehouse.save()
 
             messages.success(
@@ -41,16 +40,23 @@ def warehouse_create_view(request):
             )
 
             return redirect('core:warehouse_list')
+        else:
+            # Если форма невалидна, показываем ее с ошибками
+            context = {
+                'title': 'Создание склада',
+                'form': form,
+                'employee_name': request.session.get('employee_name'),
+            }
+            return render(request, 'Warehouse/warehouse_create.html', context)
     else:
+        # GET-запрос - показываем пустую форму
         form = WarehouseCreateForm()
-
-    context = {
-        'title': 'Создание склада',
-        'form': form,
-        'employee_name': request.session.get('employee_name'),
-    }
-
-    return render(request, 'Warehouse/warehouse_create.html', context)
+        context = {
+            'title': 'Создание склада',
+            'form': form,
+            'employee_name': request.session.get('employee_name'),
+        }
+        return render(request, 'Warehouse/warehouse_create.html', context)
 
 
 @login_required
@@ -69,18 +75,25 @@ def warehouse_edit_view(request, warehouse_id):
                 f'Склад "{warehouse.name}" успешно обновлен!'
             )
             return redirect('core:warehouse_list')
+        else:
+            # Если форма невалидна, показываем ее с ошибками
+            context = {
+                'title': 'Редактирование склада',
+                'form': form,
+                'warehouse': warehouse,
+                'employee_name': request.session.get('employee_name'),
+            }
+            return render(request, 'Warehouse/warehouse_edit.html', context)
     else:
+        # GET-запрос - показываем форму с текущими данными
         form = WarehouseEditForm(instance=warehouse)
-
-    context = {
-        'title': 'Редактирование склада',
-        'form': form,
-        'warehouse': warehouse,
-        'employee_name': request.session.get('employee_name'),
-    }
-
-    # ИСПРАВЛЕНО: убрали core/ из пути
-    return render(request, 'Warehouse/warehouse_edit.html', context)
+        context = {
+            'title': 'Редактирование склада',
+            'form': form,
+            'warehouse': warehouse,
+            'employee_name': request.session.get('employee_name'),
+        }
+        return render(request, 'Warehouse/warehouse_edit.html', context)
 
 
 @login_required

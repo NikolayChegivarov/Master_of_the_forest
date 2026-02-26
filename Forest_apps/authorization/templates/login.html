@@ -11,14 +11,6 @@
     <div class="login-box">
         <h2>Вход в систему</h2>
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-
         <form method="post" action="{% url 'authorization:login' %}">
             {% csrf_token %}
 

@@ -7,7 +7,7 @@
 
 {% block content %}
 <div class="balance-container">
-    <!-- Кнопка добавления на всю ширину -->
+    <!-- Кнопка добавления -->
     <div class="create-button-container">
         <a href="{% url 'inventory:material_balance_create' %}" class="create-button">
             <span class="create-icon">➕</span>
@@ -78,17 +78,6 @@
             </div>
         </form>
     </div>
-
-    <!-- Сообщения -->
-    {% if messages %}
-        <div class="messages-container">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
 
     <!-- Таблица остатков -->
     <div class="balances-list">

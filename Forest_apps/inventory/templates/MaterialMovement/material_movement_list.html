@@ -111,17 +111,6 @@
         </form>
     </div>
 
-    <!-- Сообщения -->
-    {% if messages %}
-        <div class="messages-container">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
     <!-- Таблица движений -->
     <div class="movements-list">
         <h3>Движения материалов</h3>
@@ -486,11 +475,6 @@
 
     .search-clear:hover {
         background: #e9ecef;
-    }
-
-    /* Сообщения */
-    .messages-container {
-        margin-bottom: 30px;
     }
 
     .alert {

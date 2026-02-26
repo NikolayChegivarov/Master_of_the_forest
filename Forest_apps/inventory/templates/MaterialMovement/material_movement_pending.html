@@ -15,17 +15,6 @@
         </a>
     </div>
 
-    <!-- Сообщения -->
-    {% if messages %}
-        <div class="messages-container">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
     <!-- Список ожидающих отправлений -->
     <div class="pending-list">
         <h3>Отправления, ожидающие вашего подтверждения</h3>
@@ -113,11 +102,6 @@
     .back-text {
         font-size: 16px;
         font-weight: 500;
-    }
-
-    /* Сообщения */
-    .messages-container {
-        margin-bottom: 30px;
     }
 
     .alert {

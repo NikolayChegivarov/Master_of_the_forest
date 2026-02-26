@@ -69,6 +69,7 @@
                 <div class="card-description">Перемещения, реализация, списание</div>
             </div>
         </a>
+    </div>
 
     <!-- Третий ряд кнопок (новые) -->
     <div class="dashboard-row">
@@ -100,19 +101,40 @@
                 <div class="card-description">Управление бригадами</div>
             </div>
         </a>
+    </div>
 
-        <!-- Четвертый ряд - Учет времени -->
-        <div class="dashboard-row">
-            <!-- Кнопка Учет времени -->
-            <a href="{% url 'employees:worktime_list' %}" class="dashboard-card">
-                <div class="card-content">
-                    <div class="card-icon">⏱️</div>
-                    <div class="card-title">Учет времени</div>
-                    <div class="card-description">Рабочее время сотрудников</div>
-                </div>
-            </a>
-        </div>
+    <!-- Четвертый ряд кнопок (Персонал) -->
+    <div class="dashboard-row">
+        <!-- Кнопка Сотрудники -->
+        <a href="{% url 'employees:employee_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">👥</div>
+                <div class="card-title">Сотрудники</div>
+                <div class="card-description">Управление персоналом</div>
+            </div>
+        </a>
 
+        <!-- Кнопка Должности -->
+        <a href="{% url 'core:position_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">👤</div>
+                <div class="card-title">Должности</div>
+                <div class="card-description">Управление должностями</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Учет времени -->
+        <a href="{% url 'employees:worktime_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">⏱️</div>
+                <div class="card-title">Учет времени</div>
+                <div class="card-description">Рабочее время сотрудников</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Пятый ряд кнопок (Логистика и хранение) -->
+    <div class="dashboard-row">
         <!-- Кнопка Места хранения -->
         <a href="{% url 'inventory:storage_location_list' %}" class="dashboard-card">
             <div class="card-content">
@@ -122,6 +144,23 @@
             </div>
         </a>
 
+        <!-- Кнопка Транспорт -->
+        <a href="{% url 'core:vehicle_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🚛</div>
+                <div class="card-title">Транспорт</div>
+                <div class="card-description">Управление ТС</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Контрагенты -->
+        <a href="{% url 'core:counterparty_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🏢</div>
+                <div class="card-title">Контрагенты</div>
+                <div class="card-description">Управление контрагентами</div>
+            </div>
+        </a>
     </div>
 </div>
 

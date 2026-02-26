@@ -83,6 +83,28 @@ class StorageLocation(models.Model):
         except Exception as e:
             return f"Ошибка получения {self.source_type}: {str(e)}"
 
+    def is_owned_by(self, user):
+        """Проверяет, принадлежит ли место хранения пользователю"""
+        if not user or not user.is_authenticated:
+            return False
+
+        from Forest_apps.core.models import Warehouse, Brigade, Vehicle
+
+        try:
+            if self.source_type == 'склад':
+                return Warehouse.objects.filter(id=self.source_id, created_by=user).exists()
+            elif self.source_type == 'бригады':
+                return Brigade.objects.filter(id=self.source_id, created_by=user).exists()
+            elif self.source_type == 'автомобиль':
+                return Vehicle.objects.filter(id=self.source_id, created_by=user).exists()
+            elif self.source_type == 'контрагент':
+                # Контрагенты всегда считаются "чужими" для перемещений
+                return False
+        except:
+            pass
+
+        return False
+
 
 class MaterialMovement(models.Model):
     """Документ движения материалов"""

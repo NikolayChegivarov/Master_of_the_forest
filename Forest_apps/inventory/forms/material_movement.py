@@ -97,6 +97,28 @@ class MaterialMovementCreateForm(forms.ModelForm):
         self.fields['vehicle'].required = False
         self.fields['price'].required = False
 
+    def is_owned_by_user(self, location):
+        """Проверяет, принадлежит ли место хранения пользователю"""
+        if not self.user or not self.user.is_authenticated:
+            return False
+
+        from Forest_apps.core.models import Warehouse, Brigade, Vehicle
+
+        try:
+            if location.source_type == 'склад':
+                return Warehouse.objects.filter(id=location.source_id, created_by=self.user).exists()
+            elif location.source_type == 'бригады':
+                return Brigade.objects.filter(id=location.source_id, created_by=self.user).exists()
+            elif location.source_type == 'автомобиль':
+                return Vehicle.objects.filter(id=location.source_id, created_by=self.user).exists()
+            elif location.source_type == 'контрагент':
+                # Контрагенты всегда считаются "чужими" для перемещений
+                return False
+        except:
+            pass
+
+        return False
+
     def clean(self):
         """Валидация формы"""
         cleaned_data = super().clean()
@@ -112,36 +134,72 @@ class MaterialMovementCreateForm(forms.ModelForm):
         if not quantity_pieces and not quantity_meters and not quantity_cubic:
             raise forms.ValidationError('Необходимо указать хотя бы одно количество')
 
+        # Проверка что отправитель указан
+        if not from_location:
+            raise forms.ValidationError('Необходимо указать отправителя')
+
         # Проверки для разных типов движения
         if accounting_type == 'Перемещение':
             if not to_location:
                 raise forms.ValidationError('Для перемещения необходимо указать получателя')
+
+            # Проверяем, что оба места принадлежат пользователю
+            if not self.is_owned_by_user(from_location):
+                raise forms.ValidationError('Вы можете перемещать материалы только со своих складов, бригад или ТС')
+            if not self.is_owned_by_user(to_location):
+                raise forms.ValidationError('Вы можете перемещать материалы только на свои склады, бригады или ТС')
+
+            # Проверяем, что не участвуют контрагенты
             if from_location.source_type in ['контрагент'] or to_location.source_type in ['контрагент']:
                 raise forms.ValidationError('В перемещении не могут участвовать контрагенты')
+
             if price:
                 raise forms.ValidationError('Для перемещения цена не указывается')
 
         elif accounting_type == 'Отправление':
             if not to_location:
                 raise forms.ValidationError('Для отправления необходимо указать получателя')
+
+            # Проверяем, что отправитель - свой, получатель - чужой
+            if not self.is_owned_by_user(from_location):
+                raise forms.ValidationError('Отправлять материалы можно только со своих складов, бригад или ТС')
+            if self.is_owned_by_user(to_location):
+                raise forms.ValidationError('Получатель должен быть чужим складом, бригадой или ТС (не вашим)')
+
+            # Проверяем, что не участвуют контрагенты
             if from_location.source_type in ['контрагент'] or to_location.source_type in ['контрагент']:
                 raise forms.ValidationError('В отправлении не могут участвовать контрагенты')
+
             if price:
                 raise forms.ValidationError('Для отправления цена не указывается')
 
         elif accounting_type == 'Реализация':
             if not to_location:
                 raise forms.ValidationError('Для реализации необходимо указать получателя')
+
+            # Проверяем, что получатель - контрагент
             if to_location.source_type != 'контрагент':
                 raise forms.ValidationError('Для реализации получателем должен быть контрагент')
+
+            # Отправитель может быть любым (своим или чужим) - владелец материалов важен
+            # Но контрагент не может быть отправителем в реализации
+            if from_location.source_type == 'контрагент':
+                raise forms.ValidationError('Отправителем не может быть контрагент')
+
             if not price:
                 raise forms.ValidationError('Для реализации необходимо указать цену')
 
         elif accounting_type == 'Списание':
             if to_location:
                 raise forms.ValidationError('Для списания не нужно указывать получателя')
+
+            # Проверяем, что списываем со своего склада или ТС
+            if not self.is_owned_by_user(from_location):
+                raise forms.ValidationError('Списывать материалы можно только со своих складов или ТС')
+
             if from_location.source_type not in ['склад', 'автомобиль']:
                 raise forms.ValidationError('Списание возможно только со склада или автомобиля')
+
             if price:
                 raise forms.ValidationError('Для списания цена не указывается')
 
@@ -233,5 +291,5 @@ class MaterialMovementFilterForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Queryset'ы уже установлены в определении полей, дополнительная настройка не требуется
+        # Queryset'ы уже установлены в определении полей
         pass

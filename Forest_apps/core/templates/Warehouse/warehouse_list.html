@@ -7,28 +7,17 @@
 
 {% block content %}
 <div class="warehouse-container">
-    <!-- Кнопка Создать склад на всю ширину -->
+    <!-- Кнопка создания на всю ширину -->
     <div class="create-button-container">
         <a href="{% url 'core:warehouse_create' %}" class="create-button">
-            <span class="create-icon">➕</span>
+            <span class="create-icon">🏭</span>
             <span class="create-text">Создать новый склад</span>
         </a>
     </div>
 
-    <!-- Отображение сообщений -->
-    {% if messages %}
-        <div class="messages-container">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
     <!-- Список складов -->
     <div class="warehouses-list">
-        <h3>Активные склады</h3>
+        <h3>Мои склады</h3>
 
         {% if warehouses %}
             <table class="warehouses-table">
@@ -43,7 +32,7 @@
                 <tbody>
                     {% for warehouse in warehouses %}
                     <tr>
-                        <td>{{ warehouse.name }}</td>
+                        <td><strong>{{ warehouse.name }}</strong></td>
                         <td>
                             {% if warehouse.is_active %}
                                 <span class="badge active">Активно</span>
@@ -59,8 +48,8 @@
                             {% endif %}
                         </td>
                         <td class="actions">
-                            <a href="{% url 'core:warehouse_edit' warehouse.id %}" class="btn-action" title="Редактировать">✏️</a>
-                            <a href="{% url 'core:warehouse_deactivate' warehouse.id %}" class="btn-action" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать склад «{{ warehouse.name }}»?');">❌</a>
+                            <a href="{% url 'core:warehouse_edit' warehouse.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                            <a href="{% url 'core:warehouse_deactivate' warehouse.id %}" class="btn-action delete-btn" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать склад «{{ warehouse.name }}»?');">❌</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -68,7 +57,9 @@
             </table>
         {% else %}
             <div class="empty-message">
-                <p>Пока нет ни одного склада. Создайте первый склад!</p>
+                <p>У вас пока нет ни одного склада.</p>
+                <p class="text-muted">Создайте первый склад, чтобы начать работу.</p>
+                <a href="{% url 'core:warehouse_create' %}" class="btn btn-primary">Создать склад</a>
             </div>
         {% endif %}
     </div>
@@ -79,7 +70,7 @@
         padding: 20px;
     }
 
-    /* Стили для кнопки создания на всю ширину */
+    /* Кнопка создания на всю ширину */
     .create-button-container {
         width: 100%;
         margin-bottom: 30px;
@@ -117,34 +108,7 @@
         letter-spacing: 0.5px;
     }
 
-    .messages-container {
-        margin-bottom: 30px;
-    }
-
-    .alert {
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-    }
-
-    .alert-success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-
-    .alert-error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-
-    .alert-info {
-        background: #d1ecf1;
-        color: #0c5460;
-        border: 1px solid #bee5eb;
-    }
-
+    /* Список складов */
     .warehouses-list {
         background: white;
         border-radius: 16px;
@@ -222,11 +186,42 @@
         transform: scale(1.1);
     }
 
+    .edit-btn {
+        color: #ffc107;
+    }
+
+    .delete-btn {
+        color: #dc3545;
+    }
+
     .empty-message {
         text-align: center;
         padding: 40px;
         color: #666;
         font-style: italic;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s;
+        display: inline-block;
+        margin-top: 15px;
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
     }
 
     @media (max-width: 768px) {

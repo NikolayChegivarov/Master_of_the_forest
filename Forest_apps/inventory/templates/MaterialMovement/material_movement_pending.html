@@ -1,0 +1,295 @@
+<!-- Forest_apps/inventory/templates/MaterialMovement/material_movement_pending.html -->
+{% extends "base.html" %}
+
+{% block title %}Ожидающие отправления{% endblock %}
+
+{% block header %}Ожидающие отправления{% endblock %}
+
+{% block content %}
+<div class="pending-container">
+    <!-- Навигация -->
+    <div class="navigation-bar">
+        <a href="{% url 'inventory:material_movement_list' %}" class="back-button">
+            <span class="back-icon">←</span>
+            <span class="back-text">Вернуться к списку движений</span>
+        </a>
+    </div>
+
+    <!-- Сообщения -->
+    {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Список ожидающих отправлений -->
+    <div class="pending-list">
+        <h3>Отправления, ожидающие вашего подтверждения</h3>
+
+        {% if movements %}
+            <table class="pending-table">
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>Дата</th>
+                        <th>Отправитель</th>
+                        <th>Материал</th>
+                        <th>Количество</th>
+                        <th>Автор</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movement in movements %}
+                    <tr>
+                        <td><strong>{{ movement.id }}</strong></td>
+                        <td>{{ movement.date_time|date:"d.m.Y H:i" }}</td>
+                        <td>{{ movement.from_location.get_source_name|truncatechars:40 }}</td>
+                        <td>{{ movement.material.name }}</td>
+                        <td>{{ movement.quantity_display }}</td>
+                        <td>
+                            {% if movement.author %}
+                                {{ movement.author.last_name }} {{ movement.author.first_name|first }}.
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions">
+                            <a href="{% url 'inventory:material_movement_detail' movement.id %}" class="btn-action" title="Просмотр">👁️</a>
+                            <a href="{% url 'inventory:material_movement_confirm' movement.id %}" class="btn-action confirm-btn" title="Подтвердить получение" onclick="return confirm('Подтвердить получение этих материалов? Материалы будут перемещены на ваш склад.');">✅ Подтвердить</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-message">
+                <p>У вас нет ожидающих отправлений.</p>
+                <p class="text-muted">Когда кто-то отправит вам материалы, они появятся здесь.</p>
+                <a href="{% url 'inventory:material_movement_list' %}" class="btn btn-primary">Вернуться к списку</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .pending-container {
+        padding: 20px;
+    }
+
+    /* Навигация */
+    .navigation-bar {
+        margin-bottom: 30px;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 24px;
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        border-radius: 12px;
+        text-decoration: none;
+        color: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .back-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+        background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
+    }
+
+    .back-icon {
+        font-size: 24px;
+        line-height: 1;
+    }
+
+    .back-text {
+        font-size: 16px;
+        font-weight: 500;
+    }
+
+    /* Сообщения */
+    .messages-container {
+        margin-bottom: 30px;
+    }
+
+    .alert {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .alert-info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+    }
+
+    /* Список */
+    .pending-list {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .pending-list h3 {
+        color: #2c5e2e;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .pending-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .pending-table th {
+        background: #2c5e2e;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .pending-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+        vertical-align: middle;
+    }
+
+    .pending-table tr:hover {
+        background: #f5f5f5;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
+    .actions {
+        white-space: nowrap;
+        text-align: center;
+    }
+
+    .btn-action {
+        text-decoration: none;
+        margin: 0 5px;
+        padding: 6px 12px;
+        font-size: 14px;
+        opacity: 0.7;
+        transition: opacity 0.3s, transform 0.2s;
+        display: inline-block;
+        border-radius: 4px;
+    }
+
+    .btn-action:hover {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+
+    .confirm-btn {
+        background: #28a745;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 4px;
+    }
+
+    .confirm-btn:hover {
+        background: #218838;
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 60px 40px;
+        color: #666;
+        font-style: italic;
+        background: #f8f9fa;
+        border-radius: 12px;
+    }
+
+    .empty-message p {
+        margin-bottom: 10px;
+        font-size: 18px;
+    }
+
+    .text-muted {
+        color: #999;
+        font-size: 14px;
+        margin-bottom: 20px !important;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s;
+        display: inline-block;
+        margin-top: 15px;
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
+    }
+
+    @media (max-width: 768px) {
+        .pending-table {
+            display: block;
+            overflow-x: auto;
+        }
+
+        .pending-list {
+            padding: 20px;
+        }
+
+        .pending-list h3 {
+            font-size: 20px;
+        }
+
+        .back-button {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .btn-action {
+            margin: 2px 0;
+            text-align: center;
+        }
+    }
+</style>
+{% endblock %}

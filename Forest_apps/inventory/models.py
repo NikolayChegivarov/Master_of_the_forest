@@ -88,11 +88,12 @@ class MaterialMovement(models.Model):
     """Документ движения материалов"""
     ACCOUNTING_TYPE_CHOICES = [
         ('Перемещение', 'Перемещение'),
+        ('Отправление', 'Отправление'),
         ('Реализация', 'Реализация'),
         ('Списание', 'Списание'),
     ]
 
-    date_time = models.DateTimeField('Дата/время', auto_now_add=True)
+    date_time = models.DateTimeField('Дата/время', default=timezone.now)
     accounting_type = models.CharField(
         'Тип учета',
         max_length=20,
@@ -239,6 +240,7 @@ class MaterialMovement(models.Model):
     def create_movement(cls, accounting_type, from_location, to_location,
                         material, author, quantity_pieces=0, quantity_meters=None,
                         quantity_cubic=None, price=0, total_amount=0):
+        """Создание движения (устаревший метод, лучше использовать формы)"""
         return cls.objects.create(
             accounting_type=accounting_type,
             from_location=from_location,
@@ -253,12 +255,73 @@ class MaterialMovement(models.Model):
         )
 
     def execute_movement(self):
+        """Выполнение движения с проверкой остатков"""
         if self.is_completed:
             raise ValueError("Движение уже выполнено")
 
-        if self.accounting_type == 'Перемещение' and not self.to_location:
-            raise ValueError("Для перемещения необходимо указать получателя")
+        # Проверка наличия достаточного количества материалов
+        self._check_sufficient_quantity()
 
+        if self.accounting_type == 'Перемещение':
+            if not self.to_location:
+                raise ValueError("Для перемещения необходимо указать получателя")
+            if self.from_location.source_type in ['контрагент'] or self.to_location.source_type in ['контрагент']:
+                raise ValueError("В перемещении не могут участвовать контрагенты")
+
+            MaterialBalance = apps.get_model('inventory', 'MaterialBalance')
+            from_balance, to_balance = MaterialBalance.process_movement(self)
+
+            self.is_completed = True
+            self.completed_at = timezone.now()
+
+        elif self.accounting_type == 'Отправление':
+            if not self.to_location:
+                raise ValueError("Для отправления необходимо указать получателя")
+            if self.from_location.source_type in ['контрагент'] or self.to_location.source_type in ['контрагент']:
+                raise ValueError("В отправлении не могут участвовать контрагенты")
+
+            # Для отправления is_completed остается False до подтверждения
+            # Движение создается, но остатки не списываются
+            pass
+
+        elif self.accounting_type == 'Реализация':
+            if not self.to_location or self.to_location.source_type != 'контрагент':
+                raise ValueError("Для реализации получателем должен быть контрагент")
+            if not self.price:
+                raise ValueError("Для реализации необходимо указать цену")
+
+            MaterialBalance = apps.get_model('inventory', 'MaterialBalance')
+            from_balance, to_balance = MaterialBalance.process_movement(self)
+
+            self.is_completed = True
+            self.completed_at = timezone.now()
+
+        elif self.accounting_type == 'Списание':
+            if self.to_location:
+                raise ValueError("Для списания не нужно указывать получателя")
+            if self.from_location.source_type not in ['склад', 'автомобиль']:
+                raise ValueError("Списание возможно только со склада или автомобиля")
+
+            MaterialBalance = apps.get_model('inventory', 'MaterialBalance')
+            from_balance, _ = MaterialBalance.process_movement(self)
+
+            self.is_completed = True
+            self.completed_at = timezone.now()
+
+        self.save()
+
+    def confirm_receipt(self):
+        """Подтверждение получения отправления"""
+        if self.accounting_type != 'Отправление':
+            raise ValueError("Подтверждение возможно только для отправлений")
+
+        if self.is_completed:
+            raise ValueError("Отправление уже подтверждено")
+
+        # Проверяем наличие материалов у отправителя (должны быть зарезервированы)
+        self._check_sufficient_quantity()
+
+        # Выполняем движение материалов
         MaterialBalance = apps.get_model('inventory', 'MaterialBalance')
         from_balance, to_balance = MaterialBalance.process_movement(self)
 
@@ -266,86 +329,83 @@ class MaterialMovement(models.Model):
         self.completed_at = timezone.now()
         self.save()
 
-        return from_balance, to_balance
-
-    @classmethod
-    def create_transfer(cls, from_location, to_location, material,
-                        author, quantity_pieces=0, quantity_meters=None,
-                        quantity_cubic=None):
-        return cls.create_movement(
-            accounting_type='Перемещение',
-            from_location=from_location,
-            to_location=to_location,
-            material=material,
-            quantity_pieces=quantity_pieces,
-            quantity_meters=quantity_meters,
-            quantity_cubic=quantity_cubic,
-            author=author,
-            price=0,
-            total_amount=0
-        )
-
-    @classmethod
-    def create_sale(cls, from_location, to_location, material,
-                    author, price, quantity_pieces=0, quantity_meters=None,
-                    quantity_cubic=None):
-        return cls.create_movement(
-            accounting_type='Реализация',
-            from_location=from_location,
-            to_location=to_location,
-            material=material,
-            quantity_pieces=quantity_pieces,
-            quantity_meters=quantity_meters,
-            quantity_cubic=quantity_cubic,
-            price=price,
-            author=author
-        )
-
-    @classmethod
-    def create_write_off(cls, from_location, material,
-                         author, quantity_pieces=0, quantity_meters=None,
-                         quantity_cubic=None):
-        return cls.create_movement(
-            accounting_type='Списание',
-            from_location=from_location,
-            to_location=None,
-            material=material,
-            quantity_pieces=quantity_pieces,
-            quantity_meters=quantity_meters,
-            quantity_cubic=quantity_cubic,
-            author=author,
-            price=0,
-            total_amount=0
-        )
-
-    def cancel_movement(self):
-        if not self.is_completed:
-            raise ValueError("Движение еще не выполнено")
-
+    def _check_sufficient_quantity(self):
+        """Проверка наличия достаточного количества материалов"""
         MaterialBalance = apps.get_model('inventory', 'MaterialBalance')
-        MaterialBalance.cancel_movement(self)
 
-        self.is_completed = False
-        self.completed_at = None
-        self.save()
+        try:
+            balance = MaterialBalance.objects.get(
+                storage_location=self.from_location,
+                material=self.material
+            )
+        except MaterialBalance.DoesNotExist:
+            raise ValueError(f"Материал {self.material.name} отсутствует на {self.from_location.get_source_name()}")
 
-    @property
-    def quantity_display(self):
-        parts = []
-        if self.quantity_pieces:
-            parts.append(f"{self.quantity_pieces} шт")
-        if self.quantity_meters:
-            parts.append(f"{self.quantity_meters} м.п.")
-        if self.quantity_cubic:
-            parts.append(f"{self.quantity_cubic} м³")
-        return ", ".join(parts) if parts else "0"
+        if self.quantity_pieces and balance.quantity_pieces < self.quantity_pieces:
+            raise ValueError(
+                f"Недостаточно материала в штуках: есть {balance.quantity_pieces}, требуется {self.quantity_pieces}"
+            )
+        if self.quantity_meters and (balance.quantity_meters or 0) < self.quantity_meters:
+            raise ValueError(
+                f"Недостаточно материала в погонных метрах: есть {balance.quantity_meters or 0}, требуется {self.quantity_meters}"
+            )
+        if self.quantity_cubic and (balance.quantity_cubic or 0) < self.quantity_cubic:
+            raise ValueError(
+                f"Недостаточно материала в кубических метрах: есть {balance.quantity_cubic or 0}, требуется {self.quantity_cubic}"
+            )
+
+    @classmethod
+    def get_pending_shipments_for_user(cls, user):
+        """Получение ожидающих отправлений для пользователя"""
+        from Forest_apps.inventory.models import StorageLocation
+
+        # Находим все места хранения, созданные пользователем
+        user_locations = []
+
+        # Склады
+        from Forest_apps.core.models import Warehouse
+        warehouses = Warehouse.objects.filter(created_by=user)
+        for wh in warehouses:
+            try:
+                location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
+                user_locations.append(location.id)
+            except StorageLocation.DoesNotExist:
+                pass
+
+        # Бригады
+        from Forest_apps.core.models import Brigade
+        brigades = Brigade.objects.filter(created_by=user)
+        for br in brigades:
+            try:
+                location = StorageLocation.objects.get(source_type='бригады', source_id=br.id)
+                user_locations.append(location.id)
+            except StorageLocation.DoesNotExist:
+                pass
+
+        # Транспорт
+        from Forest_apps.core.models import Vehicle
+        vehicles = Vehicle.objects.filter(created_by=user)
+        for vh in vehicles:
+            try:
+                location = StorageLocation.objects.get(source_type='автомобиль', source_id=vh.id)
+                user_locations.append(location.id)
+            except StorageLocation.DoesNotExist:
+                pass
+
+        return cls.objects.filter(
+            accounting_type='Отправление',
+            to_location_id__in=user_locations,
+            is_completed=False
+        ).select_related('from_location', 'to_location', 'material', 'author')
 
     @classmethod
     def get_pending_movements(cls):
+        """Получение всех невыполненных движений"""
         return cls.objects.filter(is_completed=False).order_by('date_time')
 
     @classmethod
     def get_completed_movements(cls, start_date=None, end_date=None):
+        """Получение выполненных движений за период"""
         queryset = cls.objects.filter(is_completed=True)
 
         if start_date:
@@ -354,6 +414,18 @@ class MaterialMovement(models.Model):
             queryset = queryset.filter(date_time__lte=end_date)
 
         return queryset.order_by('-date_time')
+
+    @property
+    def quantity_display(self):
+        """Отображение количества в читаемом виде"""
+        parts = []
+        if self.quantity_pieces:
+            parts.append(f"{self.quantity_pieces} шт")
+        if self.quantity_meters:
+            parts.append(f"{self.quantity_meters} м.п.")
+        if self.quantity_cubic:
+            parts.append(f"{self.quantity_cubic} м³")
+        return ", ".join(parts) if parts else "0"
 
 
 class MaterialBalance(models.Model):

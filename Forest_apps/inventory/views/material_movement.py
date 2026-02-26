@@ -1,8 +1,10 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.db.models import Q, Sum
-from Forest_apps.inventory.models import MaterialMovement  # Только эта модель импортируется напрямую
+from django.db.models import Q, Sum, Count
+from django.utils import timezone
+from Forest_apps.inventory.models import MaterialMovement, StorageLocation
+from Forest_apps.core.models import Warehouse, Brigade, Vehicle
 from Forest_apps.inventory.forms.material_movement import (
     MaterialMovementCreateForm,
     MaterialMovementFilterForm
@@ -61,6 +63,36 @@ def material_movement_list_view(request):
                 Q(to_location__source_type__icontains=search)
             )
 
+    # Получаем ID мест хранения текущего пользователя для проверки прав на подтверждение
+    user_locations = []
+
+    warehouses = Warehouse.objects.filter(created_by=request.user)
+    for wh in warehouses:
+        try:
+            location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
+            user_locations.append(location.id)
+        except StorageLocation.DoesNotExist:
+            pass
+
+    brigades = Brigade.objects.filter(created_by=request.user)
+    for br in brigades:
+        try:
+            location = StorageLocation.objects.get(source_type='бригады', source_id=br.id)
+            user_locations.append(location.id)
+        except StorageLocation.DoesNotExist:
+            pass
+
+    vehicles = Vehicle.objects.filter(created_by=request.user)
+    for vh in vehicles:
+        try:
+            location = StorageLocation.objects.get(source_type='автомобиль', source_id=vh.id)
+            user_locations.append(location.id)
+        except StorageLocation.DoesNotExist:
+            pass
+
+    # Подсчет ожидающих отправлений для текущего пользователя
+    pending_shipments_count = MaterialMovement.get_pending_shipments_for_user(request.user).count()
+
     # Подсчет статистики
     total_count = movements.count()
     total_amount = movements.filter(accounting_type='Реализация').aggregate(
@@ -76,6 +108,8 @@ def material_movement_list_view(request):
         'total_count': total_count,
         'total_amount': total_amount,
         'pending_count': pending_count,
+        'pending_shipments_count': pending_shipments_count,
+        'user_locations': user_locations,
     }
 
     return render(request, 'MaterialMovement/material_movement_list.html', context)
@@ -86,12 +120,30 @@ def material_movement_create_view(request):
     """Создание нового движения материалов"""
 
     if request.method == 'POST':
-        form = MaterialMovementCreateForm(request.POST)
+        form = MaterialMovementCreateForm(request.POST, user=request.user)
         if form.is_valid():
-            # Сохраняем движение, но пока не коммитим
+            # Сохраняем движение
             movement = form.save(commit=False)
             movement.author = request.user
+
+            # Для Перемещения, Реализации и Списания сразу устанавливаем is_completed=True
+            if movement.accounting_type in ['Перемещение', 'Реализация', 'Списание']:
+                movement.is_completed = True
+                movement.completed_at = timezone.now()
+            else:
+                movement.is_completed = False
+
             movement.save()
+
+            # Если движение должно быть выполнено сразу, выполняем его
+            if movement.is_completed:
+                try:
+                    movement.execute_movement()
+                except ValueError as e:
+                    # Если не хватает материалов, удаляем созданное движение
+                    movement.delete()
+                    messages.error(request, str(e))
+                    return redirect('inventory:material_movement_create')
 
             messages.success(
                 request,
@@ -100,7 +152,7 @@ def material_movement_create_view(request):
 
             return redirect('inventory:material_movement_list')
     else:
-        form = MaterialMovementCreateForm()
+        form = MaterialMovementCreateForm(user=request.user)
 
     context = {
         'title': 'Создание движения',
@@ -129,6 +181,56 @@ def material_movement_detail_view(request, movement_id):
     }
 
     return render(request, 'MaterialMovement/material_movement_detail.html', context)
+
+
+@login_required
+def material_movement_edit_view(request, movement_id):
+    """Редактирование движения"""
+
+    movement = get_object_or_404(MaterialMovement, id=movement_id)
+
+    if movement.is_completed:
+        messages.error(request, 'Нельзя редактировать выполненное движение')
+        return redirect('inventory:material_movement_detail', movement_id=movement.id)
+
+    if request.method == 'POST':
+        form = MaterialMovementCreateForm(request.POST, instance=movement, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request,
+                f'Движение №{movement.id} успешно обновлено!'
+            )
+            return redirect('inventory:material_movement_detail', movement_id=movement.id)
+    else:
+        form = MaterialMovementCreateForm(instance=movement, user=request.user)
+
+    context = {
+        'title': f'Редактирование движения №{movement.id}',
+        'form': form,
+        'movement': movement,
+        'employee_name': request.session.get('employee_name'),
+    }
+
+    return render(request, 'MaterialMovement/material_movement_edit.html', context)
+
+
+@login_required
+def material_movement_delete_view(request, movement_id):
+    """Удаление движения"""
+
+    try:
+        movement = get_object_or_404(MaterialMovement, id=movement_id)
+
+        if movement.is_completed:
+            messages.error(request, 'Нельзя удалить выполненное движение')
+        else:
+            movement.delete()
+            messages.success(request, 'Движение успешно удалено!')
+    except Exception as e:
+        messages.error(request, str(e))
+
+    return redirect('inventory:material_movement_list')
 
 
 @login_required
@@ -178,50 +280,73 @@ def material_movement_cancel_view(request, movement_id):
 
 
 @login_required
-def material_movement_delete_view(request, movement_id):
-    """Удаление движения"""
+def material_movement_confirm_shipment_view(request, movement_id):
+    """Подтверждение получения отправления"""
 
     try:
         movement = get_object_or_404(MaterialMovement, id=movement_id)
 
+        if movement.accounting_type != 'Отправление':
+            messages.error(request, 'Подтверждение возможно только для отправлений')
+            return redirect('inventory:material_movement_list')
+
         if movement.is_completed:
-            messages.error(request, 'Нельзя удалить выполненное движение')
-        else:
-            movement.delete()
-            messages.success(request, 'Движение успешно удалено!')
-    except Exception as e:
+            messages.error(request, 'Отправление уже подтверждено')
+            return redirect('inventory:material_movement_list')
+
+        # Проверяем, что получатель - место хранения текущего пользователя
+        user_locations = []
+
+        warehouses = Warehouse.objects.filter(created_by=request.user)
+        for wh in warehouses:
+            try:
+                location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
+                user_locations.append(location.id)
+            except StorageLocation.DoesNotExist:
+                pass
+
+        brigades = Brigade.objects.filter(created_by=request.user)
+        for br in brigades:
+            try:
+                location = StorageLocation.objects.get(source_type='бригады', source_id=br.id)
+                user_locations.append(location.id)
+            except StorageLocation.DoesNotExist:
+                pass
+
+        vehicles = Vehicle.objects.filter(created_by=request.user)
+        for vh in vehicles:
+            try:
+                location = StorageLocation.objects.get(source_type='автомобиль', source_id=vh.id)
+                user_locations.append(location.id)
+            except StorageLocation.DoesNotExist:
+                pass
+
+        if movement.to_location.id not in user_locations:
+            messages.error(request, 'Вы не можете подтвердить это отправление')
+            return redirect('inventory:material_movement_list')
+
+        # Подтверждаем получение
+        movement.confirm_receipt()
+        messages.success(request, f'Отправление №{movement.id} успешно подтверждено!')
+
+    except ValueError as e:
         messages.error(request, str(e))
+    except Exception as e:
+        messages.error(request, f'Ошибка при подтверждении: {str(e)}')
 
     return redirect('inventory:material_movement_list')
 
 
 @login_required
-def material_movement_edit_view(request, movement_id):
-    """Редактирование движения"""
+def material_movement_pending_shipments_view(request):
+    """Список ожидающих отправлений для текущего пользователя"""
 
-    movement = get_object_or_404(MaterialMovement, id=movement_id)
-
-    if movement.is_completed:
-        messages.error(request, 'Нельзя редактировать выполненное движение')
-        return redirect('inventory:material_movement_detail', movement_id=movement.id)
-
-    if request.method == 'POST':
-        form = MaterialMovementCreateForm(request.POST, instance=movement)
-        if form.is_valid():
-            form.save()
-            messages.success(
-                request,
-                f'Движение №{movement.id} успешно обновлено!'
-            )
-            return redirect('inventory:material_movement_detail', movement_id=movement.id)
-    else:
-        form = MaterialMovementCreateForm(instance=movement)
+    movements = MaterialMovement.get_pending_shipments_for_user(request.user)
 
     context = {
-        'title': f'Редактирование движения №{movement.id}',
-        'form': form,
-        'movement': movement,
+        'title': 'Ожидающие отправления',
         'employee_name': request.session.get('employee_name'),
+        'movements': movements,
     }
 
-    return render(request, 'MaterialMovement/material_movement_edit.html', context)
+    return render(request, 'MaterialMovement/material_movement_pending.html', context)

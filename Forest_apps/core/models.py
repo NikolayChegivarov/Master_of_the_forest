@@ -73,6 +73,13 @@ class Warehouse(models.Model):
         verbose_name='Кто создал',
         related_name='created_warehouses'
     )
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='warehouses_created',
+        null=True
+    )
 
     class Meta:
         verbose_name = 'Склад'
@@ -149,6 +156,13 @@ class Vehicle(models.Model):
         blank=True,
         verbose_name='Кто создал',
         related_name='created_vehicles'
+    )
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='vehicles_created',
+        null=True
     )
 
     class Meta:
@@ -238,6 +252,13 @@ class Counterparty(models.Model):
         verbose_name='Кто создал',
         related_name='created_counterparties'
     )
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='counterparties_created',
+        null=True
+    )
 
     class Meta:
         verbose_name = 'Контрагент'
@@ -314,6 +335,13 @@ class Brigade(models.Model):
         verbose_name='Кто создал',
         related_name='created_brigades'
     )
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='brigades_created',
+        null=True
+    )
 
     class Meta:
         verbose_name = 'Бригада'
@@ -372,48 +400,3 @@ class Brigade(models.Model):
         Получение всех активных бригад
         """
         return cls.objects.filter(is_active=True).order_by('name')
-
-
-# # Сигналы для создания мест хранения при создании объектов через админку
-# @receiver(post_save, sender=Warehouse)
-# def create_warehouse_storage_location(sender, instance, created, **kwargs):
-#     """Сигнал для создания места хранения при создании склада"""
-#     if created:
-#         from Forest_apps.inventory.models import StorageLocation
-#         StorageLocation.objects.get_or_create(
-#             source_type='склад',
-#             source_id=instance.id
-#         )
-#
-#
-# @receiver(post_save, sender=Vehicle)
-# def create_vehicle_storage_location(sender, instance, created, **kwargs):
-#     """Сигнал для создания места хранения при создании ТС"""
-#     if created:
-#         from Forest_apps.inventory.models import StorageLocation
-#         StorageLocation.objects.get_or_create(
-#             source_type='автомобиль',
-#             source_id=instance.id
-#         )
-#
-#
-# @receiver(post_save, sender=Counterparty)
-# def create_counterparty_storage_location(sender, instance, created, **kwargs):
-#     """Сигнал для создания места хранения при создании контрагента"""
-#     if created:
-#         from Forest_apps.inventory.models import StorageLocation
-#         StorageLocation.objects.get_or_create(
-#             source_type='контрагент',
-#             source_id=instance.id
-#         )
-#
-#
-# @receiver(post_save, sender=Brigade)
-# def create_brigade_storage_location(sender, instance, created, **kwargs):
-#     """Сигнал для создания места хранения при создании бригады"""
-#     if created:
-#         from Forest_apps.inventory.models import StorageLocation
-#         StorageLocation.objects.get_or_create(
-#             source_type='бригады',
-#             source_id=instance.id
-#         )

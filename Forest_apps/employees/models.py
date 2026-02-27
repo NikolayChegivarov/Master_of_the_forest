@@ -35,6 +35,13 @@ class Employee(models.Model):
         verbose_name='Кто создал',
         related_name='created_employees'
     )
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='employees_created',
+        null=True
+    )
 
     class Meta:
         verbose_name = 'Сотрудник'
@@ -144,6 +151,13 @@ class WorkTimeRecord(models.Model):
         blank=True,
         verbose_name='Кто создал',
         related_name='created_worktimerecords'
+    )
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='worktimerecords_created',
+        null=True
     )
 
     class Meta:

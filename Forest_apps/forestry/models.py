@@ -2,6 +2,9 @@
 # Материалы/Лесосеки/Лесничества
 from django.db import models
 from django.core.validators import MinValueValidator
+from django.contrib.auth import get_user_model  # 👈 ПРАВИЛЬНЫЙ ИМПОРТ
+
+User = get_user_model()
 
 
 # ЛЕСНИЧЕСТВА ЛЕСОСЕКИ МАТЕРИАЛЫ
@@ -20,6 +23,21 @@ class Material(models.Model):
     )
     name = models.CharField('Номенклатура', max_length=200)
     is_active = models.BooleanField('Активен', default=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_material'
+    )
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='material_created',
+        null=True
+    )
 
     class Meta:
         verbose_name = 'Материал'
@@ -74,6 +92,21 @@ class Forestry(models.Model):
     name = models.CharField('Наименование', max_length=200)
     is_active = models.BooleanField('Активность', default=True)
     created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_forestry'
+    )
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='forestry_created',
+        null=True
+    )
 
     class Meta:
         verbose_name = 'Лесничество'
@@ -141,6 +174,21 @@ class CuttingAreaContent(models.Model):
         decimal_places=3,
         validators=[MinValueValidator(0)]
     )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_cutting_aria_content'
+    )
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='cutting_aria_content_created',
+        null=True
+    )
 
     class Meta:
         verbose_name = 'Содержание лесосеки'
@@ -196,6 +244,21 @@ class CuttingArea(models.Model):
     )
     is_active = models.BooleanField('Активность', default=True)
     created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_cutting_aria'
+    )
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='cutting_aria_created',
+        null=True
+    )
 
     class Meta:
         verbose_name = 'Лесосека'

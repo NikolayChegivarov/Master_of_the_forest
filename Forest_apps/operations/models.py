@@ -12,6 +12,21 @@ class OperationType(models.Model):
     """Тип операции (технический процесс)"""
     name = models.CharField('Название', max_length=100)
     is_active = models.BooleanField('Активность', default=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_operation_type'
+    )
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='operation_type_created',
+        null=True
+    )
 
     class Meta:
         verbose_name = 'Тип операции'
@@ -71,6 +86,21 @@ class OperationRecord(models.Model):
         max_digits=12,
         decimal_places=3,
         validators=[MinValueValidator(0.001)]
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_operation_record'
+    )
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='operation_record_created',
+        null=True
     )
 
     class Meta:

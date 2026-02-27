@@ -212,10 +212,20 @@ class MaterialMovement(models.Model):
         default=0
     )
 
-    author = models.ForeignKey(
+    created_by = models.ForeignKey(
         User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_material_movement'
+    )
+    created_by_position = models.ForeignKey(
+        'core.Position',
         on_delete=models.PROTECT,
-        verbose_name='Автор документа'
+        verbose_name='Должность создателя',
+        related_name='material_movement_created',
+        null=True
     )
 
     is_completed = models.BooleanField(
@@ -490,6 +500,21 @@ class MaterialBalance(models.Model):
     last_updated = models.DateTimeField(
         'Дата последнего обновления',
         auto_now=True
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_material_balance'
+    )
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='material_balance_created',
+        null=True
     )
 
     class Meta:

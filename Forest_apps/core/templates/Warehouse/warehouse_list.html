@@ -17,7 +17,7 @@
 
     <!-- Список складов -->
     <div class="warehouses-list">
-        <h3>Мои склады</h3>
+        <h3>Склады ({{ position_name|default:"наша должность" }})</h3>
 
         {% if warehouses %}
             <table class="warehouses-table">
@@ -25,7 +25,8 @@
                     <tr>
                         <th>Название</th>
                         <th>Статус</th>
-                        <th>Кто создал</th>
+                        <th>Должность создателя</th>
+                        <th>Дата создания</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
@@ -41,12 +42,13 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if warehouse.created_by %}
-                                {{ warehouse.created_by.last_name }} {{ warehouse.created_by.first_name|first }}.
+                            {% if warehouse.created_by_position %}
+                                <span class="position-badge">{{ warehouse.created_by_position.name }}</span>
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
+                        <td>{{ warehouse.created_at|date:"d.m.Y" }}</td>
                         <td class="actions">
                             <a href="{% url 'core:warehouse_edit' warehouse.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                             <a href="{% url 'core:warehouse_deactivate' warehouse.id %}" class="btn-action delete-btn" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать склад «{{ warehouse.name }}»?');">❌</a>
@@ -57,7 +59,7 @@
             </table>
         {% else %}
             <div class="empty-message">
-                <p>У вас пока нет ни одного склада.</p>
+                <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного склада.</p>
                 <p class="text-muted">Создайте первый склад, чтобы начать работу.</p>
                 <a href="{% url 'core:warehouse_create' %}" class="btn btn-primary">Создать склад</a>
             </div>
@@ -163,6 +165,16 @@
         color: #721c24;
     }
 
+    .position-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #e9ecef;
+        color: #495057;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
     .text-muted {
         color: #999;
         font-style: italic;
@@ -196,9 +208,11 @@
 
     .empty-message {
         text-align: center;
-        padding: 40px;
+        padding: 60px 40px;
         color: #666;
         font-style: italic;
+        background: #f8f9fa;
+        border-radius: 12px;
     }
 
     .btn {

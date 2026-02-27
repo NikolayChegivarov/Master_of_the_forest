@@ -7,15 +7,31 @@ from Forest_apps.core.forms.brigade import BrigadeCreateForm, BrigadeEditForm
 
 @login_required
 def brigade_list_view(request):
-    """Страница со списком бригад"""
+    """Страница со списком бригад (только для должности пользователя)"""
 
-    # Получаем все активные бригады
-    active_brigades = Brigade.get_active_brigades()
+    # Получаем должность текущего пользователя из сессии
+    user_position_name = request.session.get('position_name')
+    user_position_id = None
+
+    # Находим ID должности по названию
+    from Forest_apps.core.models import Position
+    try:
+        position = Position.objects.get(name__iexact=user_position_name)
+        user_position_id = position.id
+    except Position.DoesNotExist:
+        # Если должность не найдена, показываем пустой список
+        user_position_id = -1
+
+    # Получаем бригады, созданные этой должностью
+    brigades = Brigade.objects.filter(
+        created_by_position_id=user_position_id
+    ).order_by('-created_at')
 
     context = {
         'title': 'Бригады',
         'employee_name': request.session.get('employee_name'),
-        'brigades': active_brigades,
+        'position_name': user_position_name,
+        'brigades': brigades,
     }
     return render(request, 'Brigade/brigade_list.html', context)
 
@@ -27,11 +43,26 @@ def brigade_create_view(request):
     if request.method == 'POST':
         form = BrigadeCreateForm(request.POST)
         if form.is_valid():
-            # Сохраняем бригаду, но пока не коммитим
+            # Сохраняем бригаду
             brigade = form.save(commit=False)
-            # Добавляем создателя
+
+            # Добавляем создателя (пользователя)
             brigade.created_by = request.user
-            # Сохраняем
+
+            # Добавляем должность создателя
+            from Forest_apps.core.models import Position
+            position_name = request.session.get('position_name')
+            try:
+                position = Position.objects.get(name__iexact=position_name)
+                brigade.created_by_position = position
+            except Position.DoesNotExist:
+                # Если должность не найдена, создаем или используем существующую
+                position, _ = Position.objects.get_or_create(
+                    name=position_name,
+                    defaults={'is_active': True}
+                )
+                brigade.created_by_position = position
+
             brigade.save()
 
             messages.success(
@@ -54,10 +85,23 @@ def brigade_create_view(request):
 
 @login_required
 def brigade_edit_view(request, brigade_id):
-    """Редактирование бригады"""
+    """Редактирование бригады (только для своей должности)"""
 
-    # Получаем бригаду по ID или возвращаем 404
-    brigade = get_object_or_404(Brigade, id=brigade_id)
+    # Получаем должность текущего пользователя
+    from Forest_apps.core.models import Position
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('core:brigade_list')
+
+    # Получаем бригаду по ID и проверяем, что она создана этой должностью
+    brigade = get_object_or_404(
+        Brigade,
+        id=brigade_id,
+        created_by_position=position
+    )
 
     if request.method == 'POST':
         form = BrigadeEditForm(request.POST, instance=brigade)
@@ -83,10 +127,24 @@ def brigade_edit_view(request, brigade_id):
 
 @login_required
 def brigade_deactivate_view(request, brigade_id):
-    """Деактивация бригады"""
+    """Деактивация бригады (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    from Forest_apps.core.models import Position
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('core:brigade_list')
 
     try:
-        # Используем метод из модели
+        # Проверяем, что бригада создана этой должностью
+        brigade = get_object_or_404(
+            Brigade,
+            id=brigade_id,
+            created_by_position=position
+        )
         brigade = Brigade.deactivate_brigade(brigade_id)
         messages.success(
             request,

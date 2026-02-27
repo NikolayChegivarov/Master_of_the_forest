@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.db.models import Q, Sum
 from Forest_apps.inventory.models import MaterialBalance, StorageLocation
 from Forest_apps.forestry.models import Material
+from Forest_apps.core.models import Position, Warehouse, Brigade, Vehicle
 from Forest_apps.inventory.forms.material_balance import (
     MaterialBalanceCreateForm,
     MaterialBalanceFilterForm
@@ -12,11 +13,25 @@ from Forest_apps.inventory.forms.material_balance import (
 
 @login_required
 def material_balance_list_view(request):
-    """Список остатков материалов"""
+    """Список остатков материалов (только для должности пользователя)"""
 
-    # Базовый запрос
-    balances = MaterialBalance.objects.select_related(
-        'storage_location', 'material'
+    # Получаем должность текущего пользователя из сессии
+    user_position_name = request.session.get('position_name')
+    user_position_id = None
+
+    # Находим ID должности по названию
+    try:
+        position = Position.objects.get(name__iexact=user_position_name)
+        user_position_id = position.id
+    except Position.DoesNotExist:
+        # Если должность не найдена, показываем пустой список
+        user_position_id = -1
+
+    # Базовый запрос - только остатки, созданные этой должностью
+    balances = MaterialBalance.objects.filter(
+        created_by_position_id=user_position_id
+    ).select_related(
+        'storage_location', 'material', 'created_by_position'
     ).order_by('storage_location__source_type', 'material__material_type', 'material__name')
 
     # Фильтрация
@@ -43,9 +58,7 @@ def material_balance_list_view(request):
                 Q(storage_location__source_type__icontains=search)
             )
 
-    # Получаем ID мест хранения текущего пользователя для проверки прав
-    from Forest_apps.core.models import Warehouse, Brigade, Vehicle
-
+    # Получаем ID мест хранения текущего пользователя для проверки прав на редактирование
     user_warehouses = Warehouse.objects.filter(created_by=request.user).values_list('id', flat=True)
     user_brigades = Brigade.objects.filter(created_by=request.user).values_list('id', flat=True)
     user_vehicles = Vehicle.objects.filter(created_by=request.user).values_list('id', flat=True)
@@ -71,6 +84,7 @@ def material_balance_list_view(request):
     context = {
         'title': 'Остатки материалов',
         'employee_name': request.session.get('employee_name'),
+        'position_name': user_position_name,
         'balances': balances,
         'filter_form': filter_form,
         'total_pieces': total_pieces,
@@ -92,11 +106,32 @@ def material_balance_create_view(request):
     if request.method == 'POST':
         form = MaterialBalanceCreateForm(request.POST, user=request.user)
         if form.is_valid():
-            balance = form.save()
+            # Сохраняем остаток
+            balance = form.save(commit=False)
+
+            # Добавляем создателя (пользователя)
+            balance.created_by = request.user
+
+            # Добавляем должность создателя
+            position_name = request.session.get('position_name')
+            try:
+                position = Position.objects.get(name__iexact=position_name)
+                balance.created_by_position = position
+            except Position.DoesNotExist:
+                # Если должность не найдена, создаем
+                position, _ = Position.objects.get_or_create(
+                    name=position_name,
+                    defaults={'is_active': True}
+                )
+                balance.created_by_position = position
+
+            balance.save()
+
             messages.success(
                 request,
                 f'Остаток для {balance.material.name} на {balance.storage_location.get_source_name()} успешно создан!'
             )
+
             return redirect('inventory:material_balance_list')
         else:
             # Если форма невалидна, показываем ее с ошибками
@@ -126,9 +161,21 @@ def material_balance_create_view(request):
 
 @login_required
 def material_balance_edit_view(request, balance_id):
-    """Редактирование остатка материала (только свои)"""
+    """Редактирование остатка материала (только для своей должности)"""
 
-    balance = get_object_or_404(MaterialBalance, id=balance_id)
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('inventory:material_balance_list')
+
+    balance = get_object_or_404(
+        MaterialBalance,
+        id=balance_id,
+        created_by_position=position
+    )
 
     # Проверяем, принадлежит ли место хранения пользователю
     from Forest_apps.core.models import Warehouse, Brigade, Vehicle
@@ -179,10 +226,22 @@ def material_balance_edit_view(request, balance_id):
 
 @login_required
 def material_balance_delete_view(request, balance_id):
-    """Удаление остатка материала (только свои)"""
+    """Удаление остатка материала (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('inventory:material_balance_list')
 
     try:
-        balance = get_object_or_404(MaterialBalance, id=balance_id)
+        balance = get_object_or_404(
+            MaterialBalance,
+            id=balance_id,
+            created_by_position=position
+        )
 
         # Проверяем, принадлежит ли место хранения пользователю
         from Forest_apps.core.models import Warehouse, Brigade, Vehicle
@@ -214,7 +273,7 @@ def material_balance_detail_view(request, balance_id):
     """Детальный просмотр остатка"""
 
     balance = get_object_or_404(
-        MaterialBalance.objects.select_related('storage_location', 'material'),
+        MaterialBalance.objects.select_related('storage_location', 'material', 'created_by_position'),
         id=balance_id
     )
 

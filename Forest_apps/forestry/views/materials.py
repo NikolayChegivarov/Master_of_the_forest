@@ -1,49 +1,98 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
+from django.db.models import Q
 from Forest_apps.forestry.models import Material
-from Forest_apps.forestry.forms.material_forms import MaterialCreateForm, MaterialEditForm
+from Forest_apps.core.models import Position
+from Forest_apps.forestry.forms.material import MaterialCreateForm, MaterialEditForm
 
 
 @login_required
 def materials_view(request):
-    """Страница управления материалами с фильтрацией по типу"""
+    """Страница со списком материалов (только для должности пользователя)"""
 
-    # Получаем параметр фильтра из GET-запроса
-    material_type = request.GET.get('type', 'all')
+    # Получаем должность текущего пользователя из сессии
+    user_position_name = request.session.get('position_name')
+    user_position_id = None
 
-    # Базовый запрос
-    if material_type == 'all':
-        materials = Material.get_all_materials()
-    else:
-        materials = Material.get_materials_by_type(material_type)
+    # Находим ID должности по названию
+    try:
+        position = Position.objects.get(name__iexact=user_position_name)
+        user_position_id = position.id
+    except Position.DoesNotExist:
+        # Если должность не найдена, показываем пустой список
+        user_position_id = -1
+
+    # Получаем материалы, созданные этой должностью
+    materials = Material.objects.filter(
+        created_by_position_id=user_position_id
+    ).select_related('created_by_position').order_by('material_type', 'name')
+
+    # Фильтрация по типу материала (если есть)
+    material_type = request.GET.get('type', '')
+    if material_type:
+        materials = materials.filter(material_type=material_type)
+
+    # Поиск по названию
+    search_query = request.GET.get('search', '')
+    if search_query:
+        materials = materials.filter(
+            Q(name__icontains=search_query) |
+            Q(material_type__icontains=search_query)
+        )
+
+    # Статистика по типам
+    stats_by_type = {
+        'древесина': materials.filter(material_type='древесина').count(),
+        'ГСМ': materials.filter(material_type='ГСМ').count(),
+        'запчасти': materials.filter(material_type='запчасти').count(),
+    }
 
     context = {
         'title': 'Материалы',
         'employee_name': request.session.get('employee_name'),
+        'position_name': user_position_name,
         'materials': materials,
-        'current_filter': material_type,  # Для подсветки выбранного фильтра
+        'stats_by_type': stats_by_type,
+        'current_type': material_type,
+        'search_query': search_query,
     }
     return render(request, 'materials/materials.html', context)
 
 
 @login_required
-def create_material_view(request):
+def material_create_view(request):
     """Создание нового материала"""
 
     if request.method == 'POST':
         form = MaterialCreateForm(request.POST)
         if form.is_valid():
             # Сохраняем материал
-            material = form.save()
+            material = form.save(commit=False)
 
-            # Добавляем сообщение об успехе (только одно!)
+            # Добавляем создателя (пользователя)
+            material.created_by = request.user
+
+            # Добавляем должность создателя
+            position_name = request.session.get('position_name')
+            try:
+                position = Position.objects.get(name__iexact=position_name)
+                material.created_by_position = position
+            except Position.DoesNotExist:
+                # Если должность не найдена, создаем
+                position, _ = Position.objects.get_or_create(
+                    name=position_name,
+                    defaults={'is_active': True}
+                )
+                material.created_by_position = position
+
+            material.save()
+
             messages.success(
                 request,
-                f'Материал "{material.name}" ({material.get_material_type_display()}) успешно создан!'
+                f'Материал "{material.name}" успешно создан!'
             )
 
-            # Перенаправляем на страницу со списком материалов
             return redirect('forestry:materials')
     else:
         form = MaterialCreateForm()
@@ -54,15 +103,27 @@ def create_material_view(request):
         'employee_name': request.session.get('employee_name'),
     }
 
-    return render(request, 'materials/create_material.html', context)
+    return render(request, 'materials/material_create.html', context)
 
 
 @login_required
-def edit_material_view(request, material_id):
-    """Редактирование материала"""
+def material_edit_view(request, material_id):
+    """Редактирование материала (только для своей должности)"""
 
-    # Получаем материал по ID или возвращаем 404
-    material = get_object_or_404(Material, id=material_id)
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('forestry:materials')
+
+    # Получаем материал по ID и проверяем, что он создан этой должностью
+    material = get_object_or_404(
+        Material,
+        id=material_id,
+        created_by_position=position
+    )
 
     if request.method == 'POST':
         form = MaterialEditForm(request.POST, instance=material)
@@ -70,7 +131,7 @@ def edit_material_view(request, material_id):
             form.save()
             messages.success(
                 request,
-                f'Материал "{material.name}" успешно обновлён!'
+                f'Материал "{material.name}" успешно обновлен!'
             )
             return redirect('forestry:materials')
     else:
@@ -83,56 +144,31 @@ def edit_material_view(request, material_id):
         'employee_name': request.session.get('employee_name'),
     }
 
-    return render(request, 'materials/edit_material.html', context)
+    return render(request, 'materials/material_edit.html', context)
 
 
 @login_required
-def deactivate_material_view(request, material_id):
-    """Деактивация материала"""
+def material_delete_view(request, material_id):
+    """Удаление материала (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('forestry:materials')
 
     try:
-        material = get_object_or_404(Material, id=material_id)
-
-        if material.is_active:
-            material.is_active = False
-            material.save()
-            messages.success(
-                request,
-                f'Материал "{material.name}" успешно деактивирован!'
-            )
-        else:
-            messages.info(
-                request,
-                f'Материал "{material.name}" уже неактивен'
-            )
-
+        # Проверяем, что материал создан этой должностью
+        material = get_object_or_404(
+            Material,
+            id=material_id,
+            created_by_position=position
+        )
+        material.delete()
+        messages.success(request, 'Материал успешно удален!')
     except Exception as e:
-        messages.error(request, f'Ошибка при деактивации материала: {str(e)}')
-
-    return redirect('forestry:materials')
-
-
-@login_required
-def activate_material_view(request, material_id):
-    """Активация материала"""
-
-    try:
-        material = get_object_or_404(Material, id=material_id)
-
-        if not material.is_active:
-            material.is_active = True
-            material.save()
-            messages.success(
-                request,
-                f'Материал "{material.name}" успешно активирован!'
-            )
-        else:
-            messages.info(
-                request,
-                f'Материал "{material.name}" уже активен'
-            )
-
-    except Exception as e:
-        messages.error(request, f'Ошибка при активации материала: {str(e)}')
+        messages.error(request, str(e))
 
     return redirect('forestry:materials')

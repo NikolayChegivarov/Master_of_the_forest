@@ -1,10 +1,10 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum
 from django.utils import timezone
 from Forest_apps.inventory.models import MaterialMovement, StorageLocation
-from Forest_apps.core.models import Warehouse, Brigade, Vehicle
+from Forest_apps.core.models import Position, Warehouse, Brigade, Vehicle
 from Forest_apps.inventory.forms.material_movement import (
     MaterialMovementCreateForm,
     MaterialMovementFilterForm
@@ -13,11 +13,25 @@ from Forest_apps.inventory.forms.material_movement import (
 
 @login_required
 def material_movement_list_view(request):
-    """Список движений материалов"""
+    """Список движений материалов (только для должности пользователя)"""
 
-    # Базовый запрос
-    movements = MaterialMovement.objects.select_related(
-        'from_location', 'to_location', 'material', 'employee', 'vehicle', 'author'
+    # Получаем должность текущего пользователя из сессии
+    user_position_name = request.session.get('position_name')
+    user_position_id = None
+
+    # Находим ID должности по названию
+    try:
+        position = Position.objects.get(name__iexact=user_position_name)
+        user_position_id = position.id
+    except Position.DoesNotExist:
+        user_position_id = -1
+
+    # Базовый запрос - только движения, созданные этой должностью
+    movements = MaterialMovement.objects.filter(
+        created_by_position_id=user_position_id
+    ).select_related(
+        'from_location', 'to_location', 'material', 'employee', 'vehicle',
+        'author', 'created_by_position'
     ).order_by('-date_time')
 
     # Фильтрация
@@ -103,6 +117,7 @@ def material_movement_list_view(request):
     context = {
         'title': 'Движение материалов',
         'employee_name': request.session.get('employee_name'),
+        'position_name': user_position_name,
         'movements': movements,
         'filter_form': filter_form,
         'total_count': total_count,
@@ -125,6 +140,19 @@ def material_movement_create_view(request):
             # Сохраняем движение
             movement = form.save(commit=False)
             movement.author = request.user
+
+            # Добавляем должность создателя
+            position_name = request.session.get('position_name')
+            try:
+                position = Position.objects.get(name__iexact=position_name)
+                movement.created_by_position = position
+            except Position.DoesNotExist:
+                # Если должность не найдена, создаем
+                position, _ = Position.objects.get_or_create(
+                    name=position_name,
+                    defaults={'is_active': True}
+                )
+                movement.created_by_position = position
 
             # Для Перемещения, Реализации и Списания сразу устанавливаем is_completed=True
             if movement.accounting_type in ['Перемещение', 'Реализация', 'Списание']:
@@ -169,7 +197,8 @@ def material_movement_detail_view(request, movement_id):
 
     movement = get_object_or_404(
         MaterialMovement.objects.select_related(
-            'from_location', 'to_location', 'material', 'employee', 'vehicle', 'author'
+            'from_location', 'to_location', 'material', 'employee', 'vehicle',
+            'author', 'created_by_position'
         ),
         id=movement_id
     )
@@ -185,9 +214,21 @@ def material_movement_detail_view(request, movement_id):
 
 @login_required
 def material_movement_edit_view(request, movement_id):
-    """Редактирование движения"""
+    """Редактирование движения (только для своей должности)"""
 
-    movement = get_object_or_404(MaterialMovement, id=movement_id)
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('inventory:material_movement_list')
+
+    movement = get_object_or_404(
+        MaterialMovement,
+        id=movement_id,
+        created_by_position=position
+    )
 
     if movement.is_completed:
         messages.error(request, 'Нельзя редактировать выполненное движение')
@@ -217,10 +258,22 @@ def material_movement_edit_view(request, movement_id):
 
 @login_required
 def material_movement_delete_view(request, movement_id):
-    """Удаление движения"""
+    """Удаление движения (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('inventory:material_movement_list')
 
     try:
-        movement = get_object_or_404(MaterialMovement, id=movement_id)
+        movement = get_object_or_404(
+            MaterialMovement,
+            id=movement_id,
+            created_by_position=position
+        )
 
         if movement.is_completed:
             messages.error(request, 'Нельзя удалить выполненное движение')
@@ -235,10 +288,22 @@ def material_movement_delete_view(request, movement_id):
 
 @login_required
 def material_movement_execute_view(request, movement_id):
-    """Выполнение движения (проводка)"""
+    """Выполнение движения (проводка) - только для своей должности"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('inventory:material_movement_list')
 
     try:
-        movement = get_object_or_404(MaterialMovement, id=movement_id)
+        movement = get_object_or_404(
+            MaterialMovement,
+            id=movement_id,
+            created_by_position=position
+        )
 
         if movement.is_completed:
             messages.error(request, 'Движение уже выполнено')
@@ -258,10 +323,22 @@ def material_movement_execute_view(request, movement_id):
 
 @login_required
 def material_movement_cancel_view(request, movement_id):
-    """Отмена выполнения движения"""
+    """Отмена выполнения движения - только для своей должности"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('inventory:material_movement_list')
 
     try:
-        movement = get_object_or_404(MaterialMovement, id=movement_id)
+        movement = get_object_or_404(
+            MaterialMovement,
+            id=movement_id,
+            created_by_position=position
+        )
 
         if not movement.is_completed:
             messages.error(request, 'Движение еще не выполнено')

@@ -7,17 +7,17 @@
 
 {% block content %}
 <div class="vehicle-container">
-    <!-- Кнопка Создать ТС на всю ширину (как в materials) -->
+    <!-- Кнопка создания на всю ширину -->
     <div class="create-button-container">
         <a href="{% url 'core:vehicle_create' %}" class="create-button">
             <span class="create-icon">🚛</span>
-            <span class="create-text">Создать ТС</span>
+            <span class="create-text">Добавить транспортное средство</span>
         </a>
     </div>
 
     <!-- Список транспорта -->
     <div class="vehicles-list">
-        <h3>Активный транспорт</h3>
+        <h3>Транспортные средства ({{ position_name|default:"наша должность" }})</h3>
 
         {% if vehicles %}
             <table class="vehicles-table">
@@ -27,7 +27,7 @@
                         <th>Модель</th>
                         <th>Гос номер</th>
                         <th>Статус</th>
-                        <th>Кто создал</th>
+                        <th>Должность создателя</th>
                         <th>Дата создания</th>
                         <th>Действия</th>
                     </tr>
@@ -46,16 +46,16 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if vehicle.created_by %}
-                                {{ vehicle.created_by.last_name }} {{ vehicle.created_by.first_name|first }}.
+                            {% if vehicle.created_by_position %}
+                                <span class="position-badge">{{ vehicle.created_by_position.name }}</span>
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
                         <td>{{ vehicle.created_at|date:"d.m.Y" }}</td>
                         <td class="actions">
-                            <a href="{% url 'core:vehicle_edit' vehicle.id %}" class="btn-action" title="Редактировать">✏️</a>
-                            <a href="{% url 'core:vehicle_deactivate' vehicle.id %}" class="btn-action" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать ТС {{ vehicle.brand }} {{ vehicle.model }} ({{ vehicle.license_plate }})?');">❌</a>
+                            <a href="{% url 'core:vehicle_edit' vehicle.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                            <a href="{% url 'core:vehicle_deactivate' vehicle.id %}" class="btn-action delete-btn" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать ТС {{ vehicle.brand }} {{ vehicle.model }} ({{ vehicle.license_plate }})?');">❌</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -63,7 +63,9 @@
             </table>
         {% else %}
             <div class="empty-message">
-                <p>Пока нет ни одного транспортного средства. Создайте первый ТС!</p>
+                <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного транспортного средства.</p>
+                <p class="text-muted">Добавьте первое ТС, чтобы начать работу.</p>
+                <a href="{% url 'core:vehicle_create' %}" class="btn btn-primary">Добавить ТС</a>
             </div>
         {% endif %}
     </div>
@@ -74,77 +76,45 @@
         padding: 20px;
     }
 
-    /* Новые стили для прямоугольной кнопки как в materials */
+    /* Кнопка создания на всю ширину */
     .create-button-container {
-        margin-bottom: 30px;
         width: 100%;
+        margin-bottom: 30px;
     }
 
     .create-button {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
         width: 100%;
-        padding: 16px 24px;
+        padding: 20px;
         background: linear-gradient(145deg, #2c5e2e, #1e3f20);
-        border-radius: 12px;
-        color: white;
+        border-radius: 16px;
         text-decoration: none;
-        font-size: 18px;
-        font-weight: 600;
-        box-shadow: 0 4px 12px rgba(44, 94, 46, 0.3);
-        transition: all 0.3s ease;
-        border: none;
-        cursor: pointer;
+        color: white;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+        gap: 15px;
     }
 
     .create-button:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.2);
         background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(44, 94, 46, 0.4);
-    }
-
-    .create-button:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 8px rgba(44, 94, 46, 0.3);
     }
 
     .create-icon {
-        font-size: 24px;
+        font-size: 32px;
+        line-height: 1;
     }
 
     .create-text {
+        font-size: 20px;
+        font-weight: 600;
         letter-spacing: 0.5px;
     }
 
-    /* Удаляем старые стили action-buttons */
-    .action-buttons {
-        display: none;
-    }
-
-    .messages-container {
-        margin-bottom: 30px;
-    }
-
-    .alert {
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-    }
-
-    .alert-success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-
-    .alert-error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-
+    /* Список ТС */
     .vehicles-list {
         background: white;
         border-radius: 16px;
@@ -199,6 +169,16 @@
         color: #721c24;
     }
 
+    .position-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #e9ecef;
+        color: #495057;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
     .text-muted {
         color: #999;
         font-style: italic;
@@ -222,11 +202,44 @@
         transform: scale(1.1);
     }
 
+    .edit-btn {
+        color: #ffc107;
+    }
+
+    .delete-btn {
+        color: #dc3545;
+    }
+
     .empty-message {
         text-align: center;
-        padding: 40px;
+        padding: 60px 40px;
         color: #666;
         font-style: italic;
+        background: #f8f9fa;
+        border-radius: 12px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s;
+        display: inline-block;
+        margin-top: 15px;
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
     }
 
     @media (max-width: 768px) {
@@ -236,12 +249,15 @@
         }
 
         .create-button {
-            padding: 14px 20px;
-            font-size: 16px;
+            padding: 15px;
         }
 
         .create-icon {
-            font-size: 20px;
+            font-size: 28px;
+        }
+
+        .create-text {
+            font-size: 18px;
         }
     }
 </style>

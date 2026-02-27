@@ -1,21 +1,36 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from Forest_apps.core.models import Vehicle
+from Forest_apps.core.models import Vehicle, Position
 from Forest_apps.core.forms.vehicle import VehicleCreateForm, VehicleEditForm
 
 
 @login_required
 def vehicle_list_view(request):
-    """Страница со списком транспортных средств"""
+    """Страница со списком транспортных средств (только для должности пользователя)"""
 
-    # Получаем все активные ТС
-    active_vehicles = Vehicle.get_active_vehicles()
+    # Получаем должность текущего пользователя из сессии
+    user_position_name = request.session.get('position_name')
+    user_position_id = None
+
+    # Находим ID должности по названию
+    try:
+        position = Position.objects.get(name__iexact=user_position_name)
+        user_position_id = position.id
+    except Position.DoesNotExist:
+        # Если должность не найдена, показываем пустой список
+        user_position_id = -1
+
+    # Получаем ТС, созданные этой должностью
+    vehicles = Vehicle.objects.filter(
+        created_by_position_id=user_position_id
+    ).order_by('-created_at')
 
     context = {
         'title': 'Транспортные средства',
         'employee_name': request.session.get('employee_name'),
-        'vehicles': active_vehicles,
+        'position_name': user_position_name,
+        'vehicles': vehicles,
     }
     return render(request, 'Vehicle/vehicle_list.html', context)
 
@@ -27,11 +42,25 @@ def vehicle_create_view(request):
     if request.method == 'POST':
         form = VehicleCreateForm(request.POST)
         if form.is_valid():
-            # Сохраняем ТС, но пока не коммитим
+            # Сохраняем ТС
             vehicle = form.save(commit=False)
-            # Добавляем создателя
+
+            # Добавляем создателя (пользователя)
             vehicle.created_by = request.user
-            # Сохраняем
+
+            # Добавляем должность создателя
+            position_name = request.session.get('position_name')
+            try:
+                position = Position.objects.get(name__iexact=position_name)
+                vehicle.created_by_position = position
+            except Position.DoesNotExist:
+                # Если должность не найдена, создаем
+                position, _ = Position.objects.get_or_create(
+                    name=position_name,
+                    defaults={'is_active': True}
+                )
+                vehicle.created_by_position = position
+
             vehicle.save()
 
             messages.success(
@@ -54,10 +83,22 @@ def vehicle_create_view(request):
 
 @login_required
 def vehicle_edit_view(request, vehicle_id):
-    """Редактирование транспортного средства"""
+    """Редактирование транспортного средства (только для своей должности)"""
 
-    # Получаем ТС по ID или возвращаем 404
-    vehicle = get_object_or_404(Vehicle, id=vehicle_id)
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('core:vehicle_list')
+
+    # Получаем ТС по ID и проверяем, что оно создано этой должностью
+    vehicle = get_object_or_404(
+        Vehicle,
+        id=vehicle_id,
+        created_by_position=position
+    )
 
     if request.method == 'POST':
         form = VehicleEditForm(request.POST, instance=vehicle)
@@ -83,10 +124,23 @@ def vehicle_edit_view(request, vehicle_id):
 
 @login_required
 def vehicle_deactivate_view(request, vehicle_id):
-    """Деактивация транспортного средства"""
+    """Деактивация транспортного средства (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('core:vehicle_list')
 
     try:
-        # Используем метод из модели
+        # Проверяем, что ТС создано этой должностью
+        vehicle = get_object_or_404(
+            Vehicle,
+            id=vehicle_id,
+            created_by_position=position
+        )
         vehicle = Vehicle.deactivate_vehicle(vehicle_id)
         messages.success(
             request,

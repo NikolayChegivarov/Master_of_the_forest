@@ -5,7 +5,7 @@ from django.db.models import Sum, Q
 from django.utils import timezone
 from datetime import timedelta
 from Forest_apps.employees.models import WorkTimeRecord, Employee
-from Forest_apps.core.models import Warehouse
+from Forest_apps.core.models import Warehouse, Position
 from Forest_apps.employees.forms.workTimeRecord import (
     WorkTimeRecordCreateForm,
     WorkTimeRecordEditForm,
@@ -15,11 +15,24 @@ from Forest_apps.employees.forms.workTimeRecord import (
 
 @login_required
 def worktime_list_view(request):
-    """Страница со списком записей рабочего времени"""
+    """Страница со списком записей рабочего времени (только для должности пользователя)"""
 
-    # Базовый запрос
-    records = WorkTimeRecord.objects.select_related(
-        'warehouse', 'employee', 'employee__position', 'created_by'
+    # Получаем должность текущего пользователя из сессии
+    user_position_name = request.session.get('position_name')
+    user_position_id = None
+
+    # Находим ID должности по названию
+    try:
+        position = Position.objects.get(name__iexact=user_position_name)
+        user_position_id = position.id
+    except Position.DoesNotExist:
+        user_position_id = -1
+
+    # Базовый запрос - только записи, созданные этой должностью
+    records = WorkTimeRecord.objects.filter(
+        created_by_position_id=user_position_id
+    ).select_related(
+        'warehouse', 'employee', 'employee__position', 'created_by', 'created_by_position'
     ).order_by('-date_time')
 
     # Фильтрация
@@ -53,6 +66,7 @@ def worktime_list_view(request):
     # Статистика за сегодня
     today = timezone.now().date()
     today_records = WorkTimeRecord.objects.filter(
+        created_by_position_id=user_position_id,
         date_time__date=today
     ).select_related('employee', 'warehouse')
     today_hours = today_records.aggregate(total=Sum('hours'))['total'] or 0
@@ -61,6 +75,7 @@ def worktime_list_view(request):
     context = {
         'title': 'Учет рабочего времени',
         'employee_name': request.session.get('employee_name'),
+        'position_name': user_position_name,
         'records': records,
         'filter_form': filter_form,
         'total_hours': total_hours,
@@ -70,6 +85,7 @@ def worktime_list_view(request):
     }
     return render(request, 'WorkTimeRecord/worktime_list.html', context)
 
+
 @login_required
 def worktime_create_view(request):
     """Создание новой записи рабочего времени"""
@@ -77,11 +93,25 @@ def worktime_create_view(request):
     if request.method == 'POST':
         form = WorkTimeRecordCreateForm(request.POST)
         if form.is_valid():
-            # Сохраняем запись, но пока не коммитим
+            # Сохраняем запись
             record = form.save(commit=False)
-            # Добавляем создателя
+
+            # Добавляем создателя (пользователя)
             record.created_by = request.user
-            # Сохраняем
+
+            # Добавляем должность создателя
+            position_name = request.session.get('position_name')
+            try:
+                position = Position.objects.get(name__iexact=position_name)
+                record.created_by_position = position
+            except Position.DoesNotExist:
+                # Если должность не найдена, создаем
+                position, _ = Position.objects.get_or_create(
+                    name=position_name,
+                    defaults={'is_active': True}
+                )
+                record.created_by_position = position
+
             record.save()
 
             messages.success(
@@ -104,10 +134,22 @@ def worktime_create_view(request):
 
 @login_required
 def worktime_edit_view(request, record_id):
-    """Редактирование записи рабочего времени"""
+    """Редактирование записи рабочего времени (только для своей должности)"""
 
-    # Получаем запись по ID или возвращаем 404
-    record = get_object_or_404(WorkTimeRecord, id=record_id)
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('employees:worktime_list')
+
+    # Получаем запись по ID и проверяем, что она создана этой должностью
+    record = get_object_or_404(
+        WorkTimeRecord,
+        id=record_id,
+        created_by_position=position
+    )
 
     if request.method == 'POST':
         form = WorkTimeRecordEditForm(request.POST, instance=record)
@@ -133,13 +175,26 @@ def worktime_edit_view(request, record_id):
 
 @login_required
 def worktime_delete_view(request, record_id):
-    """Удаление записи рабочего времени (полное удаление из БД)"""
+    """Удаление записи рабочего времени (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('employees:worktime_list')
 
     try:
-        record = get_object_or_404(WorkTimeRecord, id=record_id)
+        # Проверяем, что запись создана этой должностью
+        record = get_object_or_404(
+            WorkTimeRecord,
+            id=record_id,
+            created_by_position=position
+        )
         employee_name = record.employee.short_name
         record_date = record.date_time.date()
-        record.delete()  # 👈 Полное удаление из БД
+        record.delete()
         messages.success(
             request,
             f'Запись для {employee_name} на {record_date} удалена!'
@@ -152,7 +207,15 @@ def worktime_delete_view(request, record_id):
 
 @login_required
 def worktime_employee_report_view(request, employee_id):
-    """Отчет по сотруднику за период"""
+    """Отчет по сотруднику за период (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('employees:worktime_list')
 
     employee = get_object_or_404(Employee, id=employee_id)
 
@@ -164,7 +227,6 @@ def worktime_employee_report_view(request, employee_id):
     date_from_str = request.GET.get('date_from', date_from.strftime('%Y-%m-%d'))
     date_to_str = request.GET.get('date_to', date_to.strftime('%Y-%m-%d'))
 
-    # Преобразуем строки в даты
     try:
         date_from = timezone.datetime.strptime(date_from_str, '%Y-%m-%d').date()
     except:
@@ -175,13 +237,13 @@ def worktime_employee_report_view(request, employee_id):
     except:
         date_to = timezone.now().date()
 
-    # Получаем записи за период
+    # Получаем записи за период (только созданные текущей должностью)
     records = WorkTimeRecord.objects.filter(
         employee=employee,
+        created_by_position=position,
         date_time__date__gte=date_from,
-        date_time__date__lte=date_to,
-        is_active=True
-    ).select_related('warehouse', 'created_by').order_by('date_time')
+        date_time__date__lte=date_to
+    ).select_related('warehouse', 'created_by', 'created_by_position').order_by('date_time')
 
     # Группировка по дням
     daily_stats = []
@@ -205,6 +267,7 @@ def worktime_employee_report_view(request, employee_id):
     context = {
         'title': f'Отчет: {employee.short_name}',
         'employee_name': request.session.get('employee_name'),
+        'position_name': position_name,
         'employee': employee,
         'records': records,
         'daily_stats': daily_stats,
@@ -220,7 +283,15 @@ def worktime_employee_report_view(request, employee_id):
 
 @login_required
 def worktime_warehouse_report_view(request, warehouse_id):
-    """Отчет по складу за период"""
+    """Отчет по складу за период (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('employees:worktime_list')
 
     warehouse = get_object_or_404(Warehouse, id=warehouse_id)
 
@@ -233,7 +304,6 @@ def worktime_warehouse_report_view(request, warehouse_id):
     date_from_str = request.GET.get('date_from', date_from.strftime('%Y-%m-%d'))
     date_to_str = request.GET.get('date_to', date_to.strftime('%Y-%m-%d'))
 
-    # Преобразуем строки в даты
     try:
         date_from = timezone.datetime.strptime(date_from_str, '%Y-%m-%d').date()
     except:
@@ -244,13 +314,14 @@ def worktime_warehouse_report_view(request, warehouse_id):
     except:
         date_to = today
 
-    # Получаем записи за период
+    # Получаем записи за период (только созданные текущей должностью)
     records = WorkTimeRecord.objects.filter(
         warehouse=warehouse,
+        created_by_position=position,
         date_time__date__gte=date_from,
-        date_time__date__lte=date_to,
-        is_active=True
-    ).select_related('employee', 'employee__position', 'created_by').order_by('date_time', 'employee__last_name')
+        date_time__date__lte=date_to
+    ).select_related('employee', 'employee__position', 'created_by', 'created_by_position').order_by('date_time',
+                                                                                                     'employee__last_name')
 
     # Группировка по сотрудникам
     employee_stats = []
@@ -278,6 +349,7 @@ def worktime_warehouse_report_view(request, warehouse_id):
     context = {
         'title': f'Отчет по складу: {warehouse.name}',
         'employee_name': request.session.get('employee_name'),
+        'position_name': position_name,
         'warehouse': warehouse,
         'records': records,
         'employee_stats': employee_stats,

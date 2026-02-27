@@ -7,7 +7,7 @@
 
 {% block content %}
 <div class="brigade-container">
-    <!-- Кнопка Создать бригаду на всю ширину -->
+    <!-- Кнопка создания на всю ширину -->
     <div class="create-button-container">
         <a href="{% url 'core:brigade_create' %}" class="create-button">
             <span class="create-icon">👥</span>
@@ -17,7 +17,7 @@
 
     <!-- Список бригад -->
     <div class="brigades-list">
-        <h3>Активные бригады</h3>
+        <h3>Бригады ({{ position_name|default:"наша должность" }})</h3>
 
         {% if brigades %}
             <table class="brigades-table">
@@ -26,6 +26,7 @@
                         <th>Название</th>
                         <th>Статус</th>
                         <th>Кто создал</th>
+                        <th>Должность создателя</th>
                         <th>Дата создания</th>
                         <th>Действия</th>
                     </tr>
@@ -48,10 +49,17 @@
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
+                        <td>
+                            {% if brigade.created_by_position %}
+                                <span class="position-badge">{{ brigade.created_by_position.name }}</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
                         <td>{{ brigade.created_at|date:"d.m.Y" }}</td>
                         <td class="actions">
-                            <a href="{% url 'core:brigade_edit' brigade.id %}" class="btn-action" title="Редактировать">✏️</a>
-                            <a href="{% url 'core:brigade_deactivate' brigade.id %}" class="btn-action" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать бригаду «{{ brigade.name }}»?');">❌</a>
+                            <a href="{% url 'core:brigade_edit' brigade.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                            <a href="{% url 'core:brigade_deactivate' brigade.id %}" class="btn-action delete-btn" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать бригаду «{{ brigade.name }}»?');">❌</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -59,7 +67,9 @@
             </table>
         {% else %}
             <div class="empty-message">
-                <p>Пока нет ни одной бригады. Создайте первую бригаду!</p>
+                <p>У {{ position_name|default:"вашей должности" }} пока нет ни одной бригады.</p>
+                <p class="text-muted">Создайте первую бригаду, чтобы начать работу.</p>
+                <a href="{% url 'core:brigade_create' %}" class="btn btn-primary">Создать бригаду</a>
             </div>
         {% endif %}
     </div>
@@ -70,7 +80,7 @@
         padding: 20px;
     }
 
-    /* Стили для кнопки создания на всю ширину */
+    /* Кнопка создания на всю ширину */
     .create-button-container {
         width: 100%;
         margin-bottom: 30px;
@@ -108,28 +118,7 @@
         letter-spacing: 0.5px;
     }
 
-    .messages-container {
-        margin-bottom: 30px;
-    }
-
-    .alert {
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 10px;
-    }
-
-    .alert-success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-
-    .alert-error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-
+    /* Список бригад */
     .brigades-list {
         background: white;
         border-radius: 16px;
@@ -184,6 +173,16 @@
         color: #721c24;
     }
 
+    .position-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #e9ecef;
+        color: #495057;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
     .text-muted {
         color: #999;
         font-style: italic;
@@ -207,11 +206,44 @@
         transform: scale(1.1);
     }
 
+    .edit-btn {
+        color: #ffc107;
+    }
+
+    .delete-btn {
+        color: #dc3545;
+    }
+
     .empty-message {
         text-align: center;
-        padding: 40px;
+        padding: 60px 40px;
         color: #666;
         font-style: italic;
+        background: #f8f9fa;
+        border-radius: 12px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s;
+        display: inline-block;
+        margin-top: 15px;
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
     }
 
     @media (max-width: 768px) {

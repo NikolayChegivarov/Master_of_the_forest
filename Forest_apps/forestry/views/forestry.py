@@ -2,21 +2,36 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from Forest_apps.forestry.models import Forestry
-from Forest_apps.forestry.forms.create_forestry import ForestryCreateForm
-from Forest_apps.forestry.forms.edit_forestry import ForestryEditForm  # Создадим позже
+from Forest_apps.core.models import Position
+from Forest_apps.forestry.forms.forestry import ForestryCreateForm, ForestryEditForm
 
 
 @login_required
 def forestry_view(request):
-    """Страница управления лесничествами"""
+    """Страница управления лесничествами (только для должности пользователя)"""
 
-    # Получаем все активные лесничества
-    active_forestries = Forestry.get_active_forestries()
+    # Получаем должность текущего пользователя из сессии
+    user_position_name = request.session.get('position_name')
+    user_position_id = None
+
+    # Находим ID должности по названию
+    try:
+        position = Position.objects.get(name__iexact=user_position_name)
+        user_position_id = position.id
+    except Position.DoesNotExist:
+        # Если должность не найдена, показываем пустой список
+        user_position_id = -1
+
+    # Получаем лесничества, созданные этой должностью
+    forestries = Forestry.objects.filter(
+        created_by_position_id=user_position_id
+    ).order_by('-created_at')
 
     context = {
         'title': 'Лесничества',
         'employee_name': request.session.get('employee_name'),
-        'forestries': active_forestries,
+        'position_name': user_position_name,
+        'forestries': forestries,
     }
     return render(request, 'forestry/forestry.html', context)
 
@@ -29,15 +44,31 @@ def create_forestry_view(request):
         form = ForestryCreateForm(request.POST)
         if form.is_valid():
             # Сохраняем лесничество
-            forestry = form.save()
+            forestry = form.save(commit=False)
 
-            # Добавляем сообщение об успехе
+            # Добавляем создателя (пользователя)
+            forestry.created_by = request.user
+
+            # Добавляем должность создателя
+            position_name = request.session.get('position_name')
+            try:
+                position = Position.objects.get(name__iexact=position_name)
+                forestry.created_by_position = position
+            except Position.DoesNotExist:
+                # Если должность не найдена, создаем
+                position, _ = Position.objects.get_or_create(
+                    name=position_name,
+                    defaults={'is_active': True}
+                )
+                forestry.created_by_position = position
+
+            forestry.save()
+
             messages.success(
                 request,
                 f'Лесничество "{forestry.name}" успешно создано!'
             )
 
-            # Перенаправляем на страницу со списком лесничеств
             return redirect('forestry:forestry')
     else:
         form = ForestryCreateForm()
@@ -53,10 +84,22 @@ def create_forestry_view(request):
 
 @login_required
 def edit_forestry_view(request, forestry_id):
-    """Редактирование лесничества"""
+    """Редактирование лесничества (только для своей должности)"""
 
-    # Получаем лесничество по ID или возвращаем 404
-    forestry = get_object_or_404(Forestry, id=forestry_id)
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('forestry:forestry')
+
+    # Получаем лесничество по ID и проверяем, что оно создано этой должностью
+    forestry = get_object_or_404(
+        Forestry,
+        id=forestry_id,
+        created_by_position=position
+    )
 
     if request.method == 'POST':
         form = ForestryEditForm(request.POST, instance=forestry)
@@ -82,10 +125,23 @@ def edit_forestry_view(request, forestry_id):
 
 @login_required
 def deactivate_forestry_view(request, forestry_id):
-    """Деактивация лесничества"""
+    """Деактивация лесничества (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('forestry:forestry')
 
     try:
-        # Используем метод из модели
+        # Проверяем, что лесничество создано этой должностью
+        forestry = get_object_or_404(
+            Forestry,
+            id=forestry_id,
+            created_by_position=position
+        )
         forestry = Forestry.deactivate_forestry(forestry_id)
         messages.success(
             request,

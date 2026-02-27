@@ -7,9 +7,9 @@ from Forest_apps.core.forms.position import PositionCreateForm, PositionEditForm
 
 @login_required
 def position_list_view(request):
-    """Страница со списком должностей"""
+    """Страница со списком должностей (общий справочник)"""
 
-    # Получаем все активные должности
+    # Получаем все активные должности (без фильтрации по создателю)
     active_positions = Position.get_active_positions()
 
     context = {
@@ -22,17 +22,13 @@ def position_list_view(request):
 
 @login_required
 def position_create_view(request):
-    """Создание новой должности"""
+    """Создание новой должности (без привязки к пользователю)"""
 
     if request.method == 'POST':
         form = PositionCreateForm(request.POST)
         if form.is_valid():
-            # Сохраняем должность, но пока не коммитим
-            position = form.save(commit=False)
-            # Добавляем создателя
-            position.created_by = request.user
-            # Сохраняем
-            position.save()
+            # Просто сохраняем, без created_by
+            position = form.save()
 
             messages.success(
                 request,
@@ -56,7 +52,6 @@ def position_create_view(request):
 def position_edit_view(request, position_id):
     """Редактирование должности"""
 
-    # Получаем должность по ID или возвращаем 404
     position = get_object_or_404(Position, id=position_id)
 
     if request.method == 'POST':
@@ -86,7 +81,6 @@ def position_deactivate_view(request, position_id):
     """Деактивация должности"""
 
     try:
-        # Используем метод из модели
         position = Position.deactivate_position(position_id)
         messages.success(
             request,

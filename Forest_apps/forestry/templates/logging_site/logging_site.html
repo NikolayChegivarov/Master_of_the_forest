@@ -7,17 +7,48 @@
 
 {% block content %}
 <div class="logging-site-container">
-    <!-- Кнопка Создать лесосеку на всю ширину -->
+    <!-- Кнопка создания на всю ширину -->
     <div class="create-button-container">
-        <a href="{% url 'forestry:create_logging_site' %}" class="create-button">
-            <span class="create-icon">➕</span>
+        <a href="{% url 'forestry:create_cutting_area' %}" class="create-button">
+            <span class="create-icon">🪓</span>
             <span class="create-text">Создать новую лесосеку</span>
         </a>
     </div>
 
+    <!-- Фильтры и поиск -->
+    <div class="filters-container">
+        <form method="get" class="filters-form">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label for="forestry">Лесничество:</label>
+                    <select name="forestry" id="forestry" class="filter-select" onchange="this.form.submit()">
+                        <option value="">Все лесничества</option>
+                        {% for forestry in forestries %}
+                            <option value="{{ forestry.id }}" {% if current_forestry|stringformat:"s" == forestry.id|stringformat:"s" %}selected{% endif %}>
+                                {{ forestry.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="search">Поиск:</label>
+                    <input type="text" name="search" id="search" value="{{ search_query }}" placeholder="Квартал, выдел, лесничество..." class="filter-input">
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="filter-btn">🔍 Найти</button>
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <a href="{% url 'forestry:logging_site' %}" class="filter-clear">✖ Сбросить</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
     <!-- Список лесосек -->
     <div class="cutting-areas-list">
-        <h3>Активные лесосеки</h3>
+        <h3>Лесосеки ({{ position_name|default:"наша должность" }})</h3>
 
         {% if cutting_areas %}
             <table class="cutting-areas-table">
@@ -27,8 +58,9 @@
                         <th>Квартал</th>
                         <th>Выдел</th>
                         <th>Площадь (Га)</th>
-                        <th>Дата создания</th>
                         <th>Статус</th>
+                        <th>Должность создателя</th>
+                        <th>Дата создания</th>
                         <th>Действия</th>
                     </tr>
                 </thead>
@@ -36,10 +68,9 @@
                     {% for area in cutting_areas %}
                     <tr>
                         <td>{{ area.forestry.name }}</td>
-                        <td>{{ area.quarter_number }}</td>
-                        <td>{{ area.division_number }}</td>
-                        <td>{{ area.area_hectares }}</td>
-                        <td>{{ area.created_at|date:"d.m.Y" }}</td>
+                        <td><strong>{{ area.quarter_number }}</strong></td>
+                        <td><strong>{{ area.division_number }}</strong></td>
+                        <td>{{ area.area_hectares|floatformat:1 }}</td>
                         <td>
                             {% if area.is_active %}
                                 <span class="badge active">Активно</span>
@@ -47,11 +78,17 @@
                                 <span class="badge inactive">Неактивно</span>
                             {% endif %}
                         </td>
+                        <td>
+                            {% if area.created_by_position %}
+                                <span class="position-badge">{{ area.created_by_position.name }}</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ area.created_at|date:"d.m.Y" }}</td>
                         <td class="actions">
-                            <a href="{% url 'forestry:edit_logging_site' area.id %}" class="btn-action" title="Редактировать">✏️</a>
-                            <a href="{% url 'forestry:deactivate_logging_site' area.id %}" class="btn-action" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать лесосеку «{{ area.full_address }}»?');">❌</a>
-                            <a href="{% url 'forestry:fill_logging_site' area.id %}" class="btn-action" title="Наполнить материалами">📦</a>
-                            <a href="{% url 'forestry:view_logging_site' area.id %}" class="btn-action" title="Просмотр">👁️</a>
+                            <a href="{% url 'forestry:edit_cutting_area' area.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                            <a href="{% url 'forestry:deactivate_cutting_area' area.id %}" class="btn-action delete-btn" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать лесосеку {{ area.full_address }}?');">❌</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -59,7 +96,14 @@
             </table>
         {% else %}
             <div class="empty-message">
-                <p>Пока нет ни одной лесосеки. Создайте первую лесосеку!</p>
+                {% if current_forestry or search_query %}
+                    <p>По заданным критериям ничего не найдено.</p>
+                    <a href="{% url 'forestry:logging_site' %}" class="btn btn-secondary">Сбросить фильтры</a>
+                {% else %}
+                    <p>У {{ position_name|default:"вашей должности" }} пока нет ни одной лесосеки.</p>
+                    <p class="text-muted">Создайте первую лесосеку, чтобы начать работу.</p>
+                    <a href="{% url 'forestry:create_cutting_area' %}" class="btn btn-primary">Создать лесосеку</a>
+                {% endif %}
             </div>
         {% endif %}
     </div>
@@ -70,71 +114,125 @@
         padding: 20px;
     }
 
+    /* Кнопка создания на всю ширину */
     .create-button-container {
-        margin-bottom: 30px;
         width: 100%;
+        margin-bottom: 30px;
     }
 
     .create-button {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
         width: 100%;
-        padding: 16px 24px;
+        padding: 20px;
         background: linear-gradient(145deg, #2c5e2e, #1e3f20);
-        border-radius: 12px;
-        color: white;
+        border-radius: 16px;
         text-decoration: none;
-        font-size: 18px;
-        font-weight: 600;
-        box-shadow: 0 4px 12px rgba(44, 94, 46, 0.3);
-        transition: all 0.3s ease;
-        border: none;
-        cursor: pointer;
+        color: white;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+        gap: 15px;
     }
 
     .create-button:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.2);
         background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(44, 94, 46, 0.4);
-    }
-
-    .create-button:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 8px rgba(44, 94, 46, 0.3);
     }
 
     .create-icon {
-        font-size: 24px;
+        font-size: 32px;
+        line-height: 1;
     }
 
     .create-text {
+        font-size: 20px;
+        font-weight: 600;
         letter-spacing: 0.5px;
     }
 
-    .messages-container {
+    /* Фильтры */
+    .filters-container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
         margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     }
 
-    .alert {
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 10px;
+    .filters-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: flex-end;
     }
 
-    .alert-success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
     }
 
-    .alert-error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
+    .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #666;
+        font-weight: 500;
     }
 
+    .filter-select,
+    .filter-input {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .filter-select:focus,
+    .filter-input:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .filter-btn {
+        padding: 8px 16px;
+        background: #2c5e2e;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+        white-space: nowrap;
+        width: 100%;
+    }
+
+    .filter-btn:hover {
+        background: #1e4220;
+    }
+
+    .filter-clear {
+        padding: 8px 16px;
+        background: #f8f9fa;
+        color: #666;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: background 0.3s;
+        display: inline-block;
+        white-space: nowrap;
+        width: 100%;
+        text-align: center;
+        border: 1px solid #ddd;
+    }
+
+    .filter-clear:hover {
+        background: #e9ecef;
+    }
+
+    /* Список лесосек */
     .cutting-areas-list {
         background: white;
         border-radius: 16px;
@@ -164,6 +262,7 @@
     .cutting-areas-table td {
         padding: 12px;
         border-bottom: 1px solid #e0e0e0;
+        vertical-align: middle;
     }
 
     .cutting-areas-table tr:hover {
@@ -188,6 +287,21 @@
         color: #721c24;
     }
 
+    .position-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #e9ecef;
+        color: #495057;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
     .actions {
         white-space: nowrap;
     }
@@ -197,7 +311,7 @@
         margin: 0 5px;
         font-size: 18px;
         opacity: 0.7;
-        transition: opacity 0.3s;
+        transition: opacity 0.3s, transform 0.2s;
         display: inline-block;
     }
 
@@ -206,11 +320,53 @@
         transform: scale(1.1);
     }
 
+    .edit-btn {
+        color: #ffc107;
+    }
+
+    .delete-btn {
+        color: #dc3545;
+    }
+
     .empty-message {
         text-align: center;
-        padding: 40px;
+        padding: 60px 40px;
         color: #666;
         font-style: italic;
+        background: #f8f9fa;
+        border-radius: 12px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s;
+        display: inline-block;
+        margin-top: 15px;
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
     }
 
     @media (max-width: 768px) {
@@ -220,12 +376,24 @@
         }
 
         .create-button {
-            padding: 14px 20px;
-            font-size: 16px;
+            padding: 15px;
         }
 
         .create-icon {
-            font-size: 20px;
+            font-size: 28px;
+        }
+
+        .create-text {
+            font-size: 18px;
+        }
+
+        .filters-row {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-group {
+            width: 100%;
         }
     }
 </style>

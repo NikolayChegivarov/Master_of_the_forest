@@ -3,20 +3,35 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q
 from Forest_apps.employees.models import Employee
+from Forest_apps.core.models import Position
 from Forest_apps.employees.forms.employee import EmployeeCreateForm, EmployeeEditForm
 
 
 @login_required
 def employee_list_view(request):
-    """Страница со списком сотрудников"""
+    """Страница со списком сотрудников (только для должности пользователя)"""
 
-    # Получаем все активные сотрудники с связанными данными
-    active_employees = Employee.get_active_employees().select_related('position', 'warehouse', 'created_by')
+    # Получаем должность текущего пользователя из сессии
+    user_position_name = request.session.get('position_name')
+    user_position_id = None
+
+    # Находим ID должности по названию
+    try:
+        position = Position.objects.get(name__iexact=user_position_name)
+        user_position_id = position.id
+    except Position.DoesNotExist:
+        # Если должность не найдена, показываем пустой список
+        user_position_id = -1
+
+    # Получаем сотрудников, созданных этой должностью
+    employees = Employee.objects.filter(
+        created_by_position_id=user_position_id
+    ).select_related('position', 'warehouse', 'created_by_position').order_by('-created_at')
 
     # Поиск по сотрудникам
     search_query = request.GET.get('search', '')
     if search_query:
-        active_employees = active_employees.filter(
+        employees = employees.filter(
             Q(last_name__icontains=search_query) |
             Q(first_name__icontains=search_query) |
             Q(middle_name__icontains=search_query) |
@@ -26,7 +41,8 @@ def employee_list_view(request):
     context = {
         'title': 'Сотрудники',
         'employee_name': request.session.get('employee_name'),
-        'employees': active_employees,
+        'position_name': user_position_name,
+        'employees': employees,
         'search_query': search_query,
     }
     return render(request, 'Employee/employee_list.html', context)
@@ -37,7 +53,7 @@ def employee_detail_view(request, employee_id):
     """Детальная информация о сотруднике"""
 
     employee = get_object_or_404(
-        Employee.objects.select_related('position', 'warehouse', 'created_by'),
+        Employee.objects.select_related('position', 'warehouse', 'created_by', 'created_by_position'),
         id=employee_id
     )
 
@@ -56,11 +72,25 @@ def employee_create_view(request):
     if request.method == 'POST':
         form = EmployeeCreateForm(request.POST)
         if form.is_valid():
-            # Сохраняем сотрудника, но пока не коммитим
+            # Сохраняем сотрудника
             employee = form.save(commit=False)
-            # Добавляем создателя
+
+            # Добавляем создателя (пользователя)
             employee.created_by = request.user
-            # Сохраняем
+
+            # Добавляем должность создателя
+            position_name = request.session.get('position_name')
+            try:
+                position = Position.objects.get(name__iexact=position_name)
+                employee.created_by_position = position
+            except Position.DoesNotExist:
+                # Если должность не найдена, создаем
+                position, _ = Position.objects.get_or_create(
+                    name=position_name,
+                    defaults={'is_active': True}
+                )
+                employee.created_by_position = position
+
             employee.save()
 
             messages.success(
@@ -83,10 +113,22 @@ def employee_create_view(request):
 
 @login_required
 def employee_edit_view(request, employee_id):
-    """Редактирование сотрудника"""
+    """Редактирование сотрудника (только для своей должности)"""
 
-    # Получаем сотрудника по ID или возвращаем 404
-    employee = get_object_or_404(Employee, id=employee_id)
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('employees:employee_list')
+
+    # Получаем сотрудника по ID и проверяем, что он создан этой должностью
+    employee = get_object_or_404(
+        Employee,
+        id=employee_id,
+        created_by_position=position
+    )
 
     if request.method == 'POST':
         form = EmployeeEditForm(request.POST, instance=employee)
@@ -112,10 +154,23 @@ def employee_edit_view(request, employee_id):
 
 @login_required
 def employee_deactivate_view(request, employee_id):
-    """Деактивация сотрудника"""
+    """Деактивация сотрудника (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('employees:employee_list')
 
     try:
-        # Используем метод из модели
+        # Проверяем, что сотрудник создан этой должностью
+        employee = get_object_or_404(
+            Employee,
+            id=employee_id,
+            created_by_position=position
+        )
         employee = Employee.deactivate_employee(employee_id)
         messages.success(
             request,
@@ -129,10 +184,23 @@ def employee_deactivate_view(request, employee_id):
 
 @login_required
 def employee_activate_view(request, employee_id):
-    """Активация сотрудника (для администрирования)"""
+    """Активация сотрудника (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('employees:employee_list')
 
     try:
-        employee = get_object_or_404(Employee, id=employee_id)
+        # Проверяем, что сотрудник создан этой должностью
+        employee = get_object_or_404(
+            Employee,
+            id=employee_id,
+            created_by_position=position
+        )
         employee.is_active = True
         employee.save()
         messages.success(

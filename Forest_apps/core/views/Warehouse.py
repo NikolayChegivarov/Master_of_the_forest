@@ -18,13 +18,12 @@ def warehouse_list_view(request):
         position = Position.objects.get(name__iexact=user_position_name)
         user_position_id = position.id
     except Position.DoesNotExist:
-        # Если должность не найдена, показываем пустой список
         user_position_id = -1
 
     # Получаем склады, созданные этой должностью
     warehouses = Warehouse.objects.filter(
         created_by_position_id=user_position_id
-    ).order_by('-created_at')  # Сортировка по дате создания (сначала новые)
+    ).order_by('-id')  # 👈 ИЗМЕНИТЬ: сортировка по ID (новые сначала)
 
     context = {
         'title': 'Склады',

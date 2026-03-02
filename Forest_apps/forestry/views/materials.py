@@ -2,9 +2,11 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q
+
+from Forest_apps.forestry.forms.material_forms import MaterialCreateForm, MaterialEditForm
 from Forest_apps.forestry.models import Material
 from Forest_apps.core.models import Position
-from Forest_apps.forestry.forms.material import MaterialCreateForm, MaterialEditForm
+
 
 
 @login_required
@@ -65,7 +67,7 @@ def material_create_view(request):
     """Создание нового материала"""
 
     if request.method == 'POST':
-        form = MaterialCreateForm(request.POST)
+        form = MaterialCreateForm(request.POST)  # 👈 ИСПРАВЛЕНО
         if form.is_valid():
             # Сохраняем материал
             material = form.save(commit=False)
@@ -95,7 +97,7 @@ def material_create_view(request):
 
             return redirect('forestry:materials')
     else:
-        form = MaterialCreateForm()
+        form = MaterialCreateForm()  # 👈 ИСПРАВЛЕНО
 
     context = {
         'title': 'Создание материала',
@@ -126,7 +128,7 @@ def material_edit_view(request, material_id):
     )
 
     if request.method == 'POST':
-        form = MaterialEditForm(request.POST, instance=material)
+        form = MaterialEditForm(request.POST, instance=material)  # 👈 ИСПРАВЛЕНО
         if form.is_valid():
             form.save()
             messages.success(
@@ -135,7 +137,7 @@ def material_edit_view(request, material_id):
             )
             return redirect('forestry:materials')
     else:
-        form = MaterialEditForm(instance=material)
+        form = MaterialEditForm(instance=material)  # 👈 ИСПРАВЛЕНО
 
     context = {
         'title': 'Редактирование материала',

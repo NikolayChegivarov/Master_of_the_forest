@@ -3,7 +3,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from Forest_apps.forestry.models import Forestry
 from Forest_apps.core.models import Position
-from Forest_apps.forestry.forms.forestry import ForestryCreateForm, ForestryEditForm
+from Forest_apps.forestry.forms.create_forestry import ForestryCreateForm  # 👈 ИСПРАВЛЕНО
+from Forest_apps.forestry.forms.edit_forestry import ForestryEditForm  # 👈 ИСПРАВЛЕНО
 
 
 @login_required
@@ -41,7 +42,7 @@ def create_forestry_view(request):
     """Создание нового лесничества"""
 
     if request.method == 'POST':
-        form = ForestryCreateForm(request.POST)
+        form = ForestryCreateForm(request.POST)  # 👈 ИСПРАВЛЕНО
         if form.is_valid():
             # Сохраняем лесничество
             forestry = form.save(commit=False)
@@ -71,7 +72,7 @@ def create_forestry_view(request):
 
             return redirect('forestry:forestry')
     else:
-        form = ForestryCreateForm()
+        form = ForestryCreateForm()  # 👈 ИСПРАВЛЕНО
 
     context = {
         'title': 'Создание лесничества',
@@ -102,7 +103,7 @@ def edit_forestry_view(request, forestry_id):
     )
 
     if request.method == 'POST':
-        form = ForestryEditForm(request.POST, instance=forestry)
+        form = ForestryEditForm(request.POST, instance=forestry)  # 👈 ИСПРАВЛЕНО
         if form.is_valid():
             form.save()
             messages.success(
@@ -111,7 +112,7 @@ def edit_forestry_view(request, forestry_id):
             )
             return redirect('forestry:forestry')
     else:
-        form = ForestryEditForm(instance=forestry)
+        form = ForestryEditForm(instance=forestry)  # 👈 ИСПРАВЛЕНО
 
     context = {
         'title': 'Редактирование лесничества',

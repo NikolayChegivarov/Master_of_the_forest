@@ -2,9 +2,10 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q
+
+from Forest_apps.forestry.forms.logging_site_forms import CuttingAreaCreateForm, CuttingAreaEditForm
 from Forest_apps.forestry.models import CuttingArea, Forestry
 from Forest_apps.core.models import Position
-from Forest_apps.forestry.forms.logging_site import CuttingAreaCreateForm, CuttingAreaEditForm
 
 
 @login_required
@@ -62,7 +63,7 @@ def create_cutting_area_view(request):
     """Создание новой лесосеки"""
 
     if request.method == 'POST':
-        form = CuttingAreaCreateForm(request.POST)
+        form = CuttingAreaCreateForm(request.POST)  # 👈 ИСПРАВЛЕНО
         if form.is_valid():
             # Сохраняем лесосеку
             cutting_area = form.save(commit=False)
@@ -92,7 +93,7 @@ def create_cutting_area_view(request):
 
             return redirect('forestry:logging_site')
     else:
-        form = CuttingAreaCreateForm()
+        form = CuttingAreaCreateForm()  # 👈 ИСПРАВЛЕНО
 
     context = {
         'title': 'Создание лесосеки',
@@ -123,7 +124,7 @@ def edit_cutting_area_view(request, area_id):
     )
 
     if request.method == 'POST':
-        form = CuttingAreaEditForm(request.POST, instance=cutting_area)
+        form = CuttingAreaEditForm(request.POST, instance=cutting_area)  # 👈 ИСПРАВЛЕНО
         if form.is_valid():
             form.save()
             messages.success(
@@ -132,7 +133,7 @@ def edit_cutting_area_view(request, area_id):
             )
             return redirect('forestry:logging_site')
     else:
-        form = CuttingAreaEditForm(instance=cutting_area)
+        form = CuttingAreaEditForm(instance=cutting_area)  # 👈 ИСПРАВЛЕНО
 
     context = {
         'title': 'Редактирование лесосеки',

@@ -7,6 +7,14 @@
 
 {% block content %}
 <div class="warehouse-container">
+    <!-- Кнопка создания на всю ширину (ОСТАВЛЯЕМ) -->
+    <div class="create-button-container">
+        <a href="{% url 'core:warehouse_create' %}" class="create-button">
+            <span class="create-icon">🏭</span>
+            <span class="create-text">Создать новый склад</span>
+        </a>
+    </div>
+
     <!-- Список складов -->
     <div class="warehouses-list">
         <h3>Склады ({{ position_name|default:"наша должность" }})</h3>
@@ -51,7 +59,7 @@
             <div class="empty-message">
                 <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного склада.</p>
                 <p class="text-muted">Создайте первый склад, чтобы начать работу.</p>
-                <a href="{% url 'core:warehouse_create' %}" class="btn btn-primary">Создать склад</a>
+                <!-- УБИРАЕМ маленькую кнопку отсюда -->
             </div>
         {% endif %}
     </div>
@@ -60,6 +68,44 @@
 <style>
     .warehouse-container {
         padding: 20px;
+    }
+
+    /* Кнопка создания на всю ширину */
+    .create-button-container {
+        width: 100%;
+        margin-bottom: 30px;
+    }
+
+    .create-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 20px;
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        border-radius: 16px;
+        text-decoration: none;
+        color: white;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+        gap: 15px;
+    }
+
+    .create-button:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+        background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
+    }
+
+    .create-icon {
+        font-size: 32px;
+        line-height: 1;
+    }
+
+    .create-text {
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
     }
 
     /* Список складов */
@@ -167,33 +213,22 @@
         border-radius: 12px;
     }
 
-    .btn {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        text-decoration: none;
-        text-align: center;
-        transition: background-color 0.3s;
-        display: inline-block;
-        margin-top: 15px;
-    }
-
-    .btn-primary {
-        background: #2c5e2e;
-        color: white;
-    }
-
-    .btn-primary:hover {
-        background: #1e4220;
-    }
-
     @media (max-width: 768px) {
         .warehouses-table {
             display: block;
             overflow-x: auto;
+        }
+
+        .create-button {
+            padding: 15px;
+        }
+
+        .create-icon {
+            font-size: 28px;
+        }
+
+        .create-text {
+            font-size: 18px;
         }
     }
 </style>

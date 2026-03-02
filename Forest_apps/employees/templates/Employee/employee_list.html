@@ -38,7 +38,6 @@
                         <th>Должность</th>
                         <th>Склад</th>
                         <th>Статус</th>
-                        <th>Должность создателя</th>
                         <th>Дата создания</th>
                         <th>Действия</th>
                     </tr>
@@ -58,13 +57,6 @@
                                 <span class="badge active">Активно</span>
                             {% else %}
                                 <span class="badge inactive">Неактивно</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if employee.created_by_position %}
-                                <span class="position-badge">{{ employee.created_by_position.name }}</span>
-                            {% else %}
-                                <span class="text-muted">—</span>
                             {% endif %}
                         </td>
                         <td>{{ employee.created_at|date:"d.m.Y" }}</td>

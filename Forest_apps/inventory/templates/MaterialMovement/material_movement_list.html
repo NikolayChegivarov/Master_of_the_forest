@@ -154,7 +154,15 @@
                                 {% endif %}
                             </td>
                             <td>{{ movement.material.name }}</td>
-                            <td class="quantity-cell">{{ movement.quantity_display }}</td>
+                            <td class="quantity-cell">
+                                {{ movement.quantity_display }}
+                                <!-- Временная отладка -->
+                                <div style="font-size: 10px; color: #666; margin-top: 2px;">
+                                    (шт:{{ movement.quantity_pieces|default:'0' }},
+                                    м.п.:{{ movement.quantity_meters|default:'0' }},
+                                    м³:{{ movement.quantity_cubic|default:'0' }})
+                                </div>
+                            </td>
                             <td class="text-right amount-cell">
                                 {% if movement.total_amount %}
                                     {{ movement.total_amount|floatformat:2 }} ₽

@@ -39,7 +39,15 @@
                         <td>{{ movement.date_time|date:"d.m.Y H:i" }}</td>
                         <td>{{ movement.from_location.get_source_name|truncatechars:40 }}</td>
                         <td>{{ movement.material.name }}</td>
-                        <td>{{ movement.quantity_display }}</td>
+                        <td>
+                            {{ movement.quantity_display }}
+                            <!-- Временная отладка -->
+                            <small style="color: gray; display: block;">
+                                (шт:{{ movement.quantity_pieces|default:'0' }},
+                                м.п.:{{ movement.quantity_meters|default:'0' }},
+                                м³:{{ movement.quantity_cubic|default:'0' }})
+                            </small>
+                        </td>
                         <td>
                             {% if movement.author %}
                                 {{ movement.created_by.last_name }} {{ movement.created_by.first_name|first }}.

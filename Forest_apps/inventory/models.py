@@ -424,15 +424,26 @@ class MaterialMovement(models.Model):
             except StorageLocation.DoesNotExist:
                 pass
 
-        # ИСПРАВЛЕНО: 'author' → 'created_by'
         return cls.objects.filter(
             accounting_type='Отправление',
             to_location_id__in=user_locations,
             is_completed=False
         ).select_related(
             'from_location', 'to_location', 'material',
-            'created_by', 'created_by_position'  # <-- вместо 'author'
+            'created_by', 'created_by_position'
         )
+
+    @property
+    def quantity_display(self):
+        """Возвращает строковое представление количества материала"""
+        parts = []
+        if self.quantity_pieces and self.quantity_pieces > 0:
+            parts.append(f"{self.quantity_pieces} шт")
+        if self.quantity_meters and self.quantity_meters > 0:
+            parts.append(f"{self.quantity_meters} м.п.")
+        if self.quantity_cubic and self.quantity_cubic > 0:
+            parts.append(f"{self.quantity_cubic} м³")
+        return ", ".join(parts) if parts else "0"
 
 
 class MaterialBalance(models.Model):
@@ -675,11 +686,12 @@ class MaterialBalance(models.Model):
 
     @property
     def quantity_display(self):
+        """Возвращает строковое представление количества материала"""
         parts = []
-        if self.quantity_pieces:
+        if self.quantity_pieces and self.quantity_pieces > 0:
             parts.append(f"{self.quantity_pieces} шт")
-        if self.quantity_meters:
+        if self.quantity_meters and self.quantity_meters > 0:
             parts.append(f"{self.quantity_meters} м.п.")
-        if self.quantity_cubic:
+        if self.quantity_cubic and self.quantity_cubic > 0:
             parts.append(f"{self.quantity_cubic} м³")
         return ", ".join(parts) if parts else "0"

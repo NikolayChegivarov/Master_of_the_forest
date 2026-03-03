@@ -34,6 +34,12 @@ def material_movement_list_view(request):
         'created_by', 'created_by_position'
     ).order_by('-date_time')
 
+    # ВРЕМЕННАЯ ОТЛАДКА
+    print(f"Всего движений: {movements.count()}")
+    for m in movements:
+        print(f"Движение ID={m.id}: pieces={m.quantity_pieces}, meters={m.quantity_meters}, cubic={m.quantity_cubic}")
+        print(f"  quantity_display: '{m.quantity_display}'")
+
     # Фильтрация
     filter_form = MaterialMovementFilterForm(request.GET or None)
 
@@ -419,6 +425,11 @@ def material_movement_pending_shipments_view(request):
     """Список ожидающих отправлений для текущего пользователя"""
 
     movements = MaterialMovement.get_pending_shipments_for_user(request.user)
+
+    # Добавим print для отладки
+    for m in movements:
+        print(f"Movement {m.id}: pieces={m.quantity_pieces}, meters={m.quantity_meters}, cubic={m.quantity_cubic}")
+        print(f"  quantity_display: {m.quantity_display}")
 
     context = {
         'title': 'Ожидающие отправления',

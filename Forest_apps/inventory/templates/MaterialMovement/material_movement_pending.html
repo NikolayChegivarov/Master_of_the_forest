@@ -42,7 +42,7 @@
                         <td>{{ movement.quantity_display }}</td>
                         <td>
                             {% if movement.author %}
-                                {{ movement.author.last_name }} {{ movement.author.first_name|first }}.
+                                {{ movement.created_by.last_name }} {{ movement.created_by.first_name|first }}.
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}

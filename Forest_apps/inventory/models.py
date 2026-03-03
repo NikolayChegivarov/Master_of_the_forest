@@ -424,40 +424,15 @@ class MaterialMovement(models.Model):
             except StorageLocation.DoesNotExist:
                 pass
 
+        # ИСПРАВЛЕНО: 'author' → 'created_by'
         return cls.objects.filter(
             accounting_type='Отправление',
             to_location_id__in=user_locations,
             is_completed=False
-        ).select_related('from_location', 'to_location', 'material', 'author')
-
-    @classmethod
-    def get_pending_movements(cls):
-        """Получение всех невыполненных движений"""
-        return cls.objects.filter(is_completed=False).order_by('date_time')
-
-    @classmethod
-    def get_completed_movements(cls, start_date=None, end_date=None):
-        """Получение выполненных движений за период"""
-        queryset = cls.objects.filter(is_completed=True)
-
-        if start_date:
-            queryset = queryset.filter(date_time__gte=start_date)
-        if end_date:
-            queryset = queryset.filter(date_time__lte=end_date)
-
-        return queryset.order_by('-date_time')
-
-    @property
-    def quantity_display(self):
-        """Отображение количества в читаемом виде"""
-        parts = []
-        if self.quantity_pieces:
-            parts.append(f"{self.quantity_pieces} шт")
-        if self.quantity_meters:
-            parts.append(f"{self.quantity_meters} м.п.")
-        if self.quantity_cubic:
-            parts.append(f"{self.quantity_cubic} м³")
-        return ", ".join(parts) if parts else "0"
+        ).select_related(
+            'from_location', 'to_location', 'material',
+            'created_by', 'created_by_position'  # <-- вместо 'author'
+        )
 
 
 class MaterialBalance(models.Model):

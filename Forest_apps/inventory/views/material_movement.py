@@ -31,7 +31,7 @@ def material_movement_list_view(request):
         created_by_position_id=user_position_id
     ).select_related(
         'from_location', 'to_location', 'material', 'employee', 'vehicle',
-        'author', 'created_by_position'
+        'created_by', 'created_by_position'
     ).order_by('-date_time')
 
     # Фильтрация
@@ -198,7 +198,7 @@ def material_movement_detail_view(request, movement_id):
     movement = get_object_or_404(
         MaterialMovement.objects.select_related(
             'from_location', 'to_location', 'material', 'employee', 'vehicle',
-            'author', 'created_by_position'
+            'created_by', 'created_by_position'
         ),
         id=movement_id
     )

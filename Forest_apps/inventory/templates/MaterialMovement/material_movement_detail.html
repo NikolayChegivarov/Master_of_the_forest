@@ -106,7 +106,7 @@
                     <th>Автор:</th>
                     <td>
                         {% if movement.author %}
-                            {{ movement.author.last_name }} {{ movement.author.first_name }}
+                            {{ movement.created_by.last_name }} {{ movement.created_by.first_name }}
                         {% else %}
                             <span class="text-muted">—</span>
                         {% endif %}

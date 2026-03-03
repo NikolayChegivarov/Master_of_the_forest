@@ -11,7 +11,7 @@
         <h2>Новый материал</h2>
 
         <!-- Форма создания -->
-        <form method="post" action="{% url 'forestry:create_material' %}">
+        <form method="post" action="{% url 'forestry:material_create' %}">
             {% csrf_token %}
 
             <!-- Отображение ошибок формы (только ошибки, не success) -->

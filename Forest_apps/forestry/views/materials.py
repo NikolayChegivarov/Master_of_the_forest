@@ -6,7 +6,7 @@ from django.db.models import Q
 from Forest_apps.forestry.forms.material_forms import MaterialCreateForm, MaterialEditForm
 from Forest_apps.forestry.models import Material
 from Forest_apps.core.models import Position
-
+# from Forest_apps.forestry.forms.material import MaterialCreateForm, MaterialEditForm
 
 
 @login_required
@@ -22,7 +22,6 @@ def materials_view(request):
         position = Position.objects.get(name__iexact=user_position_name)
         user_position_id = position.id
     except Position.DoesNotExist:
-        # Если должность не найдена, показываем пустой список
         user_position_id = -1
 
     # Получаем материалы, созданные этой должностью
@@ -30,7 +29,7 @@ def materials_view(request):
         created_by_position_id=user_position_id
     ).select_related('created_by_position').order_by('material_type', 'name')
 
-    # Фильтрация по типу материала (если есть)
+    # Фильтрация по типу материала
     material_type = request.GET.get('type', '')
     if material_type:
         materials = materials.filter(material_type=material_type)
@@ -67,7 +66,7 @@ def material_create_view(request):
     """Создание нового материала"""
 
     if request.method == 'POST':
-        form = MaterialCreateForm(request.POST)  # 👈 ИСПРАВЛЕНО
+        form = MaterialCreateForm(request.POST)
         if form.is_valid():
             # Сохраняем материал
             material = form.save(commit=False)
@@ -81,7 +80,6 @@ def material_create_view(request):
                 position = Position.objects.get(name__iexact=position_name)
                 material.created_by_position = position
             except Position.DoesNotExist:
-                # Если должность не найдена, создаем
                 position, _ = Position.objects.get_or_create(
                     name=position_name,
                     defaults={'is_active': True}
@@ -97,7 +95,7 @@ def material_create_view(request):
 
             return redirect('forestry:materials')
     else:
-        form = MaterialCreateForm()  # 👈 ИСПРАВЛЕНО
+        form = MaterialCreateForm()
 
     context = {
         'title': 'Создание материала',
@@ -105,14 +103,14 @@ def material_create_view(request):
         'employee_name': request.session.get('employee_name'),
     }
 
-    return render(request, 'materials/material_create.html', context)
+    # ИСПРАВЛЕНО: create_material.html вместо material_create.html
+    return render(request, 'materials/create_material.html', context)
 
 
 @login_required
 def material_edit_view(request, material_id):
     """Редактирование материала (только для своей должности)"""
 
-    # Получаем должность текущего пользователя
     position_name = request.session.get('position_name')
     try:
         position = Position.objects.get(name__iexact=position_name)
@@ -120,7 +118,6 @@ def material_edit_view(request, material_id):
         messages.error(request, 'Ошибка определения должности')
         return redirect('forestry:materials')
 
-    # Получаем материал по ID и проверяем, что он создан этой должностью
     material = get_object_or_404(
         Material,
         id=material_id,
@@ -128,7 +125,7 @@ def material_edit_view(request, material_id):
     )
 
     if request.method == 'POST':
-        form = MaterialEditForm(request.POST, instance=material)  # 👈 ИСПРАВЛЕНО
+        form = MaterialEditForm(request.POST, instance=material)
         if form.is_valid():
             form.save()
             messages.success(
@@ -137,7 +134,7 @@ def material_edit_view(request, material_id):
             )
             return redirect('forestry:materials')
     else:
-        form = MaterialEditForm(instance=material)  # 👈 ИСПРАВЛЕНО
+        form = MaterialEditForm(instance=material)
 
     context = {
         'title': 'Редактирование материала',
@@ -146,14 +143,14 @@ def material_edit_view(request, material_id):
         'employee_name': request.session.get('employee_name'),
     }
 
-    return render(request, 'materials/material_edit.html', context)
+    # ИСПРАВЛЕНО: edit_material.html вместо material_edit.html
+    return render(request, 'materials/edit_material.html', context)
 
 
 @login_required
 def material_delete_view(request, material_id):
     """Удаление материала (только для своей должности)"""
 
-    # Получаем должность текущего пользователя
     position_name = request.session.get('position_name')
     try:
         position = Position.objects.get(name__iexact=position_name)
@@ -162,7 +159,6 @@ def material_delete_view(request, material_id):
         return redirect('forestry:materials')
 
     try:
-        # Проверяем, что материал создан этой должностью
         material = get_object_or_404(
             Material,
             id=material_id,

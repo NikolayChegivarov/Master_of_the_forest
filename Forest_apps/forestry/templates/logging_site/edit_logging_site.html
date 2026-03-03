@@ -1,14 +1,14 @@
-<!-- Forest_apps/forestry/templates/logging_site/edit_logging_site.html -->
+<!-- Forest_apps/forestry/templates/logging_site/create_logging_site.html -->
 {% extends "base.html" %}
 
-{% block title %}Редактирование лесосеки{% endblock %}
+{% block title %}Создание лесосеки{% endblock %}
 
-{% block header %}Редактирование лесосеки{% endblock %}
+{% block header %}Создание новой лесосеки{% endblock %}
 
 {% block content %}
-<div class="edit-container">
-    <div class="edit-form">
-        <h2>Редактирование: {{ cutting_area.full_address }}</h2>
+<div class="create-container">
+    <div class="create-form">
+        <h2>Новая лесосека</h2>
 
         <!-- Отображение сообщений -->
         {% if messages %}
@@ -19,8 +19,8 @@
             {% endfor %}
         {% endif %}
 
-        <!-- Форма редактирования -->
-        <form method="post" action="{% url 'forestry:edit_logging_site' cutting_area.id %}">
+        <!-- Форма создания -->
+        <form method="post" action="{% url 'forestry:create_logging_site' %}">
             {% csrf_token %}
 
             <!-- Отображение ошибок формы -->
@@ -56,6 +56,7 @@
                         {% endfor %}
                     </div>
                 {% endif %}
+                <small class="form-text text-muted">Введите номер квартала (например: 1, 2, 3...)</small>
             </div>
 
             <!-- Поле номера выдела -->
@@ -69,6 +70,7 @@
                         {% endfor %}
                     </div>
                 {% endif %}
+                <small class="form-text text-muted">Введите номер выдела (например: 1, 2, 3...)</small>
             </div>
 
             <!-- Поле площади -->
@@ -82,25 +84,12 @@
                         {% endfor %}
                     </div>
                 {% endif %}
-            </div>
-
-            <!-- Поле активности -->
-            <div class="form-group checkbox-group">
-                <label for="{{ form.is_active.id_for_label }}">
-                    {{ form.is_active }} {{ form.is_active.label }}
-                </label>
-                {% if form.is_active.errors %}
-                    <div class="field-error">
-                        {% for error in form.is_active.errors %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
-                {% endif %}
+                <small class="form-text text-muted">Введите площадь в гектарах (например: 5.5, 10.0)</small>
             </div>
 
             <!-- Кнопки -->
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                <button type="submit" class="btn btn-primary">Создать лесосеку</button>
                 <a href="{% url 'forestry:logging_site' %}" class="btn btn-secondary">Отмена</a>
             </div>
         </form>
@@ -108,7 +97,7 @@
 </div>
 
 <style>
-    .edit-container {
+    .create-container {
         display: flex;
         justify-content: center;
         align-items: center;
@@ -116,7 +105,7 @@
         padding: 20px;
     }
 
-    .edit-form {
+    .create-form {
         background: white;
         padding: 40px;
         border-radius: 16px;
@@ -125,7 +114,7 @@
         max-width: 500px;
     }
 
-    .edit-form h2 {
+    .create-form h2 {
         color: #2c5e2e;
         margin-bottom: 30px;
         text-align: center;
@@ -161,21 +150,11 @@
         border-color: #2c5e2e;
     }
 
-    .checkbox-group {
-        display: flex;
-        align-items: center;
-    }
-
-    .checkbox-group label {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        cursor: pointer;
-    }
-
-    .checkbox-group input[type="checkbox"] {
-        width: auto;
-        margin-right: 10px;
+    .form-text {
+        display: block;
+        margin-top: 5px;
+        font-size: 14px;
+        color: #666;
     }
 
     .field-error {
@@ -245,11 +224,11 @@
 
     /* Адаптация для мобильных */
     @media (max-width: 768px) {
-        .edit-form {
+        .create-form {
             padding: 30px 20px;
         }
 
-        .edit-form h2 {
+        .create-form h2 {
             font-size: 24px;
         }
 

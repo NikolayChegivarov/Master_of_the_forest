@@ -20,7 +20,7 @@
         {% endif %}
 
         <!-- Форма редактирования -->
-        <form method="post" action="{% url 'forestry:edit_material' material.id %}">
+        <form method="post" action="{% url 'forestry:material_edit' material.id %}">
             {% csrf_token %}
 
             <!-- Отображение ошибок формы -->

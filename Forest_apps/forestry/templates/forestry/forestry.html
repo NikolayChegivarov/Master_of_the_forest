@@ -60,8 +60,6 @@
         {% else %}
             <div class="empty-message">
                 <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного лесничества.</p>
-                <p class="text-muted">Создайте первое лесничество, чтобы начать работу.</p>
-                <a href="{% url 'forestry:create_forestry' %}" class="btn btn-primary">Создать лесничество</a>
             </div>
         {% endif %}
     </div>

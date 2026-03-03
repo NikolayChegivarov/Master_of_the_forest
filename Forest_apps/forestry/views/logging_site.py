@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.db.models import Q
 
 from Forest_apps.forestry.forms.logging_site_forms import CuttingAreaCreateForm, CuttingAreaEditForm
-from Forest_apps.forestry.models import CuttingArea, Forestry
+from Forest_apps.forestry.models import CuttingArea, Forestry, Material
 from Forest_apps.core.models import Position
 
 
@@ -101,7 +101,7 @@ def create_cutting_area_view(request):
         'employee_name': request.session.get('employee_name'),
     }
 
-    return render(request, 'logging_site/create_cutting_area.html', context)
+    return render(request, 'logging_site/create_logging_site.html', context)
 
 
 @login_required
@@ -142,7 +142,7 @@ def edit_cutting_area_view(request, area_id):
         'employee_name': request.session.get('employee_name'),
     }
 
-    return render(request, 'logging_site/edit_cutting_area.html', context)
+    return render(request, 'logging_site/edit_logging_site.html', context)
 
 
 @login_required
@@ -173,3 +173,142 @@ def deactivate_cutting_area_view(request, area_id):
         messages.error(request, str(e))
 
     return redirect('forestry:logging_site')
+
+
+@login_required
+def view_cutting_area_view(request, area_id):
+    """Просмотр содержимого лесосеки"""
+
+    # Получаем лесосеку
+    cutting_area = get_object_or_404(
+        CuttingArea.objects.select_related('forestry', 'created_by_position'),
+        id=area_id
+    )
+
+    # Получаем все материалы лесосеки
+    materials = cutting_area.get_all_materials()
+
+    # Получаем общее количество
+    total_quantity = cutting_area.get_total_materials_quantity()
+
+    context = {
+        'title': f'Лесосека: {cutting_area.full_address}',
+        'employee_name': request.session.get('employee_name'),
+        'cutting_area': cutting_area,
+        'materials': materials,
+        'total_quantity': total_quantity,
+    }
+
+    return render(request, 'logging_site/view_logging_site.html', context)
+
+
+@login_required
+def fill_cutting_area_view(request, area_id):
+    """Добавление материалов в лесосеку"""
+
+    cutting_area = get_object_or_404(CuttingArea, id=area_id)
+
+    if request.method == 'POST':
+        material_id = request.POST.get('material_id')
+        quantity = request.POST.get('quantity')
+
+        if material_id and quantity:
+            try:
+                quantity = float(quantity)
+                if quantity <= 0:
+                    messages.error(request, 'Количество должно быть больше 0')
+                else:
+                    result, created = cutting_area.update_material_quantity(material_id, quantity)
+                    if created:
+                        messages.success(request, 'Материал успешно добавлен в лесосеку!')
+                    else:
+                        messages.success(request, 'Количество материала успешно обновлено!')
+                    return redirect('forestry:view_logging_site', area_id=area_id)
+            except ValueError:
+                messages.error(request, 'Введите корректное число')
+        else:
+            messages.error(request, 'Заполните все поля')
+
+    # Получаем все материалы для выпадающего списка
+    materials = Material.objects.all().order_by('material_type', 'name')
+
+    context = {
+        'title': f'Добавление материала в {cutting_area.full_address}',
+        'employee_name': request.session.get('employee_name'),
+        'cutting_area': cutting_area,
+        'materials': materials,
+    }
+
+    return render(request, 'logging_site/fill_logging_site.html', context)
+
+
+@login_required
+def update_material_quantity_view(request, area_id, material_id):
+    """Обновление количества конкретного материала в лесосеке"""
+
+    cutting_area = get_object_or_404(CuttingArea, id=area_id)
+    material = get_object_or_404(Material, id=material_id)
+
+    # Получаем текущее количество
+    current_quantity = cutting_area.get_material_quantity(material_id)
+
+    if request.method == 'POST':
+        new_quantity = request.POST.get('quantity')
+
+        if new_quantity:
+            try:
+                new_quantity = float(new_quantity)
+                if new_quantity < 0:
+                    messages.error(request, 'Количество не может быть отрицательным')
+                elif new_quantity == 0:
+                    # Если 0 - удаляем материал
+                    cutting_area.remove_material(material_id)
+                    messages.success(request, f'Материал "{material.name}" удален из лесосеки')
+                    return redirect('forestry:view_logging_site', area_id=area_id)
+                else:
+                    # Обновляем количество
+                    result, created = cutting_area.update_material_quantity(material_id, new_quantity)
+                    messages.success(request, f'Количество материала "{material.name}" обновлено')
+                    return redirect('forestry:view_logging_site', area_id=area_id)
+            except ValueError:
+                messages.error(request, 'Введите корректное число')
+        else:
+            messages.error(request, 'Введите количество')
+
+    context = {
+        'title': f'Изменение количества: {material.name}',
+        'employee_name': request.session.get('employee_name'),
+        'cutting_area': cutting_area,
+        'material': material,
+        'current_quantity': current_quantity,
+    }
+
+    return render(request, 'logging_site/update_material_quantity.html', context)
+
+
+@login_required
+def remove_material_view(request, area_id, material_id):
+    """Удаление материала из лесосеки"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('forestry:logging_site')
+
+    # Получаем лесосеку и проверяем права
+    cutting_area = get_object_or_404(
+        CuttingArea,
+        id=area_id,
+        created_by_position=position
+    )
+
+    try:
+        cutting_area.remove_material(material_id)
+        messages.success(request, 'Материал успешно удален из лесосеки!')
+    except ValueError as e:
+        messages.error(request, str(e))
+
+    return redirect('forestry:view_logging_site', area_id=area_id)

@@ -14,7 +14,7 @@
 3. ЛЕСНИЧЕСТВА ЛЕСОСЕКИ МАТЕРИАЛЫ forestry
    - Material (Материал) ✅ 
    - Forestry (Лесничество) ✅ 
-   - CuttingArea (Лесосека) ✅ 
+   - LoggingSite (Лесосека) ✅ 
 
 4. МЕСТА ХРАНЕНИЯ, ДВИЖЕНИЯ, ОСТАТКИ inventory
    - StorageLocation (Место хранения) ✅ 

@@ -13,7 +13,7 @@ from Forest_apps.inventory.forms.material_movement import (
 
 @login_required
 def material_movement_list_view(request):
-    """Список движений материалов (только для должности пользователя)"""
+    """Список движений материалов (для должности пользователя как отправителя или получателя)"""
 
     # Получаем должность текущего пользователя из сессии
     user_position_name = request.session.get('position_name')
@@ -26,19 +26,47 @@ def material_movement_list_view(request):
     except Position.DoesNotExist:
         user_position_id = -1
 
-    # Базовый запрос - только движения, созданные этой должностью
+    # Получаем ID мест хранения, принадлежащих этой должности
+    from Forest_apps.inventory.models import StorageLocation
+    from Forest_apps.core.models import Warehouse, Brigade, Vehicle
+
+    user_location_ids = []
+
+    # Склады, созданные должностью
+    warehouses = Warehouse.objects.filter(created_by_position_id=user_position_id)
+    for wh in warehouses:
+        try:
+            location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
+            user_location_ids.append(location.id)
+        except StorageLocation.DoesNotExist:
+            pass
+
+    # Бригады, созданные должностью
+    brigades = Brigade.objects.filter(created_by_position_id=user_position_id)
+    for br in brigades:
+        try:
+            location = StorageLocation.objects.get(source_type='бригады', source_id=br.id)
+            user_location_ids.append(location.id)
+        except StorageLocation.DoesNotExist:
+            pass
+
+    # Транспорт, созданный должностью
+    vehicles = Vehicle.objects.filter(created_by_position_id=user_position_id)
+    for vh in vehicles:
+        try:
+            location = StorageLocation.objects.get(source_type='автомобиль', source_id=vh.id)
+            user_location_ids.append(location.id)
+        except StorageLocation.DoesNotExist:
+            pass
+
+    # Базовый запрос - движения, где должность является отправителем ИЛИ получателем
     movements = MaterialMovement.objects.filter(
-        created_by_position_id=user_position_id
+        Q(from_location_id__in=user_location_ids) |  # должность - отправитель
+        Q(to_location_id__in=user_location_ids)  # должность - получатель
     ).select_related(
         'from_location', 'to_location', 'material', 'employee', 'vehicle',
         'created_by', 'created_by_position'
     ).order_by('-date_time')
-
-    # ВРЕМЕННАЯ ОТЛАДКА
-    print(f"Всего движений: {movements.count()}")
-    for m in movements:
-        print(f"Движение ID={m.id}: pieces={m.quantity_pieces}, meters={m.quantity_meters}, cubic={m.quantity_cubic}")
-        print(f"  quantity_display: '{m.quantity_display}'")
 
     # Фильтрация
     filter_form = MaterialMovementFilterForm(request.GET or None)
@@ -84,31 +112,7 @@ def material_movement_list_view(request):
             )
 
     # Получаем ID мест хранения текущего пользователя для проверки прав на подтверждение
-    user_locations = []
-
-    warehouses = Warehouse.objects.filter(created_by=request.user)
-    for wh in warehouses:
-        try:
-            location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
-            user_locations.append(location.id)
-        except StorageLocation.DoesNotExist:
-            pass
-
-    brigades = Brigade.objects.filter(created_by=request.user)
-    for br in brigades:
-        try:
-            location = StorageLocation.objects.get(source_type='бригады', source_id=br.id)
-            user_locations.append(location.id)
-        except StorageLocation.DoesNotExist:
-            pass
-
-    vehicles = Vehicle.objects.filter(created_by=request.user)
-    for vh in vehicles:
-        try:
-            location = StorageLocation.objects.get(source_type='автомобиль', source_id=vh.id)
-            user_locations.append(location.id)
-        except StorageLocation.DoesNotExist:
-            pass
+    user_locations = user_location_ids  # используем тот же список
 
     # Подсчет ожидающих отправлений для текущего пользователя
     pending_shipments_count = MaterialMovement.get_pending_shipments_for_user(request.user).count()

@@ -213,10 +213,14 @@ def material_movement_detail_view(request, movement_id):
         id=movement_id
     )
 
+    # Определяем роль текущего пользователя
+    user_role = movement.get_user_role(request.user)
+
     context = {
         'title': f'Движение №{movement.id}',
         'employee_name': request.session.get('employee_name'),
         'movement': movement,
+        'user_role': user_role,  # 'sender', 'receiver', или 'none'
     }
 
     return render(request, 'MaterialMovement/material_movement_detail.html', context)
@@ -224,7 +228,7 @@ def material_movement_detail_view(request, movement_id):
 
 @login_required
 def material_movement_edit_view(request, movement_id):
-    """Редактирование движения (только для своей должности)"""
+    """Редактирование движения (только для своей должности и только невыполненных)"""
 
     # Получаем должность текущего пользователя
     position_name = request.session.get('position_name')
@@ -240,9 +244,17 @@ def material_movement_edit_view(request, movement_id):
         created_by_position=position
     )
 
+    # Проверка на выполненное движение
     if movement.is_completed:
         messages.error(request, 'Нельзя редактировать выполненное движение')
         return redirect('inventory:material_movement_detail', movement_id=movement.id)
+
+    # Для отправлений проверяем, что пользователь - отправитель
+    if movement.accounting_type == 'Отправление':
+        user_role = movement.get_user_role(request.user)
+        if user_role != 'sender':
+            messages.error(request, 'Только отправитель может редактировать это движение')
+            return redirect('inventory:material_movement_detail', movement_id=movement.id)
 
     if request.method == 'POST':
         form = MaterialMovementCreateForm(request.POST, instance=movement, user=request.user)
@@ -368,7 +380,7 @@ def material_movement_cancel_view(request, movement_id):
 
 @login_required
 def material_movement_confirm_shipment_view(request, movement_id):
-    """Подтверждение получения отправления"""
+    """Подтверждение получения отправления (только для получателя)"""
 
     try:
         movement = get_object_or_404(MaterialMovement, id=movement_id)
@@ -381,35 +393,10 @@ def material_movement_confirm_shipment_view(request, movement_id):
             messages.error(request, 'Отправление уже подтверждено')
             return redirect('inventory:material_movement_list')
 
-        # Проверяем, что получатель - место хранения текущего пользователя
-        user_locations = []
-
-        warehouses = Warehouse.objects.filter(created_by=request.user)
-        for wh in warehouses:
-            try:
-                location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
-                user_locations.append(location.id)
-            except StorageLocation.DoesNotExist:
-                pass
-
-        brigades = Brigade.objects.filter(created_by=request.user)
-        for br in brigades:
-            try:
-                location = StorageLocation.objects.get(source_type='бригады', source_id=br.id)
-                user_locations.append(location.id)
-            except StorageLocation.DoesNotExist:
-                pass
-
-        vehicles = Vehicle.objects.filter(created_by=request.user)
-        for vh in vehicles:
-            try:
-                location = StorageLocation.objects.get(source_type='автомобиль', source_id=vh.id)
-                user_locations.append(location.id)
-            except StorageLocation.DoesNotExist:
-                pass
-
-        if movement.to_location.id not in user_locations:
-            messages.error(request, 'Вы не можете подтвердить это отправление')
+        # Проверяем, что пользователь - получатель
+        user_role = movement.get_user_role(request.user)
+        if user_role != 'receiver':
+            messages.error(request, 'Только получатель может подтвердить это отправление')
             return redirect('inventory:material_movement_list')
 
         # Подтверждаем получение

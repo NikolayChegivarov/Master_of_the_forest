@@ -445,6 +445,56 @@ class MaterialMovement(models.Model):
             parts.append(f"{self.quantity_cubic} м³")
         return ", ".join(parts) if parts else "0"
 
+    def get_user_role(self, user):
+        """Определяет роль пользователя для данного движения"""
+        from Forest_apps.core.models import Warehouse, Brigade, Vehicle
+        from Forest_apps.inventory.models import StorageLocation
+
+        # Определяем должность пользователя
+        from Forest_apps.core.models import Position
+        position_name = None
+        if hasattr(user, 'session') and user.is_authenticated:
+            # В реальном коде нужно получать должность из сессии
+            # Это упрощенный вариант
+            pass
+
+        # Проверяем, является ли пользователь отправителем (владелец from_location)
+        try:
+            if self.from_location.source_type == 'склад':
+                warehouse = Warehouse.objects.get(id=self.from_location.source_id)
+                if warehouse.created_by == user:
+                    return 'sender'
+            elif self.from_location.source_type == 'бригады':
+                brigade = Brigade.objects.get(id=self.from_location.source_id)
+                if brigade.created_by == user:
+                    return 'sender'
+            elif self.from_location.source_type == 'автомобиль':
+                vehicle = Vehicle.objects.get(id=self.from_location.source_id)
+                if vehicle.created_by == user:
+                    return 'sender'
+        except:
+            pass
+
+        # Проверяем, является ли пользователь получателем (владелец to_location)
+        if self.to_location:
+            try:
+                if self.to_location.source_type == 'склад':
+                    warehouse = Warehouse.objects.get(id=self.to_location.source_id)
+                    if warehouse.created_by == user:
+                        return 'receiver'
+                elif self.to_location.source_type == 'бригады':
+                    brigade = Brigade.objects.get(id=self.to_location.source_id)
+                    if brigade.created_by == user:
+                        return 'receiver'
+                elif self.to_location.source_type == 'автомобиль':
+                    vehicle = Vehicle.objects.get(id=self.to_location.source_id)
+                    if vehicle.created_by == user:
+                        return 'receiver'
+            except:
+                pass
+
+        return 'none'
+
 
 class MaterialBalance(models.Model):
     """Остатки материалов (без цены)"""

@@ -559,7 +559,8 @@ class MaterialBalance(models.Model):
                 material=movement.material,
                 quantity_pieces=movement.quantity_pieces,
                 quantity_meters=movement.quantity_meters,
-                quantity_cubic=movement.quantity_cubic
+                quantity_cubic=movement.quantity_cubic,
+                created_by_position = movement.created_by_position
             )
 
         return from_balance, to_balance
@@ -596,7 +597,7 @@ class MaterialBalance(models.Model):
 
     @classmethod
     def _add_to_balance(cls, storage_location, material, quantity_pieces=0,
-                        quantity_meters=None, quantity_cubic=None):
+                        quantity_meters=None, quantity_cubic=None, created_by_position=None):
         try:
             balance = cls.objects.get(
                 storage_location=storage_location,
@@ -619,7 +620,8 @@ class MaterialBalance(models.Model):
                 material=material,
                 quantity_pieces=quantity_pieces,
                 quantity_meters=quantity_meters,
-                quantity_cubic=quantity_cubic
+                quantity_cubic=quantity_cubic,
+                created_by_position=created_by_position  # Добавляем должность создателя
             )
             created = True
 

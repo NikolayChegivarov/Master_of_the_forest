@@ -13,7 +13,7 @@ from Forest_apps.inventory.forms.material_balance import (
 
 @login_required
 def material_balance_list_view(request):
-    """Список остатков материалов (только для должности пользователя)"""
+    """Список остатков материалов (остатки на складах должности пользователя)"""
 
     # Получаем должность текущего пользователя из сессии
     user_position_name = request.session.get('position_name')
@@ -24,12 +24,44 @@ def material_balance_list_view(request):
         position = Position.objects.get(name__iexact=user_position_name)
         user_position_id = position.id
     except Position.DoesNotExist:
-        # Если должность не найдена, показываем пустой список
         user_position_id = -1
 
-    # Базовый запрос - только остатки, созданные этой должностью
+    # Получаем ВСЕ места хранения, принадлежащие этой должности
+    from Forest_apps.inventory.models import StorageLocation
+
+    # Находим все ID мест хранения, созданные этой должностью
+    user_storage_location_ids = []
+
+    # Склады, созданные этой должностью
+    warehouses = Warehouse.objects.filter(created_by_position_id=user_position_id)
+    for wh in warehouses:
+        try:
+            location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
+            user_storage_location_ids.append(location.id)
+        except StorageLocation.DoesNotExist:
+            pass
+
+    # Бригады, созданные этой должностью
+    brigades = Brigade.objects.filter(created_by_position_id=user_position_id)
+    for br in brigades:
+        try:
+            location = StorageLocation.objects.get(source_type='бригады', source_id=br.id)
+            user_storage_location_ids.append(location.id)
+        except StorageLocation.DoesNotExist:
+            pass
+
+    # Транспорт, созданный этой должностью
+    vehicles = Vehicle.objects.filter(created_by_position_id=user_position_id)
+    for vh in vehicles:
+        try:
+            location = StorageLocation.objects.get(source_type='автомобиль', source_id=vh.id)
+            user_storage_location_ids.append(location.id)
+        except StorageLocation.DoesNotExist:
+            pass
+
+    # Базовый запрос - все остатки на местах хранения этой должности
     balances = MaterialBalance.objects.filter(
-        created_by_position_id=user_position_id
+        storage_location_id__in=user_storage_location_ids
     ).select_related(
         'storage_location', 'material', 'created_by_position'
     ).order_by('storage_location__source_type', 'material__material_type', 'material__name')
@@ -59,9 +91,9 @@ def material_balance_list_view(request):
             )
 
     # Получаем ID мест хранения текущего пользователя для проверки прав на редактирование
-    user_warehouses = Warehouse.objects.filter(created_by=request.user).values_list('id', flat=True)
-    user_brigades = Brigade.objects.filter(created_by=request.user).values_list('id', flat=True)
-    user_vehicles = Vehicle.objects.filter(created_by=request.user).values_list('id', flat=True)
+    user_warehouses = Warehouse.objects.filter(created_by_position_id=user_position_id).values_list('id', flat=True)
+    user_brigades = Brigade.objects.filter(created_by_position_id=user_position_id).values_list('id', flat=True)
+    user_vehicles = Vehicle.objects.filter(created_by_position_id=user_position_id).values_list('id', flat=True)
 
     # Преобразуем в списки для удобства проверки в шаблоне
     user_warehouses = list(user_warehouses)

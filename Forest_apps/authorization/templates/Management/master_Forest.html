@@ -123,11 +123,17 @@
             </div>
         </a>
 
-        <!-- Пустой элемент для сохранения сетки (невидимый) -->
-        <div class="dashboard-card" style="visibility: hidden;"></div>
+        <!-- Кнопка Должности (НОВАЯ) -->
+        <a href="{% url 'core:position_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">👤</div>
+                <div class="card-title">Должности</div>
+                <div class="card-description">Управление должностями</div>
+            </div>
+        </a>
     </div>
 
-    <!-- Пятый ряд кнопок (Транспорт и Контрагенты) -->
+    <!-- Пятый ряд кнопок (Транспорт, Контрагенты, Сотрудники) -->
     <div class="dashboard-row">
         <!-- Кнопка Транспорт -->
         <a href="{% url 'core:vehicle_list' %}" class="dashboard-card">
@@ -147,7 +153,29 @@
             </div>
         </a>
 
-        <!-- Пустой элемент для сохранения сетки (невидимый) -->
+        <!-- Кнопка Сотрудники (НОВАЯ) -->
+        <a href="{% url 'employees:employee_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">👥</div>
+                <div class="card-title">Сотрудники</div>
+                <div class="card-description">Управление персоналом</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Шестой ряд кнопок (резервная кнопка) -->
+    <div class="dashboard-row">
+        <!-- Резервная кнопка "Скоро" (НОВАЯ) -->
+        <div class="dashboard-card disabled">
+            <div class="card-content">
+                <div class="card-icon">⏳</div>
+                <div class="card-title">Скоро</div>
+                <div class="card-description">Дополнительный функционал</div>
+            </div>
+        </div>
+
+        <!-- Пустые элементы для сохранения сетки (невидимые) -->
+        <div class="dashboard-card" style="visibility: hidden;"></div>
         <div class="dashboard-card" style="visibility: hidden;"></div>
     </div>
 </div>
@@ -213,6 +241,12 @@
 
     .dashboard-card.placeholder:hover .card-content {
         background: linear-gradient(145deg, #5a7e5c, #3a5a3c);
+    }
+
+    .dashboard-card.disabled:hover .card-content {
+        transform: none;
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        background: linear-gradient(145deg, #6c757d, #495057);
     }
 
     .card-icon {

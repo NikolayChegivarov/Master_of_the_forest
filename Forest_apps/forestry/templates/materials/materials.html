@@ -106,7 +106,6 @@
                 {% else %}
                     <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного материала.</p>
                     <p class="text-muted">Создайте первый материал, чтобы начать работу.</p>
-                    <a href="{% url 'forestry:material_create' %}" class="btn btn-primary">Создать материал</a>
                 {% endif %}
             </div>
         {% endif %}

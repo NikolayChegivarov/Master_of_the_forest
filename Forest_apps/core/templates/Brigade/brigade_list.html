@@ -69,7 +69,6 @@
             <div class="empty-message">
                 <p>У {{ position_name|default:"вашей должности" }} пока нет ни одной бригады.</p>
                 <p class="text-muted">Создайте первую бригаду, чтобы начать работу.</p>
-                <a href="{% url 'core:brigade_create' %}" class="btn btn-primary">Создать бригаду</a>
             </div>
         {% endif %}
     </div>

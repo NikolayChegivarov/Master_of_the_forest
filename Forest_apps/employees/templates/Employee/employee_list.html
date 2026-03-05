@@ -80,7 +80,6 @@
                 {% else %}
                     <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного сотрудника.</p>
                     <p class="text-muted">Наймите первого сотрудника, чтобы начать работу.</p>
-                    <a href="{% url 'employees:employee_create' %}" class="btn btn-primary">Нанять сотрудника</a>
                 {% endif %}
             </div>
         {% endif %}

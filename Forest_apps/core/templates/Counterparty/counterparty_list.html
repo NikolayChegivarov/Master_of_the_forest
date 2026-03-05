@@ -67,7 +67,6 @@
             <div class="empty-message">
                 <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного контрагента.</p>
                 <p class="text-muted">Создайте первого контрагента, чтобы начать работу.</p>
-                <a href="{% url 'core:counterparty_create' %}" class="btn btn-primary">Создать контрагента</a>
             </div>
         {% endif %}
     </div>

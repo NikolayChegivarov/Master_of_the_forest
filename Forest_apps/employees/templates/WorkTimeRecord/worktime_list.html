@@ -56,7 +56,6 @@
                 <a href="{% url 'employees:worktime_list' %}" class="btn btn-secondary">Сбросить фильтры</a>
             {% else %}
                 <p>У {{ position_name|default:"вашей должности" }} пока нет ни одной записи о рабочем времени.</p>
-                <a href="{% url 'employees:worktime_create' %}" class="btn btn-primary">Добавить первую запись</a>
             {% endif %}
         </div>
     {% endif %}

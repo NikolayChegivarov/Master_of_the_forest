@@ -120,8 +120,8 @@
                             <th class="text-right">Штуки</th>
                             <th class="text-right">П.м.</th>
                             <th class="text-right">м³</th>
-                            <th>Должность создателя</th>
                             <th class="text-center">Действия</th>
+                            <th>Должность создателя</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -146,13 +146,6 @@
                             <td class="text-right quantity-cell">{{ balance.quantity_pieces|floatformat:1|default:"-" }}</td>
                             <td class="text-right quantity-cell">{{ balance.quantity_meters|floatformat:1|default:"-" }}</td>
                             <td class="text-right quantity-cell">{{ balance.quantity_cubic|floatformat:1|default:"-" }}</td>
-                            <td>
-                                {% if balance.created_by_position %}
-                                    <span class="position-badge">{{ balance.created_by_position.name }}</span>
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
                                     <a href="{% url 'inventory:material_balance_detail' balance.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
@@ -174,6 +167,13 @@
                                         {% endif %}
                                     {% endwith %}
                                 </div>
+                            </td>
+                            <td>
+                                {% if balance.created_by_position %}
+                                    <span class="position-badge">{{ balance.created_by_position.name }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -541,6 +541,10 @@
         text-align: right;
     }
 
+    .text-center {
+        text-align: center;
+    }
+
     .quantity-cell {
         font-weight: 500;
         white-space: nowrap;
@@ -548,6 +552,7 @@
 
     .actions-cell {
         min-width: 120px;
+        text-align: center;
     }
 
     .action-buttons-group {
@@ -659,6 +664,10 @@
 
     .btn-secondary:hover {
         background: #5a6268;
+    }
+
+    .text-muted {
+        color: #6c757d;
     }
 
     @media (max-width: 768px) {

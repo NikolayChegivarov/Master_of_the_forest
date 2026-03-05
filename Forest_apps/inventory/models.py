@@ -556,12 +556,12 @@ class MaterialBalance(models.Model):
     class Meta:
         verbose_name = 'Остаток материала'
         verbose_name_plural = 'Остатки материалов'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['storage_location', 'material'],
-                name='unique_material_balance'
-            )
-        ]
+        # constraints = [
+        #     models.UniqueConstraint(
+        #         fields=['storage_location', 'material'],
+        #         name='unique_material_balance'
+        #     )
+        # ]
         indexes = [
             models.Index(fields=['storage_location', 'material']),
             models.Index(fields=['material', 'storage_location']),

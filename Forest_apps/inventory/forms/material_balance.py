@@ -1,6 +1,50 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from Forest_apps.inventory.models import MaterialBalance, StorageLocation
 from Forest_apps.forestry.models import Material
+from Forest_apps.core.models import Warehouse, Brigade, Vehicle
+
+
+class MaterialBalanceFilterForm(forms.Form):
+    """Форма фильтрации остатков материалов"""
+    storage_location = forms.ModelChoiceField(
+        queryset=StorageLocation.objects.all().order_by('source_type'),
+        required=False,
+        label='Место хранения',
+        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
+    )
+
+    material_type = forms.ChoiceField(
+        choices=[('', 'Все типы')] + Material.MATERIAL_TYPE_CHOICES,
+        required=False,
+        label='Тип материала',
+        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
+    )
+
+    material = forms.ModelChoiceField(
+        queryset=Material.objects.all().order_by('name'),
+        required=False,
+        label='Материал',
+        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
+    )
+
+    search = forms.CharField(
+        required=False,
+        label='Поиск',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Поиск по названию...'
+        })
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Если выбран тип материала, фильтруем материалы по типу
+        if self.data.get('material_type'):
+            self.fields['material'].queryset = Material.objects.filter(
+                material_type=self.data.get('material_type')
+            ).order_by('name')
 
 
 class MaterialBalanceCreateForm(forms.ModelForm):
@@ -46,6 +90,7 @@ class MaterialBalanceCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
+        self.instance = kwargs.get('instance', None)
         super().__init__(*args, **kwargs)
 
         # Получаем все места хранения
@@ -98,36 +143,49 @@ class MaterialBalanceCreateForm(forms.ModelForm):
 
         return cleaned_data
 
+    def validate_unique(self):
+        """
+        Переопределяем метод validate_unique, чтобы отключить стандартную
+        проверку уникальности для пары (storage_location, material)
+        """
+        try:
+            self.instance.validate_unique()
+        except ValidationError as e:
+            # Игнорируем ошибку уникальности для нашей пары полей
+            if 'unique_material_balance' in e.error_dict:
+                # Удаляем эту ошибку из списка
+                pass
+            else:
+                # Если есть другие ошибки - пробрасываем их
+                raise e
 
-class MaterialBalanceFilterForm(forms.Form):
-    """Форма для фильтрации остатков"""
+    def save(self, commit=True):
+        """
+        Переопределяем метод save, чтобы вместо создания нового остатка
+        обновлять существующий, если он уже есть
+        """
+        storage_location = self.cleaned_data['storage_location']
+        material = self.cleaned_data['material']
 
-    storage_location = forms.ModelChoiceField(
-        label='Место хранения',
-        required=False,
-        queryset=StorageLocation.objects.all(),
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
+        # Пытаемся найти существующий остаток
+        try:
+            existing_balance = MaterialBalance.objects.get(
+                storage_location=storage_location,
+                material=material
+            )
 
-    material_type = forms.ChoiceField(
-        label='Тип материала',
-        required=False,
-        choices=[('', 'Все типы')] + Material.MATERIAL_TYPE_CHOICES,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
+            # Если нашли существующий, обновляем его поля
+            existing_balance.quantity_pieces += self.cleaned_data.get('quantity_pieces', 0) or 0
+            existing_balance.quantity_meters = (existing_balance.quantity_meters or 0) + (
+                        self.cleaned_data.get('quantity_meters', 0) or 0)
+            existing_balance.quantity_cubic = (existing_balance.quantity_cubic or 0) + (
+                        self.cleaned_data.get('quantity_cubic', 0) or 0)
 
-    material = forms.ModelChoiceField(
-        label='Материал',
-        required=False,
-        queryset=Material.objects.all(),
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
+            if commit:
+                existing_balance.save()
 
-    search = forms.CharField(
-        label='Поиск',
-        required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Поиск по материалу или месту...'
-        })
-    )
+            return existing_balance
+
+        except MaterialBalance.DoesNotExist:
+            # Если не нашли, создаем новый
+            return super().save(commit=commit)

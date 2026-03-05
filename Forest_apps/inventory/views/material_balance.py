@@ -9,6 +9,7 @@ from Forest_apps.inventory.forms.material_balance import (
     MaterialBalanceCreateForm,
     MaterialBalanceFilterForm
 )
+from decimal import Decimal
 
 
 @login_required
@@ -133,36 +134,46 @@ def material_balance_list_view(request):
 
 @login_required
 def material_balance_create_view(request):
-    """Создание нового остатка материала (только на свои места хранения)"""
+    """Создание нового остатка материала (или добавление к существующему)"""
 
     if request.method == 'POST':
         form = MaterialBalanceCreateForm(request.POST, user=request.user)
         if form.is_valid():
-            # Сохраняем остаток
+            # Сохраняем остаток (форма сама решит - создать новый или обновить существующий)
             balance = form.save(commit=False)
 
-            # Добавляем создателя (пользователя)
-            balance.created_by = request.user
+            # Добавляем создателя (пользователя) только для нового объекта
+            if not balance.pk:  # Это новый объект
+                balance.created_by = request.user
 
-            # Добавляем должность создателя
-            position_name = request.session.get('position_name')
-            try:
-                position = Position.objects.get(name__iexact=position_name)
-                balance.created_by_position = position
-            except Position.DoesNotExist:
-                # Если должность не найдена, создаем
-                position, _ = Position.objects.get_or_create(
-                    name=position_name,
-                    defaults={'is_active': True}
+                # Добавляем должность создателя
+                position_name = request.session.get('position_name')
+                try:
+                    position = Position.objects.get(name__iexact=position_name)
+                    balance.created_by_position = position
+                except Position.DoesNotExist:
+                    # Если должность не найдена, создаем
+                    position, _ = Position.objects.get_or_create(
+                        name=position_name,
+                        defaults={'is_active': True}
+                    )
+                    balance.created_by_position = position
+
+                balance.save()
+
+                messages.success(
+                    request,
+                    f'✅ Остаток создан: {balance.material.name} на {balance.storage_location.get_source_name()}. '
+                    f'Количество: {balance.quantity_display}'
                 )
-                balance.created_by_position = position
-
-            balance.save()
-
-            messages.success(
-                request,
-                f'Остаток для {balance.material.name} на {balance.storage_location.get_source_name()} успешно создан!'
-            )
+            else:
+                # Это существующий объект, который мы обновили
+                balance.save()
+                messages.success(
+                    request,
+                    f'✅ Остаток пополнен: {balance.material.name} на {balance.storage_location.get_source_name()}. '
+                    f'Теперь: {balance.quantity_display}'
+                )
 
             return redirect('inventory:material_balance_list')
         else:
@@ -179,7 +190,7 @@ def material_balance_create_view(request):
         if form.fields['storage_location'].queryset.count() == 0:
             messages.warning(
                 request,
-                'У вас нет мест хранения (складов, ТС, бригад), на которые можно создать остаток. Сначала создайте их в соответствующих разделах.'
+                '⚠️ У вас нет мест хранения (складов, ТС, бригад), на которые можно создать остаток. Сначала создайте их в соответствующих разделах.'
             )
 
     context = {

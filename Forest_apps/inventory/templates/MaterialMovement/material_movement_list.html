@@ -11,15 +11,15 @@
     <div class="create-buttons-row">
         <div class="create-button-container">
             <a href="{% url 'inventory:material_movement_create' %}" class="create-button">
-                <span class="create-icon">🔄</span>
+                <span class="create-icon">📤</span>
                 <span class="create-text">Создать движение</span>
             </a>
         </div>
 
         <div class="create-button-container">
             <a href="{% url 'inventory:material_movement_pending_shipments' %}" class="create-button pending-button">
-                <span class="create-icon">📦</span>
-                <span class="create-text">Отправления материалов</span>
+                <span class="create-icon">📥</span>
+                <span class="create-text">Получение материалов</span>
                 {% if pending_shipments_count > 0 %}
                     <span class="pending-badge">{{ pending_shipments_count }}</span>
                 {% endif %}

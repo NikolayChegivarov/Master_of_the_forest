@@ -65,7 +65,6 @@
             <div class="empty-message">
                 <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного транспортного средства.</p>
                 <p class="text-muted">Добавьте первое ТС, чтобы начать работу.</p>
-                <a href="{% url 'core:vehicle_create' %}" class="btn btn-primary">Добавить ТС</a>
             </div>
         {% endif %}
     </div>

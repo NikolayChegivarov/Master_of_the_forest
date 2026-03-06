@@ -437,21 +437,11 @@ def get_locations_by_type(request):
     movement_type = request.GET.get('type')
     user = request.user
 
-    print(f"\n=== API CALL START ===")
-    print(f"movement_type: {movement_type}")
-    print(f"user: {user} (ID: {user.id})")
-
     if not movement_type:
         return JsonResponse({'from_locations': [], 'to_locations': []})
 
     # Получаем ID мест пользователя
     user_location_ids = _get_user_location_ids(user)
-
-    # Получаем все места хранения для отладки
-    all_locations = StorageLocation.objects.all()
-    print(f"\nAll locations in database:")
-    for loc in all_locations:
-        print(f"  ID: {loc.id}, Type: {loc.source_type}, Source ID: {loc.source_id}, Name: {loc.get_source_name()}")
 
     # Базовый queryset
     from_locations = StorageLocation.objects.none()
@@ -473,36 +463,21 @@ def get_locations_by_type(request):
         from_locations = StorageLocation.objects.filter(id__in=user_location_ids)
         to_locations = StorageLocation.objects.filter(source_type__in=['бригады', 'автомобиль'])
 
-    # Применяем distinct и сортировку
+    # Убираем дубликаты и сортируем
     from_locations = from_locations.distinct().order_by('source_type')
     to_locations = to_locations.distinct().order_by('source_type')
-
-    # Преобразуем в список для проверки
-    from_list = list(from_locations)
-    to_list = list(to_locations)
-
-    print(f"\nfrom_locations count: {len(from_list)}")
-    for loc in from_list:
-        print(f"  from: {loc.id} - {loc.get_source_name()}")
-
-    print(f"to_locations count: {len(to_list)}")
-    for loc in to_list:
-        print(f"  to: {loc.id} - {loc.get_source_name()}")
 
     # Форматируем ответ
     data = {
         'from_locations': [
             {'id': loc.id, 'name': loc.get_source_name()}
-            for loc in from_list
+            for loc in from_locations
         ],
         'to_locations': [
             {'id': loc.id, 'name': loc.get_source_name()}
-            for loc in to_list
+            for loc in to_locations
         ]
     }
-
-    print(f"\nResponse data: {data}")
-    print("=== API CALL END ===\n")
 
     return JsonResponse(data)
 
@@ -517,45 +492,31 @@ def _get_user_location_ids(user):
 
     user_location_ids = []
 
-    print(f"=== Getting user locations for user: {user} (ID: {user.id}) ===")
-
     # Склады, созданные пользователем
     warehouses = Warehouse.objects.filter(created_by=user)
-    print(f"Warehouses count: {warehouses.count()}")
     for wh in warehouses:
-        print(f"  Warehouse: {wh.id} - {wh.name}, created_by: {wh.created_by_id}")
         try:
             location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
             user_location_ids.append(location.id)
-            print(f"    -> Added location: {location.id} - {location.get_source_name()}")
         except StorageLocation.DoesNotExist:
-            print(f"    -> StorageLocation not found for warehouse {wh.id}")
+            pass
 
     # Бригады, созданные пользователем
     brigades = Brigade.objects.filter(created_by=user)
-    print(f"Brigades count: {brigades.count()}")
     for br in brigades:
-        print(f"  Brigade: {br.id} - {br.name}, created_by: {br.created_by_id}")
         try:
             location = StorageLocation.objects.get(source_type='бригады', source_id=br.id)
             user_location_ids.append(location.id)
-            print(f"    -> Added location: {location.id} - {location.get_source_name()}")
         except StorageLocation.DoesNotExist:
-            print(f"    -> StorageLocation not found for brigade {br.id}")
+            pass
 
     # Транспорт, созданный пользователем
     vehicles = Vehicle.objects.filter(created_by=user)
-    print(f"Vehicles count: {vehicles.count()}")
     for vh in vehicles:
-        print(f"  Vehicle: {vh.id} - {vh.brand} {vh.model}, created_by: {vh.created_by_id}")
         try:
             location = StorageLocation.objects.get(source_type='автомобиль', source_id=vh.id)
             user_location_ids.append(location.id)
-            print(f"    -> Added location: {location.id} - {location.get_source_name()}")
         except StorageLocation.DoesNotExist:
-            print(f"    -> StorageLocation not found for vehicle {vh.id}")
-
-    print(f"Final user_location_ids: {user_location_ids}")
-    print("=== END Getting user locations ===")
+            pass
 
     return user_location_ids

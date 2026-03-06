@@ -36,4 +36,7 @@ urlpatterns = [
          name='material_movement_confirm'),
     path('movements/pending-shipments/', material_movement.material_movement_pending_shipments_view,
          name='material_movement_pending_shipments'),
+
+    # API для динамической загрузки мест хранения
+    path('api/locations-by-type/', material_movement.get_locations_by_type, name='api_locations_by_type'),
 ]

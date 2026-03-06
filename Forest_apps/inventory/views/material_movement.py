@@ -3,6 +3,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q, Sum
 from django.utils import timezone
+from django.http import JsonResponse
 from Forest_apps.inventory.models import MaterialMovement, StorageLocation
 from Forest_apps.core.models import Position, Warehouse, Brigade, Vehicle
 from Forest_apps.inventory.forms.material_movement import (
@@ -149,7 +150,7 @@ def material_movement_create_view(request):
         if form.is_valid():
             # Сохраняем движение
             movement = form.save(commit=False)
-            movement.author = request.user
+            movement.created_by = request.user
 
             # Добавляем должность создателя
             position_name = request.session.get('position_name')
@@ -365,7 +366,11 @@ def material_movement_cancel_view(request, movement_id):
         if not movement.is_completed:
             messages.error(request, 'Движение еще не выполнено')
         else:
-            movement.cancel_movement()
+            from Forest_apps.inventory.models import MaterialBalance
+            MaterialBalance.cancel_movement(movement)
+            movement.is_completed = False
+            movement.completed_at = None
+            movement.save()
             messages.success(
                 request,
                 f'Выполнение движения №{movement.id} отменено!'
@@ -417,11 +422,6 @@ def material_movement_pending_shipments_view(request):
 
     movements = MaterialMovement.get_pending_shipments_for_user(request.user)
 
-    # Добавим print для отладки
-    for m in movements:
-        print(f"Movement {m.id}: pieces={m.quantity_pieces}, meters={m.quantity_meters}, cubic={m.quantity_cubic}")
-        print(f"  quantity_display: {m.quantity_display}")
-
     context = {
         'title': 'Ожидающие отправления',
         'employee_name': request.session.get('employee_name'),
@@ -429,3 +429,133 @@ def material_movement_pending_shipments_view(request):
     }
 
     return render(request, 'MaterialMovement/material_movement_pending.html', context)
+
+
+@login_required
+def get_locations_by_type(request):
+    """API для получения списка мест хранения в зависимости от типа движения"""
+    movement_type = request.GET.get('type')
+    user = request.user
+
+    print(f"\n=== API CALL START ===")
+    print(f"movement_type: {movement_type}")
+    print(f"user: {user} (ID: {user.id})")
+
+    if not movement_type:
+        return JsonResponse({'from_locations': [], 'to_locations': []})
+
+    # Получаем ID мест пользователя
+    user_location_ids = _get_user_location_ids(user)
+
+    # Получаем все места хранения для отладки
+    all_locations = StorageLocation.objects.all()
+    print(f"\nAll locations in database:")
+    for loc in all_locations:
+        print(f"  ID: {loc.id}, Type: {loc.source_type}, Source ID: {loc.source_id}, Name: {loc.get_source_name()}")
+
+    # Базовый queryset
+    from_locations = StorageLocation.objects.none()
+    to_locations = StorageLocation.objects.none()
+
+    if movement_type == 'Перемещение':
+        from_locations = StorageLocation.objects.filter(id__in=user_location_ids)
+        to_locations = StorageLocation.objects.filter(id__in=user_location_ids)
+
+    elif movement_type == 'Отправление':
+        from_locations = StorageLocation.objects.filter(id__in=user_location_ids)
+        to_locations = StorageLocation.objects.exclude(id__in=user_location_ids).exclude(source_type='контрагент')
+
+    elif movement_type == 'Реализация':
+        from_locations = StorageLocation.objects.all()
+        to_locations = StorageLocation.objects.filter(source_type='контрагент')
+
+    elif movement_type == 'Списание':
+        from_locations = StorageLocation.objects.filter(id__in=user_location_ids)
+        to_locations = StorageLocation.objects.filter(source_type__in=['бригады', 'автомобиль'])
+
+    # Применяем distinct и сортировку
+    from_locations = from_locations.distinct().order_by('source_type')
+    to_locations = to_locations.distinct().order_by('source_type')
+
+    # Преобразуем в список для проверки
+    from_list = list(from_locations)
+    to_list = list(to_locations)
+
+    print(f"\nfrom_locations count: {len(from_list)}")
+    for loc in from_list:
+        print(f"  from: {loc.id} - {loc.get_source_name()}")
+
+    print(f"to_locations count: {len(to_list)}")
+    for loc in to_list:
+        print(f"  to: {loc.id} - {loc.get_source_name()}")
+
+    # Форматируем ответ
+    data = {
+        'from_locations': [
+            {'id': loc.id, 'name': loc.get_source_name()}
+            for loc in from_list
+        ],
+        'to_locations': [
+            {'id': loc.id, 'name': loc.get_source_name()}
+            for loc in to_list
+        ]
+    }
+
+    print(f"\nResponse data: {data}")
+    print("=== API CALL END ===\n")
+
+    return JsonResponse(data)
+
+
+def _get_user_location_ids(user):
+    """Вспомогательная функция для получения ID мест хранения пользователя"""
+    if not user or not user.is_authenticated:
+        return []
+
+    from Forest_apps.inventory.models import StorageLocation
+    from Forest_apps.core.models import Warehouse, Brigade, Vehicle
+
+    user_location_ids = []
+
+    print(f"=== Getting user locations for user: {user} (ID: {user.id}) ===")
+
+    # Склады, созданные пользователем
+    warehouses = Warehouse.objects.filter(created_by=user)
+    print(f"Warehouses count: {warehouses.count()}")
+    for wh in warehouses:
+        print(f"  Warehouse: {wh.id} - {wh.name}, created_by: {wh.created_by_id}")
+        try:
+            location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
+            user_location_ids.append(location.id)
+            print(f"    -> Added location: {location.id} - {location.get_source_name()}")
+        except StorageLocation.DoesNotExist:
+            print(f"    -> StorageLocation not found for warehouse {wh.id}")
+
+    # Бригады, созданные пользователем
+    brigades = Brigade.objects.filter(created_by=user)
+    print(f"Brigades count: {brigades.count()}")
+    for br in brigades:
+        print(f"  Brigade: {br.id} - {br.name}, created_by: {br.created_by_id}")
+        try:
+            location = StorageLocation.objects.get(source_type='бригады', source_id=br.id)
+            user_location_ids.append(location.id)
+            print(f"    -> Added location: {location.id} - {location.get_source_name()}")
+        except StorageLocation.DoesNotExist:
+            print(f"    -> StorageLocation not found for brigade {br.id}")
+
+    # Транспорт, созданный пользователем
+    vehicles = Vehicle.objects.filter(created_by=user)
+    print(f"Vehicles count: {vehicles.count()}")
+    for vh in vehicles:
+        print(f"  Vehicle: {vh.id} - {vh.brand} {vh.model}, created_by: {vh.created_by_id}")
+        try:
+            location = StorageLocation.objects.get(source_type='автомобиль', source_id=vh.id)
+            user_location_ids.append(location.id)
+            print(f"    -> Added location: {location.id} - {location.get_source_name()}")
+        except StorageLocation.DoesNotExist:
+            print(f"    -> StorageLocation not found for vehicle {vh.id}")
+
+    print(f"Final user_location_ids: {user_location_ids}")
+    print("=== END Getting user locations ===")
+
+    return user_location_ids

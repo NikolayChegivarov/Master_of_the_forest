@@ -324,4 +324,146 @@
         }
     }
 </style>
+
+<!-- Скрипт для корректировки значений в полях "откуда", "куда" -->
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.getElementById('id_accounting_type');
+    const fromLocationSelect = document.getElementById('id_from_location');
+    const toLocationSelect = document.getElementById('id_to_location');
+    const priceField = document.querySelector('input[name="price"]');
+    const priceGroup = priceField?.closest('.form-group');
+
+    if (!typeSelect) {
+        console.error('typeSelect not found!');
+        return;
+    }
+
+    console.log('Type select found:', typeSelect);
+
+    // Функция для обновления состояния полей
+    function updateFields() {
+        const selectedType = typeSelect.value;
+
+        console.log('Selected type changed to:', selectedType);
+
+        // Полностью очищаем и отключаем поля до загрузки данных
+        fromLocationSelect.innerHTML = '<option value="">---------</option>';
+        toLocationSelect.innerHTML = '<option value="">---------</option>';
+        fromLocationSelect.disabled = true;
+        toLocationSelect.disabled = true;
+
+        // Управление полем цены
+        if (selectedType === 'Реализация') {
+            priceField.disabled = false;
+            priceField.required = true;
+            priceGroup?.classList.remove('disabled-field');
+        } else {
+            priceField.disabled = true;
+            priceField.required = false;
+            priceField.value = '';
+            priceGroup?.classList.add('disabled-field');
+        }
+
+        if (!selectedType) {
+            return;
+        }
+
+        // Загружаем новые опции через AJAX
+        const url = `/inventory/api/locations-by-type/?type=${encodeURIComponent(selectedType)}`;
+        console.log('Fetching from URL:', url);
+
+        fetch(url)
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Raw data received:', data);
+
+                // Проверяем структуру данных
+                if (!data) {
+                    console.error('No data received');
+                    return;
+                }
+
+                // Включаем поля
+                fromLocationSelect.disabled = false;
+                toLocationSelect.disabled = false;
+
+                // Очищаем и заполняем "Откуда"
+                fromLocationSelect.innerHTML = '<option value="">---------</option>';
+                if (data.from_locations && Array.isArray(data.from_locations)) {
+                    console.log(`Processing ${data.from_locations.length} from locations`);
+                    data.from_locations.forEach((loc, index) => {
+                        console.log(`From location ${index}:`, loc);
+                        if (loc && loc.id && loc.name) {
+                            const option = document.createElement('option');
+                            option.value = loc.id;
+                            option.textContent = loc.name;
+                            fromLocationSelect.appendChild(option);
+                        }
+                    });
+                } else {
+                    console.warn('from_locations is not an array:', data.from_locations);
+                }
+
+                // Очищаем и заполняем "Куда"
+                toLocationSelect.innerHTML = '<option value="">---------</option>';
+                if (data.to_locations && Array.isArray(data.to_locations)) {
+                    console.log(`Processing ${data.to_locations.length} to locations`);
+                    data.to_locations.forEach((loc, index) => {
+                        console.log(`To location ${index}:`, loc);
+                        if (loc && loc.id && loc.name) {
+                            const option = document.createElement('option');
+                            option.value = loc.id;
+                            option.textContent = loc.name;
+                            toLocationSelect.appendChild(option);
+                        }
+                    });
+                } else {
+                    console.warn('to_locations is not an array:', data.to_locations);
+                }
+
+                // Выводим итоговое количество опций
+                console.log('Final from options count:', fromLocationSelect.options.length - 1); // -1 для пустого option
+                console.log('Final to options count:', toLocationSelect.options.length - 1);
+            })
+            .catch(error => {
+                console.error('Error loading locations:', error);
+                fromLocationSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+                toLocationSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+            });
+    }
+
+    // Слушаем изменение типа движения
+    typeSelect.addEventListener('change', updateFields);
+    console.log('Event listener added');
+
+    // Вызываем при загрузке страницы, если тип уже выбран
+    if (typeSelect.value) {
+        console.log('Initial type value:', typeSelect.value);
+        setTimeout(updateFields, 100); // Небольшая задержка для гарантии
+    }
+});
+</script>
+
+<style>
+    .disabled-field {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+    .disabled-field input {
+        background-color: #f5f5f5;
+    }
+    select:disabled {
+        background-color: #f5f5f5;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
 {% endblock %}

@@ -168,9 +168,16 @@ class MaterialMovementCreateForm(forms.ModelForm):
         self.fields['from_location'].queryset = StorageLocation.objects.all().order_by('source_type')
         self.fields['to_location'].queryset = StorageLocation.objects.all().order_by('source_type')
         self.fields['material'].queryset = Material.objects.all().order_by('material_type', 'name')
+
+        # ИСПРАВЛЕНО: Явно фильтруем сотрудников только с должностью "водитель"
+        from Forest_apps.employees.models import Employee
+
+        # Находим должность "водитель" по точному названию
         self.fields['employee'].queryset = Employee.objects.filter(
-            position__name__icontains='водитель'
+            position__name='водитель',  # Точное совпадение
+            is_active=True
         ).order_by('last_name', 'first_name')
+
         self.fields['vehicle'].queryset = Vehicle.objects.all().order_by('brand', 'model')
 
         # Если это редактирование, применяем фильтры в соответствии с типом движения

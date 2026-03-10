@@ -158,36 +158,36 @@ def material_movement_create_view(request):
                 position = Position.objects.get(name__iexact=position_name)
                 movement.created_by_position = position
             except Position.DoesNotExist:
-                # Если должность не найдена, создаем
                 position, _ = Position.objects.get_or_create(
                     name=position_name,
                     defaults={'is_active': True}
                 )
                 movement.created_by_position = position
 
-            # Для Перемещения, Реализации и Списания сразу устанавливаем is_completed=True
-            if movement.accounting_type in ['Перемещение', 'Реализация', 'Списание']:
-                movement.is_completed = True
-                movement.completed_at = timezone.now()
-            else:
-                movement.is_completed = False
-
+            # Сохраняем движение сначала (чтобы получить ID)
             movement.save()
 
-            # Если движение должно быть выполнено сразу, выполняем его
-            if movement.is_completed:
+            # Для Перемещения, Реализации и Списания сразу выполняем движение
+            if movement.accounting_type in ['Перемещение', 'Реализация', 'Списание']:
                 try:
+                    # Вызываем выполнение движения
                     movement.execute_movement()
+
+                    messages.success(
+                        request,
+                        f'Движение №{movement.id} успешно создано и выполнено!'
+                    )
                 except ValueError as e:
                     # Если не хватает материалов, удаляем созданное движение
                     movement.delete()
                     messages.error(request, str(e))
                     return redirect('inventory:material_movement_create')
-
-            messages.success(
-                request,
-                f'Движение №{movement.id} успешно создано!'
-            )
+            else:
+                # Для отправления просто сохраняем
+                messages.success(
+                    request,
+                    f'Отправление №{movement.id} успешно создано и ожидает подтверждения!'
+                )
 
             return redirect('inventory:material_movement_list')
     else:

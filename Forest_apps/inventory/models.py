@@ -288,20 +288,101 @@ class MaterialMovement(models.Model):
 
     def execute_movement(self):
         """Выполнение движения с проверкой остатков"""
+
+        print(f"\n=== EXECUTE MOVEMENT START ===")
+        print(f"Movement ID: {self.id}")
+        print(f"Type: {self.accounting_type}")
+        print(f"From: {self.from_location}")
+        print(f"To: {self.to_location}")
+        print(f"Material: {self.material}")
+        print(f"Quantity pieces: {self.quantity_pieces}")
+        print(f"Quantity meters: {self.quantity_meters}")
+        print(f"Quantity cubic: {self.quantity_cubic}")
+        print(f"Is completed: {self.is_completed}")
+
         if self.is_completed:
+            print("ERROR: Movement already completed")
             raise ValueError("Движение уже выполнено")
 
         # Проверка наличия достаточного количества материалов
         self._check_sufficient_quantity()
 
         if self.accounting_type == 'Перемещение':
+            print("Processing Перемещение...")
             if not self.to_location:
                 raise ValueError("Для перемещения необходимо указать получателя")
             if self.from_location.source_type in ['контрагент'] or self.to_location.source_type in ['контрагент']:
                 raise ValueError("В перемещении не могут участвовать контрагенты")
 
-            MaterialBalance = apps.get_model('inventory', 'MaterialBalance')
-            from_balance, to_balance = MaterialBalance.process_movement(self)
+            # Импортируем модель здесь, чтобы избежать циклического импорта
+            from .models import MaterialBalance
+
+            # Получаем или создаем остаток в месте назначения
+            try:
+                from_balance = MaterialBalance.objects.get(
+                    storage_location=self.from_location,
+                    material=self.material
+                )
+            except MaterialBalance.DoesNotExist:
+                print(f"ERROR: Material not found at from_location")
+                raise ValueError(f"Материал {self.material.name} отсутствует на {self.from_location.get_source_name()}")
+
+            # Проверяем наличие достаточного количества
+            if self.quantity_pieces and from_balance.quantity_pieces < self.quantity_pieces:
+                raise ValueError(
+                    f"Недостаточно материала в штуках: есть {from_balance.quantity_pieces}, требуется {self.quantity_pieces}"
+                )
+            if self.quantity_meters and (from_balance.quantity_meters or 0) < self.quantity_meters:
+                raise ValueError(
+                    f"Недостаточно материала в погонных метрах: есть {from_balance.quantity_meters or 0}, требуется {self.quantity_meters}"
+                )
+            if self.quantity_cubic and (from_balance.quantity_cubic or 0) < self.quantity_cubic:
+                raise ValueError(
+                    f"Недостаточно материала в кубических метрах: есть {from_balance.quantity_cubic or 0}, требуется {self.quantity_cubic}"
+                )
+
+            # Уменьшаем количество у отправителя
+            print("Уменьшаем количество у отправителя...")
+            if self.quantity_pieces:
+                from_balance.quantity_pieces -= self.quantity_pieces
+            if self.quantity_meters:
+                from_balance.quantity_meters = (from_balance.quantity_meters or 0) - self.quantity_meters
+            if self.quantity_cubic:
+                from_balance.quantity_cubic = (from_balance.quantity_cubic or 0) - self.quantity_cubic
+
+            from_balance.save()
+            print(f"Баланс отправителя после отправления: pieces={from_balance.quantity_pieces}")
+
+            # Увеличиваем количество у получателя
+            print("Увеличиваем количество у получателя...")
+            try:
+                to_balance = MaterialBalance.objects.get(
+                    storage_location=self.to_location,
+                    material=self.material
+                )
+                print(f"Обнаружен существующий баланс: ID={to_balance.id}")
+
+                if self.quantity_pieces:
+                    to_balance.quantity_pieces += self.quantity_pieces
+                if self.quantity_meters:
+                    to_balance.quantity_meters = (to_balance.quantity_meters or 0) + self.quantity_meters
+                if self.quantity_cubic:
+                    to_balance.quantity_cubic = (to_balance.quantity_cubic or 0) + self.quantity_cubic
+
+                to_balance.save()
+                print(f"баланс получателя после обновления: pieces={to_balance.quantity_pieces}")
+
+            except MaterialBalance.DoesNotExist:
+                # Если у получателя нет такого материала, создаем новую запись
+                MaterialBalance.objects.create(
+                    storage_location=self.to_location,
+                    material=self.material,
+                    quantity_pieces=self.quantity_pieces or 0,
+                    quantity_meters=self.quantity_meters or 0,
+                    quantity_cubic=self.quantity_cubic or 0,
+                    created_by=self.created_by,
+                    created_by_position=self.created_by_position
+                )
 
             self.is_completed = True
             self.completed_at = timezone.now()
@@ -322,8 +403,66 @@ class MaterialMovement(models.Model):
             if not self.price:
                 raise ValueError("Для реализации необходимо указать цену")
 
-            MaterialBalance = apps.get_model('inventory', 'MaterialBalance')
-            from_balance, to_balance = MaterialBalance.process_movement(self)
+            from .models import MaterialBalance
+
+            try:
+                from_balance = MaterialBalance.objects.get(
+                    storage_location=self.from_location,
+                    material=self.material
+                )
+            except MaterialBalance.DoesNotExist:
+                raise ValueError(f"Материал {self.material.name} отсутствует на {self.from_location.get_source_name()}")
+
+            # Проверяем наличие достаточного количества
+            if self.quantity_pieces and from_balance.quantity_pieces < self.quantity_pieces:
+                raise ValueError(
+                    f"Недостаточно материала в штуках: есть {from_balance.quantity_pieces}, требуется {self.quantity_pieces}"
+                )
+            if self.quantity_meters and (from_balance.quantity_meters or 0) < self.quantity_meters:
+                raise ValueError(
+                    f"Недостаточно материала в погонных метрах: есть {from_balance.quantity_meters or 0}, требуется {self.quantity_meters}"
+                )
+            if self.quantity_cubic and (from_balance.quantity_cubic or 0) < self.quantity_cubic:
+                raise ValueError(
+                    f"Недостаточно материала в кубических метрах: есть {from_balance.quantity_cubic or 0}, требуется {self.quantity_cubic}"
+                )
+
+            # Уменьшаем количество у отправителя
+            if self.quantity_pieces:
+                from_balance.quantity_pieces -= self.quantity_pieces
+            if self.quantity_meters:
+                from_balance.quantity_meters = (from_balance.quantity_meters or 0) - self.quantity_meters
+            if self.quantity_cubic:
+                from_balance.quantity_cubic = (from_balance.quantity_cubic or 0) - self.quantity_cubic
+
+            from_balance.save()
+
+            # Для реализации создаем запись у контрагента
+            try:
+                to_balance = MaterialBalance.objects.get(
+                    storage_location=self.to_location,
+                    material=self.material
+                )
+
+                if self.quantity_pieces:
+                    to_balance.quantity_pieces += self.quantity_pieces
+                if self.quantity_meters:
+                    to_balance.quantity_meters = (to_balance.quantity_meters or 0) + self.quantity_meters
+                if self.quantity_cubic:
+                    to_balance.quantity_cubic = (to_balance.quantity_cubic or 0) + self.quantity_cubic
+
+                to_balance.save()
+
+            except MaterialBalance.DoesNotExist:
+                MaterialBalance.objects.create(
+                    storage_location=self.to_location,
+                    material=self.material,
+                    quantity_pieces=self.quantity_pieces or 0,
+                    quantity_meters=self.quantity_meters or 0,
+                    quantity_cubic=self.quantity_cubic or 0,
+                    created_by=self.created_by,
+                    created_by_position=self.created_by_position
+                )
 
             self.is_completed = True
             self.completed_at = timezone.now()
@@ -334,8 +473,39 @@ class MaterialMovement(models.Model):
             if self.from_location.source_type not in ['склад', 'автомобиль']:
                 raise ValueError("Списание возможно только со склада или автомобиля")
 
-            MaterialBalance = apps.get_model('inventory', 'MaterialBalance')
-            from_balance, _ = MaterialBalance.process_movement(self)
+            from .models import MaterialBalance
+
+            try:
+                from_balance = MaterialBalance.objects.get(
+                    storage_location=self.from_location,
+                    material=self.material
+                )
+            except MaterialBalance.DoesNotExist:
+                raise ValueError(f"Материал {self.material.name} отсутствует на {self.from_location.get_source_name()}")
+
+            # Проверяем наличие достаточного количества
+            if self.quantity_pieces and from_balance.quantity_pieces < self.quantity_pieces:
+                raise ValueError(
+                    f"Недостаточно материала в штуках: есть {from_balance.quantity_pieces}, требуется {self.quantity_pieces}"
+                )
+            if self.quantity_meters and (from_balance.quantity_meters or 0) < self.quantity_meters:
+                raise ValueError(
+                    f"Недостаточно материала в погонных метрах: есть {from_balance.quantity_meters or 0}, требуется {self.quantity_meters}"
+                )
+            if self.quantity_cubic and (from_balance.quantity_cubic or 0) < self.quantity_cubic:
+                raise ValueError(
+                    f"Недостаточно материала в кубических метрах: есть {from_balance.quantity_cubic or 0}, требуется {self.quantity_cubic}"
+                )
+
+            # Уменьшаем количество у отправителя
+            if self.quantity_pieces:
+                from_balance.quantity_pieces -= self.quantity_pieces
+            if self.quantity_meters:
+                from_balance.quantity_meters = (from_balance.quantity_meters or 0) - self.quantity_meters
+            if self.quantity_cubic:
+                from_balance.quantity_cubic = (from_balance.quantity_cubic or 0) - self.quantity_cubic
+
+            from_balance.save()
 
             self.is_completed = True
             self.completed_at = timezone.now()
@@ -573,6 +743,7 @@ class MaterialBalance(models.Model):
 
     @classmethod
     def process_movement(cls, movement):
+        """Обработка движения материалов"""
         try:
             from_balance = cls.objects.get(
                 storage_location=movement.from_location,
@@ -581,24 +752,27 @@ class MaterialBalance(models.Model):
         except cls.DoesNotExist:
             raise ValueError(f"Материал {movement.material} не найден в месте хранения {movement.from_location}")
 
+        # Проверка наличия достаточного количества
         if movement.quantity_pieces and from_balance.quantity_pieces < movement.quantity_pieces:
             raise ValueError(
-                f"Недостаточно материала в штуках: есть {from_balance.quantity_pieces}, требуется {movement.quantity_pieces}")
-
+                f"Недостаточно материала в штуках: есть {from_balance.quantity_pieces}, требуется {movement.quantity_pieces}"
+            )
         if movement.quantity_meters and (from_balance.quantity_meters or 0) < movement.quantity_meters:
             raise ValueError(
-                f"Недостаточно материала в погонных метрах: есть {from_balance.quantity_meters or 0}, требуется {movement.quantity_meters}")
-
+                f"Недостаточно материала в погонных метрах: есть {from_balance.quantity_meters or 0}, требуется {movement.quantity_meters}"
+            )
         if movement.quantity_cubic and (from_balance.quantity_cubic or 0) < movement.quantity_cubic:
             raise ValueError(
-                f"Недостаточно материала в кубических метрах: есть {from_balance.quantity_cubic or 0}, требуется {movement.quantity_cubic}")
+                f"Недостаточно материала в кубических метрах: есть {from_balance.quantity_cubic or 0}, требуется {movement.quantity_cubic}"
+            )
 
+        # Уменьшаем количество у отправителя
         if movement.quantity_pieces:
             from_balance.quantity_pieces -= movement.quantity_pieces
-        if movement.quantity_meters is not None:
-            from_balance.quantity_meters = (from_balance.quantity_meters or 0) - (movement.quantity_meters or 0)
-        if movement.quantity_cubic is not None:
-            from_balance.quantity_cubic = (from_balance.quantity_cubic or 0) - (movement.quantity_cubic or 0)
+        if movement.quantity_meters:
+            from_balance.quantity_meters = (from_balance.quantity_meters or 0) - movement.quantity_meters
+        if movement.quantity_cubic:
+            from_balance.quantity_cubic = (from_balance.quantity_cubic or 0) - movement.quantity_cubic
 
         from_balance.save()
 
@@ -610,7 +784,7 @@ class MaterialBalance(models.Model):
                 quantity_pieces=movement.quantity_pieces,
                 quantity_meters=movement.quantity_meters,
                 quantity_cubic=movement.quantity_cubic,
-                created_by_position = movement.created_by_position
+                created_by_position=movement.created_by_position
             )
 
         return from_balance, to_balance

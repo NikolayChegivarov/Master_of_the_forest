@@ -271,13 +271,21 @@ class MaterialMovementCreateForm(forms.ModelForm):
             ).order_by('source_type')
 
         elif accounting_type == 'Списание':
-            # Списание: откуда - свои, куда - бригады и автомобили
+            # Списание: откуда - свои склады и автомобили
             self.fields['from_location'].queryset = StorageLocation.objects.filter(
-                id__in=self.user_location_ids
+                id__in=self.user_location_ids,
+                source_type__in=['склад', 'автомобиль']
             ).order_by('source_type')
+            # Куда - свои бригады и автомобили
             self.fields['to_location'].queryset = StorageLocation.objects.filter(
-                id__in=self.brigade_and_vehicle_ids
+                id__in=self.user_location_ids,
+                source_type__in=['бригады', 'автомобиль']
             ).order_by('source_type')
+
+            # Материалы - только ГСМ и запчасти
+            self.fields['material'].queryset = Material.objects.filter(
+                material_type__in=['ГСМ', 'запчасти']
+            ).order_by('material_type', 'name')
 
     def clean(self):
         """Валидация формы"""
@@ -286,6 +294,7 @@ class MaterialMovementCreateForm(forms.ModelForm):
         from_location = cleaned_data.get('from_location')
         to_location = cleaned_data.get('to_location')
         price = cleaned_data.get('price')
+        material = cleaned_data.get('material')
 
         quantity_pieces = cleaned_data.get('quantity_pieces')
         quantity_meters = cleaned_data.get('quantity_meters')
@@ -327,6 +336,8 @@ class MaterialMovementCreateForm(forms.ModelForm):
                 raise forms.ValidationError('Контрагенты не могут участвовать в отправлении')
 
         elif accounting_type == 'Реализация':
+            if not from_location:
+                raise forms.ValidationError('Для реализации необходимо указать отправителя')
             if not to_location:
                 raise forms.ValidationError('Для реализации необходимо указать получателя')
 
@@ -343,13 +354,26 @@ class MaterialMovementCreateForm(forms.ModelForm):
         elif accounting_type == 'Списание':
             if not from_location:
                 raise forms.ValidationError('Для списания необходимо указать отправителя')
+            if not to_location:
+                raise forms.ValidationError('Для списания необходимо указать получателя (бригаду или ТС)')
 
-            # Проверка, что отправитель - свой
+            # Проверка, что отправитель - склад или автомобиль (свои)
             if from_location and from_location.id not in self.user_location_ids:
                 raise forms.ValidationError('Списывать можно только со своих мест хранения')
-
-            # Проверка, что отправитель - склад или автомобиль
             if from_location and from_location.source_type not in ['склад', 'автомобиль']:
                 raise forms.ValidationError('Списание возможно только со склада или автомобиля')
+
+            # Проверка, что получатель - бригада или автомобиль
+            if to_location and to_location.source_type not in ['бригады', 'автомобиль']:
+                raise forms.ValidationError(
+                    'Получателем при списании может быть только бригада или транспортное средство')
+
+            # Проверка, что получатель - свой
+            if to_location and to_location.id not in self.user_location_ids:
+                raise forms.ValidationError('Можно списывать только на свои бригады и ТС')
+
+            # Проверка типа материала
+            if material and material.material_type not in ['ГСМ', 'запчасти']:
+                raise forms.ValidationError('Списание возможно только для материалов типа ГСМ или запчасти')
 
         return cleaned_data

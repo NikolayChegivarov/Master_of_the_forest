@@ -39,4 +39,5 @@ urlpatterns = [
 
     # API для динамической загрузки мест хранения
     path('api/locations-by-type/', material_movement.get_locations_by_type, name='api_locations_by_type'),
+    path('api/materials/', material_movement.get_materials, name='api_materials'),
 ]

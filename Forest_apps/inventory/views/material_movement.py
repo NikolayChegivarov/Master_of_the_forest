@@ -4,6 +4,8 @@ from django.contrib import messages
 from django.db.models import Q, Sum
 from django.utils import timezone
 from django.http import JsonResponse
+
+from Forest_apps.forestry.models import Material
 from Forest_apps.inventory.models import MaterialMovement, StorageLocation
 from Forest_apps.core.models import Position, Warehouse, Brigade, Vehicle
 from Forest_apps.inventory.forms.material_movement import (
@@ -520,3 +522,19 @@ def _get_user_location_ids(user):
             pass
 
     return user_location_ids
+
+
+@login_required
+def get_materials(request):
+    """API для получения списка материалов"""
+    materials = Material.objects.all().order_by('material_type', 'name')
+    data = [
+        {
+            'id': m.id,
+            'name': m.name,
+            'type': m.material_type,
+            'type_display': m.get_material_type_display()
+        }
+        for m in materials
+    ]
+    return JsonResponse(data, safe=False)

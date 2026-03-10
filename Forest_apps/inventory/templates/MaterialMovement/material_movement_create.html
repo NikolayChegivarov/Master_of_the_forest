@@ -332,19 +332,75 @@ document.addEventListener('DOMContentLoaded', function() {
     const typeSelect = document.getElementById('id_accounting_type');
     const fromLocationSelect = document.getElementById('id_from_location');
     const toLocationSelect = document.getElementById('id_to_location');
+    const materialSelect = document.getElementById('id_material');
     const priceField = document.querySelector('input[name="price"]');
     const priceGroup = priceField?.closest('.form-group');
 
+    // Поля для водителя и транспортного средства
+    const employeeSelect = document.getElementById('id_employee');
+    const vehicleSelect = document.getElementById('id_vehicle');
+    const employeeGroup = employeeSelect?.closest('.form-group');
+    const vehicleGroup = vehicleSelect?.closest('.form-group');
+
     if (!typeSelect) return;
+
+    // Сохраняем все материалы для фильтрации
+    let allMaterials = [];
+
+    // Загружаем все материалы при загрузке страницы
+    fetch('/inventory/api/materials/')
+        .then(response => response.json())
+        .then(data => {
+            allMaterials = data;
+            console.log('Все материалы загружены:', allMaterials);
+        });
+
+    function filterMaterialsByType(materialType) {
+        if (!materialType || materialType === '') {
+            // Если тип не выбран или не "Списание", показываем все материалы
+            materialSelect.innerHTML = '<option value="">---------</option>';
+            allMaterials.forEach(mat => {
+                const option = document.createElement('option');
+                option.value = mat.id;
+                option.textContent = mat.name;
+                materialSelect.appendChild(option);
+            });
+        } else if (materialType === 'Списание') {
+            // Для списания показываем только ГСМ и запчасти
+            materialSelect.innerHTML = '<option value="">---------</option>';
+            allMaterials.forEach(mat => {
+                if (mat.type === 'ГСМ' || mat.type === 'запчасти') {
+                    const option = document.createElement('option');
+                    option.value = mat.id;
+                    option.textContent = mat.name;
+                    materialSelect.appendChild(option);
+                }
+            });
+        } else {
+            // Для других типов показываем все материалы
+            materialSelect.innerHTML = '<option value="">---------</option>';
+            allMaterials.forEach(mat => {
+                const option = document.createElement('option');
+                option.value = mat.id;
+                option.textContent = mat.name;
+                materialSelect.appendChild(option);
+            });
+        }
+    }
 
     function updateFields() {
         const selectedType = typeSelect.value;
+
+        console.log('Selected type:', selectedType);
 
         // Очищаем и отключаем поля до загрузки данных
         fromLocationSelect.innerHTML = '<option value="">---------</option>';
         toLocationSelect.innerHTML = '<option value="">---------</option>';
         fromLocationSelect.disabled = true;
         toLocationSelect.disabled = true;
+
+        // Фильтруем материалы в зависимости от типа
+        filterMaterialsByType(selectedType);
 
         // Управление полем цены
         if (selectedType === 'Реализация') {
@@ -358,10 +414,36 @@ document.addEventListener('DOMContentLoaded', function() {
             priceGroup?.classList.add('disabled-field');
         }
 
+        // Управление полями водителя и транспортного средства
+        if (selectedType === 'Списание') {
+            // При списании отключаем поля водителя и ТС
+            if (employeeSelect) {
+                employeeSelect.disabled = true;
+                employeeSelect.value = '';
+                employeeGroup?.classList.add('disabled-field');
+            }
+            if (vehicleSelect) {
+                vehicleSelect.disabled = true;
+                vehicleSelect.value = '';
+                vehicleGroup?.classList.add('disabled-field');
+            }
+        } else {
+            // Для остальных типов включаем поля (но они могут быть необязательными)
+            if (employeeSelect) {
+                employeeSelect.disabled = false;
+                employeeGroup?.classList.remove('disabled-field');
+            }
+            if (vehicleSelect) {
+                vehicleSelect.disabled = false;
+                vehicleGroup?.classList.remove('disabled-field');
+            }
+        }
+
         if (!selectedType) return;
 
-        // Загружаем новые опции
+        // Загружаем места хранения
         const url = `/inventory/api/locations-by-type/?type=${encodeURIComponent(selectedType)}`;
+        console.log('Fetching from URL:', url);
 
         fetch(url)
             .then(response => {
@@ -371,6 +453,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.json();
             })
             .then(data => {
+                console.log('Received locations data:', data);
+
                 // Включаем поля
                 fromLocationSelect.disabled = false;
                 toLocationSelect.disabled = false;
@@ -402,7 +486,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Ошибка загрузки мест хранения:', error);
+                console.error('Error loading locations:', error);
                 fromLocationSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
                 toLocationSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
             });
@@ -421,8 +505,10 @@ document.addEventListener('DOMContentLoaded', function() {
         opacity: 0.6;
         pointer-events: none;
     }
-    .disabled-field input {
+    .disabled-field input,
+    .disabled-field select {
         background-color: #f5f5f5;
+        cursor: not-allowed;
     }
     select:disabled {
         background-color: #f5f5f5;

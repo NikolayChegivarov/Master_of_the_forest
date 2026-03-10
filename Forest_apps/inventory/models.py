@@ -291,14 +291,14 @@ class MaterialMovement(models.Model):
 
         print(f"\n=== EXECUTE MOVEMENT START ===")
         print(f"Movement ID: {self.id}")
-        print(f"Type: {self.accounting_type}")
-        print(f"From: {self.from_location}")
-        print(f"To: {self.to_location}")
-        print(f"Material: {self.material}")
-        print(f"Quantity pieces: {self.quantity_pieces}")
-        print(f"Quantity meters: {self.quantity_meters}")
-        print(f"Quantity cubic: {self.quantity_cubic}")
-        print(f"Is completed: {self.is_completed}")
+        print(f"Тип: {self.accounting_type}")
+        print(f"От куда: {self.from_location}")
+        print(f"Куда: {self.to_location}")
+        print(f"Материал: {self.material}")
+        print(f"Количество штук: {self.quantity_pieces}")
+        print(f"Количество погонных метров: {self.quantity_meters}")
+        print(f"Количество кубических метров: {self.quantity_cubic}")
+        print(f"Завершено {self.is_completed}")
 
         if self.is_completed:
             print("ERROR: Movement already completed")

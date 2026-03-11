@@ -1,0 +1,235 @@
+<!-- Forest_apps/operations/templates/OperationRecord/operation_record_detail.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block header %}Детали операции{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+    <div class="detail-card">
+        <div class="detail-header">
+            <div class="detail-icon">📋</div>
+            <h2>Операция #{{ record.id }}</h2>
+        </div>
+
+        <div class="detail-content">
+            <div class="detail-row">
+                <div class="detail-label">Тип операции:</div>
+                <div class="detail-value">
+                    <span class="operation-badge">{{ record.operation_type.name }}</span>
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Дата и время:</div>
+                <div class="detail-value">{{ record.date_time|date:"d.m.Y H:i:s" }}</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Склад:</div>
+                <div class="detail-value">{{ record.warehouse.name }}</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Материал:</div>
+                <div class="detail-value">{{ record.material.name }}</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Количество:</div>
+                <div class="detail-value quantity">{{ record.quantity|floatformat:3 }} {{ record.material.unit }}</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Кто создал:</div>
+                <div class="detail-value">
+                    {% if record.created_by %}
+                        {{ record.created_by.get_full_name|default:record.created_by.username }}
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Должность создателя:</div>
+                <div class="detail-value">
+                    {% if record.created_by_position %}
+                        <span class="position-badge">{{ record.created_by_position.name }}</span>
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-actions">
+            <a href="{% url 'operations:operation_record_edit' record.id %}" class="btn btn-warning">✏️ Редактировать</a>
+            <a href="{% url 'operations:operation_record_list' %}" class="btn btn-secondary">← К списку</a>
+            <a href="{% url 'operations:operation_record_delete' record.id %}" class="btn btn-danger" onclick="return confirm('Удалить эту запись операции?');">🗑️ Удалить</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .detail-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 20px;
+    }
+
+    .detail-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 600px;
+        overflow: hidden;
+    }
+
+    .detail-header {
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        color: white;
+        padding: 30px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .detail-icon {
+        font-size: 48px;
+    }
+
+    .detail-header h2 {
+        margin: 0;
+        font-size: 24px;
+    }
+
+    .detail-content {
+        padding: 30px;
+    }
+
+    .detail-row {
+        display: flex;
+        padding: 12px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        width: 150px;
+        font-weight: 600;
+        color: #666;
+    }
+
+    .detail-value {
+        flex: 1;
+        color: #333;
+    }
+
+    .detail-value.quantity {
+        font-weight: 700;
+        color: #2c5e2e;
+        font-size: 18px;
+    }
+
+    .operation-badge {
+        display: inline-block;
+        padding: 5px 12px;
+        background: #e8f5e9;
+        color: #2c5e2e;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+
+    .position-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #e9ecef;
+        color: #495057;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
+    .detail-actions {
+        display: flex;
+        gap: 10px;
+        padding: 20px 30px 30px;
+        justify-content: center;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-warning {
+        background: #ffc107;
+        color: #212529;
+    }
+
+    .btn-warning:hover {
+        background: #e0a800;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+    @media (max-width: 768px) {
+        .detail-row {
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .detail-label {
+            width: 100%;
+        }
+
+        .detail-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

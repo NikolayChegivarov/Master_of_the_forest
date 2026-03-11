@@ -12,5 +12,6 @@ urlpatterns = [
     path('core/', include('Forest_apps.core.urls')),   # склады, должность, транспорт, контрагент, бригада
     path('employees/', include('Forest_apps.employees.urls')),  # сотрудники,
     path('forestry/', include('Forest_apps.forestry.urls')),  # лесничества, лесосеки, материалы
-    path('inventory/', include('Forest_apps.inventory.urls')),  # место хранения, движение, остатки
+    path('inventory/', include('Forest_apps.inventory.urls')),  # место хранения, движение, остатки, конвертация
+    path('operations/', include('Forest_apps.operations.urls')),  # техпроцессы
 ]

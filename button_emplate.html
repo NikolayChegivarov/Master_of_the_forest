@@ -76,13 +76,31 @@
             </div>
         </a>
 
-        <!-- Кнопка Техпроцессы (заглушка) -->
-        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+
+        <!-- Кнопка Техпроцессы (ведет на страницу operations.html) -->
+        <a href="{% url 'operations:operations_home' %}" class="dashboard-card">
             <div class="card-content">
-                <div class="card-icon">🏗️️</div>
+                <div class="card-icon">🔧</div>
                 <div class="card-title">Техпроцессы</div>
-                <div class="card-description">Управление технологическими процессами</div>
-                <div class="card-badge">В разработке</div>
+                <div class="card-description">Управление типами операций и учет выполненных работ</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Типы операций (операции) -->
+        <a href="{% url 'operations:operation_type_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">⚙️</div>
+                <div class="card-title">Типы операций</div>
+                <div class="card-description">Типы операций: распиловка, сушка и т.д.</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Учет операций -->
+        <a href="{% url 'operations:operation_record_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">📊</div>
+                <div class="card-title">Учет операций</div>
+                <div class="card-description">Журнал выполненных операций на складах</div>
             </div>
         </a>
 

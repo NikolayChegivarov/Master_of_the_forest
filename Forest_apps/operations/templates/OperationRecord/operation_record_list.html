@@ -1,0 +1,638 @@
+<!-- Forest_apps/operations/templates/OperationRecord/operation_record_list.html -->
+{% extends "base.html" %}
+
+{% block title %}Учет операций{% endblock %}
+
+{% block header %}Учет операций{% endblock %}
+
+{% block content %}
+<div class="operation-record-container">
+    <!-- Кнопка создания на всю ширину -->
+    <div class="create-button-container">
+        <a href="{% url 'operations:operation_record_create' %}" class="create-button">
+            <span class="create-icon">📝</span>
+            <span class="create-text">Записать операцию</span>
+        </a>
+    </div>
+
+    <!-- Статистика -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_count }}</div>
+                <div class="stat-label">Всего операций</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_quantity|floatformat:1 }}</div>
+                <div class="stat-label">Всего обработано</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Статистика по типам -->
+    {% if stats_by_type %}
+    <div class="type-stats">
+        <h4>Статистика по типам операций:</h4>
+        <div class="type-stats-grid">
+            {% for stat in stats_by_type %}
+            <div class="type-stat-item">
+                <span class="type-name">{{ stat.name }}</span>
+                <span class="type-count">{{ stat.count }} опер.</span>
+                <span class="type-quantity">{{ stat.quantity|floatformat:1 }} ед.</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Фильтры -->
+    <div class="filters-container">
+        <form method="get" class="filters-form" id="filter-form">
+            <div class="filters-row">
+                <div class="filter-group">
+                    {{ filter_form.operation_type.label_tag }}
+                    {{ filter_form.operation_type }}
+                </div>
+                <div class="filter-group">
+                    {{ filter_form.warehouse.label_tag }}
+                    {{ filter_form.warehouse }}
+                </div>
+                <div class="filter-group">
+                    {{ filter_form.material.label_tag }}
+                    {{ filter_form.material }}
+                </div>
+            </div>
+            <div class="filters-row">
+                <div class="filter-group">
+                    {{ filter_form.date_from.label_tag }}
+                    {{ filter_form.date_from }}
+                </div>
+                <div class="filter-group">
+                    {{ filter_form.date_to.label_tag }}
+                    {{ filter_form.date_to }}
+                </div>
+                <div class="filter-group">
+                    {{ filter_form.search.label_tag }}
+                    {{ filter_form.search }}
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="filter-btn">🔍 Применить</button>
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <a href="{% url 'operations:operation_record_list' %}" class="filter-clear">✖ Сбросить</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Таблица операций -->
+    <div class="records-list">
+        <h3>Журнал операций ({{ position_name|default:"наша должность" }})</h3>
+
+        {% if records %}
+            <div class="table-responsive">
+                <table class="records-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Дата/время</th>
+                            <th>Тип операции</th>
+                            <th>Склад</th>
+                            <th>Материал</th>
+                            <th class="text-right">Количество</th>
+                            <th>Должность создателя</th>
+                            <th class="text-center">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr>
+                            <td><strong>{{ record.id }}</strong></td>
+                            <td>{{ record.date_time|date:"d.m.Y H:i" }}</td>
+                            <td>
+                                <span class="operation-badge">{{ record.operation_type.name }}</span>
+                            </td>
+                            <td class="warehouse-cell">{{ record.warehouse.name }}</td>
+                            <td class="material-cell">{{ record.material.name }}</td>
+                            <td class="text-right quantity-cell">{{ record.quantity|floatformat:1 }} {{ record.material.unit }}</td>
+                            <td>
+                                {% if record.created_by_position %}
+                                    <span class="position-badge">{{ record.created_by_position.name }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="actions-cell">
+                                <div class="action-buttons-group">
+                                    <a href="{% url 'operations:operation_record_detail' record.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
+                                    <a href="{% url 'operations:operation_record_edit' record.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                                    <a href="{% url 'operations:operation_record_delete' record.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить эту запись операции?');">🗑️</a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-message">
+                {% if filter_form.has_changed %}
+                    <p>По заданным критериям ничего не найдено.</p>
+                    <a href="{% url 'operations:operation_record_list' %}" class="btn btn-secondary">Сбросить фильтры</a>
+                {% else %}
+                    <p>У {{ position_name|default:"вашей должности" }} пока нет ни одной записи операции.</p>
+                    <p class="text-muted">Запишите первую операцию, чтобы начать учет.</p>
+                    <a href="{% url 'operations:operation_record_create' %}" class="btn btn-primary">Записать операцию</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .operation-record-container {
+        padding: 20px;
+    }
+
+    /* Кнопка создания на всю ширину */
+    .create-button-container {
+        width: 100%;
+        margin-bottom: 30px;
+    }
+
+    .create-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 20px;
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        border-radius: 16px;
+        text-decoration: none;
+        color: white;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+        gap: 15px;
+    }
+
+    .create-button:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+        background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
+    }
+
+    .create-icon {
+        font-size: 32px;
+        line-height: 1;
+    }
+
+    .create-text {
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    /* Статистика */
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .stat-icon {
+        font-size: 36px;
+        color: #2c5e2e;
+    }
+
+    .stat-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #2c5e2e;
+        line-height: 1.2;
+    }
+
+    .stat-label {
+        font-size: 14px;
+        color: #666;
+    }
+
+    /* Статистика по типам */
+    .type-stats {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .type-stats h4 {
+        margin: 0 0 15px 0;
+        color: #2c5e2e;
+        font-size: 16px;
+    }
+
+    .type-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+    }
+
+    .type-stat-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .type-name {
+        font-weight: 600;
+        color: #2c5e2e;
+        flex: 1;
+    }
+
+    .type-count {
+        color: #666;
+        font-size: 13px;
+    }
+
+    .type-quantity {
+        font-weight: 600;
+        color: #2c5e2e;
+    }
+
+    /* Фильтры */
+    .filters-container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .filters-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        margin-bottom: 15px;
+    }
+
+    .filters-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 150px;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .filter-btn {
+        padding: 8px 16px;
+        background: #2c5e2e;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+        white-space: nowrap;
+        width: 100%;
+    }
+
+    .filter-btn:hover {
+        background: #1e4220;
+    }
+
+    .filter-clear {
+        padding: 8px 16px;
+        background: #f8f9fa;
+        color: #666;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: background 0.3s;
+        display: inline-block;
+        white-space: nowrap;
+        width: 100%;
+        text-align: center;
+        border: 1px solid #ddd;
+    }
+
+    .filter-clear:hover {
+        background: #e9ecef;
+    }
+
+    /* Таблица */
+    .records-list {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .records-list h3 {
+        color: #2c5e2e;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        border-radius: 12px;
+    }
+
+    .records-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 1000px;
+    }
+
+    .records-table th {
+        background: #2c5e2e;
+        color: white;
+        padding: 14px 12px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    .records-table td {
+        padding: 14px 12px;
+        border-bottom: 1px solid #e0e0e0;
+        vertical-align: middle;
+        font-size: 14px;
+    }
+
+    .records-table tbody tr:hover {
+        background: #f5f5f5;
+    }
+
+    .warehouse-cell,
+    .material-cell {
+        white-space: nowrap;
+    }
+
+    .operation-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        background: #e8f5e9;
+        color: #2c5e2e;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .position-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #e9ecef;
+        color: #495057;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .quantity-cell {
+        font-weight: 600;
+        color: #2c5e2e;
+    }
+
+    .text-right {
+        text-align: right;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
+    .actions-cell {
+        min-width: 120px;
+        text-align: center;
+    }
+
+    .action-buttons-group {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .btn-action {
+        text-decoration: none;
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        font-size: 16px;
+        transition: all 0.2s;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .view-btn {
+        color: #2c5e2e;
+    }
+
+    .view-btn:hover {
+        background: #2c5e2e;
+        color: white;
+        border-color: #2c5e2e;
+    }
+
+    .edit-btn {
+        color: #ffc107;
+    }
+
+    .edit-btn:hover {
+        background: #ffc107;
+        color: white;
+        border-color: #ffc107;
+    }
+
+    .delete-btn {
+        color: #dc3545;
+    }
+
+    .delete-btn:hover {
+        background: #dc3545;
+        color: white;
+        border-color: #dc3545;
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 60px 40px;
+        color: #666;
+        font-style: italic;
+        background: #f8f9fa;
+        border-radius: 12px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s;
+        display: inline-block;
+        margin-top: 15px;
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    @media (max-width: 768px) {
+        .operation-record-container {
+            padding: 10px;
+        }
+
+        .records-list {
+            padding: 20px;
+        }
+
+        .records-list h3 {
+            font-size: 20px;
+        }
+
+        .stats-cards {
+            grid-template-columns: 1fr;
+        }
+
+        .type-stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .filters-row {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-group {
+            width: 100%;
+        }
+
+        .action-buttons-group {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .btn-action {
+            width: 100%;
+            margin: 2px 0;
+        }
+    }
+</style>
+
+<!-- JavaScript для автоматической отправки фильтров -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('filter-form');
+        const autoSubmitFields = document.querySelectorAll('select[name="operation_type"], select[name="warehouse"], select[name="material"], input[name="date_from"], input[name="date_to"]');
+        const searchInput = document.querySelector('input[name="search"]');
+
+        // Автоматическая отправка при изменении select-полей
+        autoSubmitFields.forEach(field => {
+            field.addEventListener('change', function() {
+                form.submit();
+            });
+        });
+
+        // Для поиска используем кнопку или Enter
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    form.submit();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

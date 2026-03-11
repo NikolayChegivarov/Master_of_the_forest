@@ -48,6 +48,7 @@
 
         nav ul li {
             margin-right: 1.5rem;
+            margin-bottom: 0;
         }
 
         nav ul li a {
@@ -140,6 +141,35 @@
             text-decoration: none;
         }
 
+        /* Стили для режима подмены */
+        .badge-warning {
+            background: #ffc107;
+            color: #212529;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .return-btn {
+            background: #17a2b8;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background 0.3s;
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .return-btn:hover {
+            background: #138496;
+            text-decoration: none;
+        }
+
         @media (max-width: 768px) {
             nav ul {
                 flex-direction: column;
@@ -149,6 +179,7 @@
             nav ul li {
                 margin-right: 0;
                 margin-bottom: 10px;
+                width: 100%;
             }
 
             .ml-auto {
@@ -159,6 +190,12 @@
             .user-info {
                 display: block;
                 margin-bottom: 5px;
+            }
+
+            .badge-warning,
+            .return-btn {
+                width: 100%;
+                text-align: center;
             }
         }
     </style>
@@ -177,11 +214,24 @@
         <div class="container">
             <ul>
                 <li><a href="/" class="home-link" title="Главная">🏠 <span class="home-text">Главная</span></a></li>
+
                 <!-- Проверяем наличие employee_name в сессии -->
                 {% if request.session.employee_name %}
+
+                    <!-- Индикатор режима подмены -->
+                    {% if request.session.is_switched %}
+                        <li>
+                            <span class="badge-warning">🔀 Режим подмены: {{ request.session.position_name }}</span>
+                        </li>
+                        <li>
+                            <a href="{% url 'authorization:return_to_original' %}" class="return-btn">↩️ Вернуться</a>
+                        </li>
+                    {% endif %}
+
                     {% block nav_items %}
                         <!-- Навигация будет подставляться в дочерних шаблонах -->
                     {% endblock %}
+
                     <li class="ml-auto">
                         <span class="user-info">
                             {{ request.session.employee_name }} ({{ request.session.position_name }})
@@ -190,7 +240,7 @@
                     </li>
                 {% else %}
                     <li class="ml-auto">
-                        <a href="{% url 'authorization:login' %}">Войти</a>
+                        <a href="{% url 'authorization:login' %}" class="logout-btn" style="background: #4a6b4c;">Войти</a>
                     </li>
                 {% endif %}
             </ul>

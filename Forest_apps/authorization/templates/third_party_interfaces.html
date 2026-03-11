@@ -1,10 +1,157 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+<!-- Forest_apps/authorization/templates/third_party_interfaces.html -->
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block title %}Сторонние интерфейсы{% endblock %}
+
+{% block header %}Сторонние интерфейсы руководящего состава{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Кнопка Бухгалтер -->
+    <a href="{% url 'authorization:switch_to_position' 'бухгалтер' %}" class="dashboard-card">
+        <div class="card-content">
+            <div class="card-icon">💰</div>
+            <div class="card-title">Бухгалтер</div>
+            <div class="card-description">Учет финансов и материалов</div>
+        </div>
+    </a>
+
+    <!-- Кнопка Механик -->
+    <a href="{% url 'authorization:switch_to_position' 'механик' %}" class="dashboard-card">
+        <div class="card-content">
+            <div class="card-icon">🔧</div>
+            <div class="card-title">Механик</div>
+            <div class="card-description">Управление транспортом</div>
+        </div>
+    </a>
+
+    <!-- Кнопка Мастер леса -->
+    <a href="{% url 'authorization:switch_to_position' 'мастер леса' %}" class="dashboard-card">
+        <div class="card-content">
+            <div class="card-icon">🌲</div>
+            <div class="card-title">Мастер леса</div>
+            <div class="card-description">Лесничества и лесосеки</div>
+        </div>
+    </a>
+
+    <!-- Кнопка Мастер ЛПЦ -->
+    <a href="{% url 'authorization:switch_to_position' 'мастер ЛПЦ' %}" class="dashboard-card">
+        <div class="card-content">
+            <div class="card-icon">🏭</div>
+            <div class="card-title">Мастер ЛПЦ</div>
+            <div class="card-description">Лесопильный цех</div>
+        </div>
+    </a>
+
+    <!-- Кнопка Мастер ДОЦ -->
+    <a href="{% url 'authorization:switch_to_position' 'мастер ДОЦ' %}" class="dashboard-card">
+        <div class="card-content">
+            <div class="card-icon">🪚</div>
+            <div class="card-title">Мастер ДОЦ</div>
+            <div class="card-description">Деревообрабатывающий цех</div>
+        </div>
+    </a>
+
+    <!-- Кнопка Мастер ЖД -->
+    <a href="{% url 'authorization:switch_to_position' 'мастер ЖД' %}" class="dashboard-card">
+        <div class="card-content">
+            <div class="card-icon">🚂</div>
+            <div class="card-title">Мастер ЖД</div>
+            <div class="card-description">Железнодорожный тупик</div>
+        </div>
+    </a>
+</div>
+
+<style>
+    .dashboard-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        gap: 30px;
+        flex-wrap: wrap;
+        padding: 20px;
+    }
+
+    .dashboard-card {
+        text-decoration: none;
+        width: 280px;
+        height: 280px;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .card-content {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        border-radius: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+        cursor: pointer;
+        padding: 20px;
+        box-sizing: border-box;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .dashboard-card:hover .card-content {
+        transform: translateY(-12px);
+        box-shadow: 0 24px 36px rgba(0,0,0,0.25);
+        background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .card-icon {
+        font-size: 72px;
+        margin-bottom: 24px;
+        text-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .card-title {
+        font-size: 26px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        letter-spacing: 0.5px;
+        text-align: center;
+    }
+
+    .card-description {
+        font-size: 15px;
+        opacity: 0.9;
+        text-align: center;
+        line-height: 1.5;
+        max-width: 90%;
+        font-weight: 400;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-container {
+            gap: 20px;
+        }
+
+        .dashboard-card {
+            width: 220px;
+            height: 220px;
+        }
+
+        .card-icon {
+            font-size: 56px;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .card-description {
+            font-size: 13px;
+        }
+    }
+</style>
+{% endblock %}

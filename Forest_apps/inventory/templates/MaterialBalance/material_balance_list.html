@@ -99,6 +99,16 @@
                     <a href="{% url 'inventory:material_balance_list' %}" class="filter-clear">✖ Сбросить</a>
                 </div>
             </div>
+
+            <!-- НОВОЕ: Чекбокс для скрытия пустых мест хранения -->
+            <div class="hide-empty-row">
+                <div class="hide-empty-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="hide_empty" id="hide_empty" value="1" {% if request.GET.hide_empty %}checked{% endif %}>
+                        <span class="checkbox-text">🚫 Скрыть пустые места хранения (где все количества равны 0)</span>
+                    </label>
+                </div>
+            </div>
         </form>
     </div>
 
@@ -126,7 +136,7 @@
                     </thead>
                     <tbody>
                         {% for balance in balances %}
-                        <tr class="balance-row {% if not balance.storage_location.source_id in user_warehouses and not balance.storage_location.source_id in user_brigades and not balance.storage_location.source_id in user_vehicles %}foreign-row{% endif %}">
+                        <tr class="balance-row {% if not balance.storage_location.source_id in user_warehouses and not balance.storage_location.source_id in user_brigades and not balance.storage_location.source_id in user_vehicles %}foreign-row{% endif %} {% if balance.is_empty %}empty-balance{% endif %}">
                             <td class="location-cell">
                                 <a href="{% url 'inventory:storage_location_detail' balance.storage_location.id %}" class="location-link">
                                     {{ balance.storage_location.get_source_name }}
@@ -143,9 +153,9 @@
                                     {{ balance.material.get_material_type_display }}
                                 </span>
                             </td>
-                            <td class="text-right quantity-cell">{{ balance.quantity_pieces|floatformat:1|default:"-" }}</td>
-                            <td class="text-right quantity-cell">{{ balance.quantity_meters|floatformat:1|default:"-" }}</td>
-                            <td class="text-right quantity-cell">{{ balance.quantity_cubic|floatformat:1|default:"-" }}</td>
+                            <td class="text-right quantity-cell {% if balance.quantity_pieces == 0 %}zero-quantity{% endif %}">{{ balance.quantity_pieces|floatformat:1|default:"-" }}</td>
+                            <td class="text-right quantity-cell {% if balance.quantity_meters == 0 %}zero-quantity{% endif %}">{{ balance.quantity_meters|floatformat:1|default:"-" }}</td>
+                            <td class="text-right quantity-cell {% if balance.quantity_cubic == 0 %}zero-quantity{% endif %}">{{ balance.quantity_cubic|floatformat:1|default:"-" }}</td>
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
                                     <a href="{% url 'inventory:material_balance_detail' balance.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
@@ -182,7 +192,7 @@
             </div>
         {% else %}
             <div class="empty-message">
-                {% if filter_form.has_changed %}
+                {% if filter_form.has_changed or request.GET.hide_empty %}
                     <p>По заданным критериям ничего не найдено.</p>
                     <a href="{% url 'inventory:material_balance_list' %}" class="btn btn-secondary">Сбросить фильтры</a>
                 {% else %}
@@ -397,6 +407,42 @@
         background: #e9ecef;
     }
 
+    /* НОВЫЙ СТИЛЬ: Чекбокс для скрытия пустых мест */
+    .hide-empty-row {
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #e0e0e0;
+        display: flex;
+        justify-content: flex-start;
+    }
+
+    .hide-empty-group {
+        display: flex;
+        align-items: center;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        font-size: 15px;
+        color: #333;
+        user-select: none;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: #2c5e2e;
+    }
+
+    .checkbox-text {
+        font-weight: 500;
+        color: #2c5e2e;
+    }
+
     /* Таблица */
     .balances-list {
         background: white;
@@ -451,6 +497,16 @@
 
     .foreign-row:hover {
         opacity: 1;
+    }
+
+    /* НОВЫЙ СТИЛЬ: Скрытые пустые строки */
+    .empty-balance {
+        display: none;
+    }
+
+    .zero-quantity {
+        color: #999;
+        font-style: italic;
     }
 
     .location-cell {
@@ -724,6 +780,9 @@
         const autoSubmitFields = document.querySelectorAll('select[name="storage_location"], select[name="material_type"], select[name="material"]');
         const searchInput = document.querySelector('input[name="search"]');
 
+        // НОВОЕ: Чекбокс для скрытия пустых мест
+        const hideEmptyCheckbox = document.getElementById('hide_empty');
+
         // Автоматическая отправка при изменении select-полей
         autoSubmitFields.forEach(field => {
             field.addEventListener('change', function() {
@@ -738,6 +797,13 @@
                     e.preventDefault();
                     form.submit();
                 }
+            });
+        }
+
+        // НОВОЕ: Автоматическая отправка при изменении чекбокса
+        if (hideEmptyCheckbox) {
+            hideEmptyCheckbox.addEventListener('change', function() {
+                form.submit();
             });
         }
     });

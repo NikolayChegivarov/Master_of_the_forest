@@ -91,6 +91,16 @@ def material_balance_list_view(request):
                 Q(storage_location__source_type__icontains=search)
             )
 
+    # НОВОЕ: Фильтрация по пустым местам хранения
+    hide_empty = request.GET.get('hide_empty')
+    if hide_empty:
+        # Исключаем записи, где все количества равны 0
+        balances = balances.exclude(
+            quantity_pieces=0,
+            quantity_meters=0,
+            quantity_cubic=0
+        )
+
     # Получаем ID мест хранения текущего пользователя для проверки прав на редактирование
     user_warehouses = Warehouse.objects.filter(created_by_position_id=user_position_id).values_list('id', flat=True)
     user_brigades = Brigade.objects.filter(created_by_position_id=user_position_id).values_list('id', flat=True)

@@ -391,156 +391,102 @@ class MaterialMovement(models.Model):
 
             if not self.to_location or self.to_location.source_type != 'контрагент':
                 raise ValueError("Для реализации получателем должен быть контрагент")
-
             if not self.price:
                 raise ValueError("Для реализации необходимо указать цену")
-
             from .models import MaterialBalance
 
             try:
-
                 from_balance = MaterialBalance.objects.get(
-
                     storage_location=self.from_location,
-
                     material=self.material
-
                 )
-
             except MaterialBalance.DoesNotExist:
-
                 raise ValueError(f"Материал {self.material.name} отсутствует на {self.from_location.get_source_name()}")
 
             # Проверяем наличие достаточного количества
-
             if self.quantity_pieces and from_balance.quantity_pieces < self.quantity_pieces:
                 raise ValueError(
-
                     f"Недостаточно материала в штуках: есть {from_balance.quantity_pieces}, требуется {self.quantity_pieces}"
-
                 )
-
             if self.quantity_meters and (from_balance.quantity_meters or 0) < self.quantity_meters:
                 raise ValueError(
-
                     f"Недостаточно материала в погонных метрах: есть {from_balance.quantity_meters or 0}, требуется {self.quantity_meters}"
-
                 )
-
             if self.quantity_cubic and (from_balance.quantity_cubic or 0) < self.quantity_cubic:
                 raise ValueError(
-
                     f"Недостаточно материала в кубических метрах: есть {from_balance.quantity_cubic or 0}, требуется {self.quantity_cubic}"
-
                 )
 
             # Уменьшаем количество у отправителя (ТОЛЬКО УМЕНЬШАЕМ, НЕ ДОБАВЛЯЕМ ПОЛУЧАТЕЛЮ)
-
             if self.quantity_pieces:
                 from_balance.quantity_pieces -= self.quantity_pieces
-
             if self.quantity_meters:
                 from_balance.quantity_meters = (from_balance.quantity_meters or 0) - self.quantity_meters
-
             if self.quantity_cubic:
                 from_balance.quantity_cubic = (from_balance.quantity_cubic or 0) - self.quantity_cubic
-
             from_balance.save()
 
             # НЕ создаем запись у получателя! Только уменьшаем у отправителя.
-
-
             self.is_completed = True
-
             self.completed_at = timezone.now()
 
         elif self.accounting_type == 'Списание':
-
             print("Processing Списание...")
-
             if not self.to_location:
                 raise ValueError("Для списания необходимо указать получателя (бригаду или ТС)")
 
             # Проверка, что отправитель - склад или автомобиль (свои)
-
             if self.from_location.source_type not in ['склад', 'автомобиль']:
                 raise ValueError("Списание возможно только со склада или автомобиля")
 
             # Проверка, что получатель - бригада или автомобиль (только для аналитики)
-
             if self.to_location.source_type not in ['бригады', 'автомобиль']:
                 raise ValueError("Получателем при списании может быть только бригада или транспортное средство")
 
             # Проверка, что материал - ГСМ или запчасти
-
             if self.material.material_type not in ['ГСМ', 'запчасти']:
                 raise ValueError("Списание возможно только для материалов типа ГСМ или запчасти")
 
             from .models import MaterialBalance
 
             # Получаем остаток у отправителя
-
             try:
-
                 from_balance = MaterialBalance.objects.get(
-
                     storage_location=self.from_location,
-
                     material=self.material
-
                 )
-
                 print(f"Найден баланс отправителя: ID={from_balance.id}, pieces={from_balance.quantity_pieces}")
 
             except MaterialBalance.DoesNotExist:
-
                 print(f"ERROR: Material not found at from_location")
-
                 raise ValueError(f"Материал {self.material.name} отсутствует на {self.from_location.get_source_name()}")
 
             # Проверяем наличие достаточного количества
-
             if self.quantity_pieces and from_balance.quantity_pieces < self.quantity_pieces:
                 raise ValueError(
-
                     f"Недостаточно материала в штуках: есть {from_balance.quantity_pieces}, требуется {self.quantity_pieces}"
-
                 )
-
             if self.quantity_meters and (from_balance.quantity_meters or 0) < self.quantity_meters:
                 raise ValueError(
-
                     f"Недостаточно материала в погонных метрах: есть {from_balance.quantity_meters or 0}, требуется {self.quantity_meters}"
-
                 )
-
             if self.quantity_cubic and (from_balance.quantity_cubic or 0) < self.quantity_cubic:
                 raise ValueError(
-
                     f"Недостаточно материала в кубических метрах: есть {from_balance.quantity_cubic or 0}, требуется {self.quantity_cubic}"
-
                 )
 
             # Уменьшаем количество у отправителя (ТОЛЬКО УМЕНЬШАЕМ, НЕ ДОБАВЛЯЕМ ПОЛУЧАТЕЛЮ)
-
             if self.quantity_pieces:
                 from_balance.quantity_pieces -= self.quantity_pieces
-
             if self.quantity_meters:
                 from_balance.quantity_meters = (from_balance.quantity_meters or 0) - self.quantity_meters
-
             if self.quantity_cubic:
                 from_balance.quantity_cubic = (from_balance.quantity_cubic or 0) - self.quantity_cubic
-
             from_balance.save()
 
             # НЕ создаем запись у получателя! Только уменьшаем у отправителя.
-
             # Получатель нужен только для аналитики в документе движения.
-
-
             self.is_completed = True
-
             self.completed_at = timezone.now()
         self.save()
 
@@ -548,7 +494,6 @@ class MaterialMovement(models.Model):
         """Подтверждение получения отправления"""
         if self.accounting_type != 'Отправление':
             raise ValueError("Подтверждение возможно только для отправлений")
-
         if self.is_completed:
             raise ValueError("Отправление уже подтверждено")
 
@@ -952,4 +897,265 @@ class MaterialBalance(models.Model):
             parts.append(f"{self.quantity_meters} м.п.")
         if self.quantity_cubic and self.quantity_cubic > 0:
             parts.append(f"{self.quantity_cubic} м³")
+        return ", ".join(parts) if parts else "0"
+
+
+class Conversion(models.Model):
+    """Документ конвертации древесины (списание одного материала и создание другого)"""
+
+    conversion_date = models.DateTimeField(
+        'Дата конвертации',
+        default=timezone.now
+    )
+
+    storage_location = models.ForeignKey(
+        'inventory.StorageLocation',
+        on_delete=models.PROTECT,
+        verbose_name='Место хранения',
+        limit_choices_to={'source_type': 'склад'}  # Только склады
+    )
+
+    # Материал, который списываем (исходный)
+    source_material = models.ForeignKey(
+        'forestry.Material',
+        on_delete=models.PROTECT,
+        verbose_name='Исходный материал',
+        related_name='conversions_source'
+    )
+
+    source_quantity_pieces = models.DecimalField(
+        'Количество в штуках (списание)',
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        default=None
+    )
+
+    source_quantity_meters = models.DecimalField(
+        'Количество в погонных метрах (списание)',
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        default=None
+    )
+
+    source_quantity_cubic = models.DecimalField(
+        'Количество в кубических метрах (списание)',
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        default=None
+    )
+
+    # Материал, который создаем (результат)
+    target_material = models.ForeignKey(
+        'forestry.Material',
+        on_delete=models.PROTECT,
+        verbose_name='Целевой материал',
+        related_name='conversions_target'
+    )
+
+    target_quantity_pieces = models.DecimalField(
+        'Количество в штуках (создание)',
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        default=None
+    )
+
+    target_quantity_meters = models.DecimalField(
+        'Количество в погонных метрах (создание)',
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        default=None
+    )
+
+    target_quantity_cubic = models.DecimalField(
+        'Количество в кубических метрах (создание)',
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        default=None
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_conversions'
+    )
+
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='conversions_created',
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        'Дата создания',
+        auto_now_add=True
+    )
+
+    is_completed = models.BooleanField(
+        'Выполнено',
+        default=False,
+        help_text='Конвертация выполнена и остатки обновлены'
+    )
+
+    completed_at = models.DateTimeField(
+        'Дата выполнения',
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        verbose_name = 'Конвертация древесины'
+        verbose_name_plural = 'Конвертации древесины'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['conversion_date']),
+            models.Index(fields=['storage_location', 'source_material']),
+            models.Index(fields=['is_completed']),
+        ]
+
+    def __str__(self):
+        return f"Конвертация №{self.id} от {self.created_at.date()}"
+
+    def clean(self):
+        """Валидация данных"""
+        # Проверка, что указано хотя бы одно количество для исходного материала
+        if not self.source_quantity_pieces and not self.source_quantity_meters and not self.source_quantity_cubic:
+            raise ValidationError('Необходимо указать хотя бы одно количество для списания')
+
+        # Проверка, что указано хотя бы одно количество для целевого материала
+        if not self.target_quantity_pieces and not self.target_quantity_meters and not self.target_quantity_cubic:
+            raise ValidationError('Необходимо указать хотя бы одно количество для создания')
+
+        # Проверка, что исходный и целевой материалы - древесина
+        if self.source_material and self.source_material.material_type != 'древесина':
+            raise ValidationError('Исходный материал должен быть типа "древесина"')
+
+        if self.target_material and self.target_material.material_type != 'древесина':
+            raise ValidationError('Целевой материал должен быть типа "древесина"')
+
+        # Проверка, что исходный и целевой материалы разные
+        if self.source_material == self.target_material:
+            raise ValidationError('Исходный и целевой материалы должны быть разными')
+
+    def execute_conversion(self):
+        """Выполнение конвертации (списание исходного и создание целевого материала)"""
+        from .models import MaterialBalance
+
+        if self.is_completed:
+            raise ValueError("Конвертация уже выполнена")
+
+        # Получаем баланс исходного материала
+        try:
+            source_balance = MaterialBalance.objects.get(
+                storage_location=self.storage_location,
+                material=self.source_material
+            )
+        except MaterialBalance.DoesNotExist:
+            raise ValueError(
+                f"Материал {self.source_material.name} отсутствует на складе {self.storage_location.get_source_name()}")
+
+        # Проверяем наличие достаточного количества исходного материала
+        if self.source_quantity_pieces and source_balance.quantity_pieces < self.source_quantity_pieces:
+            raise ValueError(
+                f"Недостаточно исходного материала в штуках: есть {source_balance.quantity_pieces}, требуется {self.source_quantity_pieces}"
+            )
+        if self.source_quantity_meters and (source_balance.quantity_meters or 0) < self.source_quantity_meters:
+            raise ValueError(
+                f"Недостаточно исходного материала в погонных метрах: есть {source_balance.quantity_meters or 0}, требуется {self.source_quantity_meters}"
+            )
+        if self.source_quantity_cubic and (source_balance.quantity_cubic or 0) < self.source_quantity_cubic:
+            raise ValueError(
+                f"Недостаточно исходного материала в кубических метрах: есть {source_balance.quantity_cubic or 0}, требуется {self.source_quantity_cubic}"
+            )
+
+        # Уменьшаем количество исходного материала
+        if self.source_quantity_pieces:
+            source_balance.quantity_pieces -= self.source_quantity_pieces
+        if self.source_quantity_meters:
+            source_balance.quantity_meters = (source_balance.quantity_meters or 0) - self.source_quantity_meters
+        if self.source_quantity_cubic:
+            source_balance.quantity_cubic = (source_balance.quantity_cubic or 0) - self.source_quantity_cubic
+
+        source_balance.save()
+
+        # Создаем или обновляем баланс целевого материала
+        try:
+            target_balance = MaterialBalance.objects.get(
+                storage_location=self.storage_location,
+                material=self.target_material
+            )
+
+            # Обновляем существующий баланс
+            if self.target_quantity_pieces:
+                target_balance.quantity_pieces += self.target_quantity_pieces
+            if self.target_quantity_meters:
+                target_balance.quantity_meters = (target_balance.quantity_meters or 0) + self.target_quantity_meters
+            if self.target_quantity_cubic:
+                target_balance.quantity_cubic = (target_balance.quantity_cubic or 0) + self.target_quantity_cubic
+
+            target_balance.save()
+
+        except MaterialBalance.DoesNotExist:
+            # Создаем новый баланс для целевого материала
+            MaterialBalance.objects.create(
+                storage_location=self.storage_location,
+                material=self.target_material,
+                quantity_pieces=self.target_quantity_pieces or 0,
+                quantity_meters=self.target_quantity_meters or 0,
+                quantity_cubic=self.target_quantity_cubic or 0,
+                created_by=self.created_by,
+                created_by_position=self.created_by_position
+            )
+
+        # Отмечаем конвертацию как выполненную
+        self.is_completed = True
+        self.completed_at = timezone.now()
+        self.save()
+
+        return True
+
+    @property
+    def source_quantity_display(self):
+        """Возвращает строковое представление количества исходного материала"""
+        parts = []
+        if self.source_quantity_pieces and self.source_quantity_pieces > 0:
+            parts.append(f"{self.source_quantity_pieces} шт")
+        if self.source_quantity_meters and self.source_quantity_meters > 0:
+            parts.append(f"{self.source_quantity_meters} м.п.")
+        if self.source_quantity_cubic and self.source_quantity_cubic > 0:
+            parts.append(f"{self.source_quantity_cubic} м³")
+        return ", ".join(parts) if parts else "0"
+
+    @property
+    def target_quantity_display(self):
+        """Возвращает строковое представление количества целевого материала"""
+        parts = []
+        if self.target_quantity_pieces and self.target_quantity_pieces > 0:
+            parts.append(f"{self.target_quantity_pieces} шт")
+        if self.target_quantity_meters and self.target_quantity_meters > 0:
+            parts.append(f"{self.target_quantity_meters} м.п.")
+        if self.target_quantity_cubic and self.target_quantity_cubic > 0:
+            parts.append(f"{self.target_quantity_cubic} м³")
         return ", ".join(parts) if parts else "0"

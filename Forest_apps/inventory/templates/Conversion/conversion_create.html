@@ -1,0 +1,368 @@
+<!-- Forest_apps/inventory/templates/Conversion/conversion_create.html -->
+{% extends "base.html" %}
+
+{% block title %}Создание конвертации{% endblock %}
+
+{% block header %}Конвертация древесины{% endblock %}
+
+{% block content %}
+<div class="create-container">
+    <div class="create-form">
+        <h2>Новая конвертация</h2>
+        <p class="subtitle">Списание одного материала и создание другого (только древесина)</p>
+
+        <!-- Форма создания -->
+        <form method="post" action="{% url 'inventory:conversion_create' %}">
+            {% csrf_token %}
+
+            <!-- Отображение ошибок формы -->
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Поле Место хранения (склад) -->
+            <div class="form-group">
+                <label for="{{ form.storage_location.id_for_label }}">{{ form.storage_location.label }}:</label>
+                {{ form.storage_location }}
+                {% if form.storage_location.errors %}
+                    <div class="field-error">
+                        {% for error in form.storage_location.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Блок СПИСАНИЕ -->
+            <div class="conversion-block source-block">
+                <h3>📤 Списать (исходный материал)</h3>
+
+                <!-- Поле Исходный материал -->
+                <div class="form-group">
+                    <label for="{{ form.source_material.id_for_label }}">{{ form.source_material.label }}:</label>
+                    {{ form.source_material }}
+                    {% if form.source_material.errors %}
+                        <div class="field-error">
+                            {% for error in form.source_material.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Поля количества для списания -->
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="{{ form.source_quantity_pieces.id_for_label }}">{{ form.source_quantity_pieces.label }}:</label>
+                        {{ form.source_quantity_pieces }}
+                        {% if form.source_quantity_pieces.errors %}
+                            <div class="field-error">
+                                {% for error in form.source_quantity_pieces.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group half">
+                        <label for="{{ form.source_quantity_meters.id_for_label }}">{{ form.source_quantity_meters.label }}:</label>
+                        {{ form.source_quantity_meters }}
+                        {% if form.source_quantity_meters.errors %}
+                            <div class="field-error">
+                                {% for error in form.source_quantity_meters.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.source_quantity_cubic.id_for_label }}">{{ form.source_quantity_cubic.label }}:</label>
+                    {{ form.source_quantity_cubic }}
+                    {% if form.source_quantity_cubic.errors %}
+                        <div class="field-error">
+                            {% for error in form.source_quantity_cubic.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Стрелка-разделитель -->
+            <div class="arrow-divider">↓ КОНВЕРТАЦИЯ ↓</div>
+
+            <!-- Блок СОЗДАНИЕ -->
+            <div class="conversion-block target-block">
+                <h3>📥 Создать (целевой материал)</h3>
+
+                <!-- Поле Целевой материал -->
+                <div class="form-group">
+                    <label for="{{ form.target_material.id_for_label }}">{{ form.target_material.label }}:</label>
+                    {{ form.target_material }}
+                    {% if form.target_material.errors %}
+                        <div class="field-error">
+                            {% for error in form.target_material.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Поля количества для создания -->
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="{{ form.target_quantity_pieces.id_for_label }}">{{ form.target_quantity_pieces.label }}:</label>
+                        {{ form.target_quantity_pieces }}
+                        {% if form.target_quantity_pieces.errors %}
+                            <div class="field-error">
+                                {% for error in form.target_quantity_pieces.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group half">
+                        <label for="{{ form.target_quantity_meters.id_for_label }}">{{ form.target_quantity_meters.label }}:</label>
+                        {{ form.target_quantity_meters }}
+                        {% if form.target_quantity_meters.errors %}
+                            <div class="field-error">
+                                {% for error in form.target_quantity_meters.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.target_quantity_cubic.id_for_label }}">{{ form.target_quantity_cubic.label }}:</label>
+                    {{ form.target_quantity_cubic }}
+                    {% if form.target_quantity_cubic.errors %}
+                        <div class="field-error">
+                            {% for error in form.target_quantity_cubic.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-text">
+                Укажите количество для списания исходного материала и количество для создания целевого материала.
+                Все материалы должны быть типа "древесина".
+            </div>
+
+            <!-- Кнопки -->
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">🔄 Сконвертировать</button>
+                <a href="{% url 'inventory:conversion_list' %}" class="btn btn-secondary">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .create-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 20px;
+    }
+
+    .create-form {
+        background: white;
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 700px;
+    }
+
+    .create-form h2 {
+        color: #8B4513;
+        margin-bottom: 5px;
+        text-align: center;
+        font-size: 28px;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #666;
+        margin-bottom: 30px;
+        font-style: italic;
+    }
+
+    .conversion-block {
+        background: #f9f9f9;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .source-block {
+        border-left: 4px solid #dc3545;
+    }
+
+    .target-block {
+        border-left: 4px solid #28a745;
+    }
+
+    .conversion-block h3 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-size: 18px;
+        color: #333;
+    }
+
+    .arrow-divider {
+        text-align: center;
+        font-size: 18px;
+        font-weight: bold;
+        color: #8B4513;
+        margin: 15px 0;
+        padding: 10px;
+        background: #f0f0f0;
+        border-radius: 30px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .form-group.half {
+        flex: 1;
+        margin-bottom: 0;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #8B4513;
+    }
+
+    .form-text {
+        margin-top: 20px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        color: #666;
+        font-style: italic;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .field-error {
+        color: #dc3545;
+        font-size: 13px;
+        margin-top: 5px;
+    }
+
+    .alert {
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+    }
+
+    .btn {
+        padding: 12px 30px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-primary {
+        background: #8B4513;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #5D3A1A;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    @media (max-width: 768px) {
+        .create-form {
+            padding: 30px 20px;
+        }
+
+        .create-form h2 {
+            font-size: 24px;
+        }
+
+        .form-row {
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

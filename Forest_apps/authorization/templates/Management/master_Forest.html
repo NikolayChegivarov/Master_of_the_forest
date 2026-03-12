@@ -11,9 +11,8 @@
 
 {% block content %}
 <div class="dashboard-container">
-    <!-- Первый ряд кнопок -->
+    <!-- Первый ряд: Лесничества, Лесосеки, Склады -->
     <div class="dashboard-row">
-        <!-- Кнопка Лесничества (существующая) -->
         <a href="{% url 'forestry:forestry' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">🌲</div>
@@ -22,28 +21,14 @@
             </div>
         </a>
 
-        <!-- Кнопка Лесосека (существующая) -->
         <a href="{% url 'forestry:logging_site' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">🪓</div>
-                <div class="card-title">Лесосека</div>
+                <div class="card-title">Лесосеки</div>
                 <div class="card-description">Управление лесосеками</div>
             </div>
         </a>
 
-        <!-- Кнопка Материалы (существующая) -->
-        <a href="{% url 'forestry:materials' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">📦</div>
-                <div class="card-title">Материалы</div>
-                <div class="card-description">Учет и движение материалов</div>
-            </div>
-        </a>
-    </div>
-
-    <!-- Второй ряд кнопок (новые) -->
-    <div class="dashboard-row">
-        <!-- Кнопка Склады -->
         <a href="{% url 'core:warehouse_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">🏭</div>
@@ -51,8 +36,18 @@
                 <div class="card-description">Управление складами</div>
             </div>
         </a>
+    </div>
 
-        <!-- Кнопка Остатки материалов -->
+    <!-- Второй ряд: Материалы, Остатки материалов, Движение материалов -->
+    <div class="dashboard-row">
+        <a href="{% url 'forestry:materials' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">📦</div>
+                <div class="card-title">Материалы</div>
+                <div class="card-description">Учет и движение материалов</div>
+            </div>
+        </a>
+
         <a href="{% url 'inventory:material_balance_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">📊</div>
@@ -61,7 +56,6 @@
             </div>
         </a>
 
-        <!-- Кнопка Движение материалов -->
         <a href="{% url 'inventory:material_movement_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">📤</div>
@@ -71,9 +65,8 @@
         </a>
     </div>
 
-    <!-- Третий ряд кнопок (новые) -->
+    <!-- Третий ряд: Конвертация древесины, Техпроцессы, Бригады -->
     <div class="dashboard-row">
-        <!-- Кнопка Конвертация материалов -->
         <a href="{% url 'inventory:conversion_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">🔄</div>
@@ -82,7 +75,6 @@
             </div>
         </a>
 
-        <!-- Кнопка Техпроцессы (ведет на страницу operations.html) -->
         <a href="{% url 'operations:operations_home' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">🔧</div>
@@ -91,7 +83,6 @@
             </div>
         </a>
 
-        <!-- Кнопка Бригады -->
         <a href="{% url 'core:brigade_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">👷</div>
@@ -101,9 +92,8 @@
         </a>
     </div>
 
-    <!-- Четвертый ряд кнопок -->
+    <!-- Четвертый ряд: Учет времени + два пустых места для сохранения сетки -->
     <div class="dashboard-row">
-        <!-- Кнопка Учет времени -->
         <a href="{% url 'employees:worktime_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">⏱️</div>
@@ -111,66 +101,6 @@
                 <div class="card-description">Рабочее время сотрудников</div>
             </div>
         </a>
-
-        <!-- Кнопка Места хранения -->
-        <a href="{% url 'inventory:storage_location_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">📍</div>
-                <div class="card-title">Места хранения</div>
-                <div class="card-description">Склады, ТС, контрагенты, бригады</div>
-            </div>
-        </a>
-
-        <!-- Кнопка Должности (НОВАЯ) -->
-        <a href="{% url 'core:position_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">👤</div>
-                <div class="card-title">Должности</div>
-                <div class="card-description">Управление должностями</div>
-            </div>
-        </a>
-    </div>
-
-    <!-- Пятый ряд кнопок (Транспорт, Контрагенты, Сотрудники) -->
-    <div class="dashboard-row">
-        <!-- Кнопка Транспорт -->
-        <a href="{% url 'core:vehicle_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">🚛</div>
-                <div class="card-title">Транспорт</div>
-                <div class="card-description">Управление ТС</div>
-            </div>
-        </a>
-
-        <!-- Кнопка Контрагенты -->
-        <a href="{% url 'core:counterparty_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">🏢</div>
-                <div class="card-title">Контрагенты</div>
-                <div class="card-description">Управление контрагентами</div>
-            </div>
-        </a>
-
-        <!-- Кнопка Сотрудники (НОВАЯ) -->
-        <a href="{% url 'employees:employee_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">👥</div>
-                <div class="card-title">Сотрудники</div>
-                <div class="card-description">Управление персоналом</div>
-            </div>
-        </a>
-    </div>
-
-    <!-- Шестой ряд кнопок (резервная кнопка) -->
-    <div class="dashboard-row">
-        <!-- Резервная кнопка "Скоро" (НОВАЯ) -->
-        <div class="dashboard-card disabled">
-            <div class="card-content">
-                <div class="card-icon">⏳</div>
-                <div class="card-title">Скоро</div>
-                <div class="card-description">Дополнительный функционал</div>
-            </div>
-        </div>
 
         <!-- Пустые элементы для сохранения сетки (невидимые) -->
         <div class="dashboard-card" style="visibility: hidden;"></div>

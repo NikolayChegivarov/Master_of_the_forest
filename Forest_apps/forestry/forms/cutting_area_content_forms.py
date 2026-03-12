@@ -6,7 +6,7 @@ class AddMaterialToCuttingAreaForm(forms.Form):
     """Форма для добавления материала в лесосеку"""
 
     material = forms.ModelChoiceField(
-        queryset=Material.objects.all().order_by('material_type', 'name'),
+        queryset=Material.objects.filter(material_type='древесина', is_active=True).order_by('name'),  # 👈 ИЗМЕНЕНО: только древесина
         empty_label="--- Выберите материал ---",
         widget=forms.Select(attrs={
             'class': 'form-control',

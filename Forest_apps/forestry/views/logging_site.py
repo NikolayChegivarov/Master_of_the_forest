@@ -205,38 +205,40 @@ def view_cutting_area_view(request, area_id):
 @login_required
 def fill_cutting_area_view(request, area_id):
     """Добавление материалов в лесосеку"""
+    from Forest_apps.forestry.forms.cutting_area_content_forms import AddMaterialToCuttingAreaForm
 
     cutting_area = get_object_or_404(CuttingArea, id=area_id)
 
     if request.method == 'POST':
-        material_id = request.POST.get('material_id')
-        quantity = request.POST.get('quantity')
+        # 👇 ВАЖНО: сначала cutting_area, потом request.POST
+        form = AddMaterialToCuttingAreaForm(cutting_area, request.POST)
+        if form.is_valid():
+            material = form.cleaned_data['material']
+            quantity = form.cleaned_data['quantity']
 
-        if material_id and quantity:
-            try:
-                quantity = float(quantity)
-                if quantity <= 0:
-                    messages.error(request, 'Количество должно быть больше 0')
-                else:
-                    result, created = cutting_area.update_material_quantity(material_id, quantity)
-                    if created:
-                        messages.success(request, 'Материал успешно добавлен в лесосеку!')
-                    else:
-                        messages.success(request, 'Количество материала успешно обновлено!')
-                    return redirect('forestry:view_logging_site', area_id=area_id)
-            except ValueError:
-                messages.error(request, 'Введите корректное число')
-        else:
-            messages.error(request, 'Заполните все поля')
+            result, created = cutting_area.update_material_quantity(material.id, quantity)
 
-    # Получаем все материалы для выпадающего списка
-    materials = Material.objects.all().order_by('material_type', 'name')
+            if created:
+                messages.success(request, 'Материал успешно добавлен в лесосеку!')
+            else:
+                messages.success(request, 'Количество материала успешно обновлено!')
+
+            return redirect('forestry:view_logging_site', area_id=area_id)
+    else:
+        # 👇 Для GET запроса только cutting_area
+        form = AddMaterialToCuttingAreaForm(cutting_area)
+
+        # Фильтруем материалы только для древесины
+        form.fields['material'].queryset = Material.objects.filter(
+            material_type='древесина',
+            is_active=True
+        ).order_by('name')
 
     context = {
         'title': f'Добавление материала в {cutting_area.full_address}',
         'employee_name': request.session.get('employee_name'),
         'cutting_area': cutting_area,
-        'materials': materials,
+        'form': form,
     }
 
     return render(request, 'logging_site/fill_logging_site.html', context)

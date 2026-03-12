@@ -76,39 +76,10 @@
         </form>
     </div>
 
-    <!-- Быстрый выбор материалов (опционально) -->
-    {% if materials %}
-    <div class="quick-select">
-        <h3>Быстрый выбор материалов</h3>
-        <div class="materials-grid">
-            {% for material in materials %}
-            <div class="material-card" onclick="selectMaterial('{{ material.id }}', '{{ material.name }}')">
-                <div class="material-type">{{ material.get_material_type_display }}</div>
-                <div class="material-name">{{ material.name }}</div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
+    <!-- Быстрый выбор материалов - УПРАЗДНЕН -->
+    <!-- Блок quick-select полностью удален -->
+
 </div>
-
-<script>
-function selectMaterial(materialId, materialName) {
-    // Устанавливаем выбранный материал в селект
-    const select = document.getElementById('{{ form.material.id_for_label }}');
-    for (let i = 0; i < select.options.length; i++) {
-        if (select.options[i].value == materialId) {
-            select.selectedIndex = i;
-            break;
-        }
-    }
-    // Прокручиваем к форме и фокусируемся на поле количества
-    document.getElementById('{{ form.quantity.id_for_label }}').focus();
-
-    // Показываем сообщение
-    alert(`Выбран материал: ${materialName}`);
-}
-</script>
 
 <style>
     .fill-container {
@@ -257,52 +228,6 @@ function selectMaterial(materialId, materialName) {
         background: #5a6268;
     }
 
-    .quick-select {
-        background: white;
-        padding: 30px;
-        border-radius: 16px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-    }
-
-    .quick-select h3 {
-        color: #2c5e2e;
-        margin-bottom: 20px;
-        font-size: 24px;
-    }
-
-    .materials-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 15px;
-    }
-
-    .material-card {
-        background: #f8f9fa;
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        padding: 15px;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-
-    .material-card:hover {
-        border-color: #2c5e2e;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-
-    .material-type {
-        font-size: 14px;
-        color: #666;
-        margin-bottom: 5px;
-    }
-
-    .material-name {
-        font-size: 16px;
-        font-weight: 600;
-        color: #333;
-    }
-
     @media (max-width: 768px) {
         .cutting-area-info h2 {
             font-size: 24px;
@@ -318,10 +243,6 @@ function selectMaterial(materialId, materialName) {
 
         .btn {
             width: 100%;
-        }
-
-        .materials-grid {
-            grid-template-columns: 1fr;
         }
     }
 </style>

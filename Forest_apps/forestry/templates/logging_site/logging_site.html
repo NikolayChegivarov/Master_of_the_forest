@@ -87,7 +87,11 @@
                         </td>
                         <td>{{ area.created_at|date:"d.m.Y" }}</td>
                         <td class="actions">
+                            <!-- Кнопка просмотра (новая) -->
+                            <a href="{% url 'forestry:view_logging_site' area.id %}" class="btn-action view-btn" title="Просмотреть содержимое">👁️</a>
+                            <!-- Кнопка редактирования -->
                             <a href="{% url 'forestry:edit_logging_site' area.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                            <!-- Кнопка деактивации -->
                             <a href="{% url 'forestry:deactivate_logging_site' area.id %}" class="btn-action delete-btn" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать лесосеку {{ area.full_address }}?');">❌</a>
                         </td>
                     </tr>
@@ -317,6 +321,15 @@
     .btn-action:hover {
         opacity: 1;
         transform: scale(1.1);
+    }
+
+    /* Стили для новой кнопки просмотра */
+    .view-btn {
+        color: #17a2b8;  /* Голубой цвет */
+    }
+
+    .view-btn:hover {
+        color: #138496;
     }
 
     .edit-btn {

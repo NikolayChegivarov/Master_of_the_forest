@@ -1,62 +1,598 @@
-<!-- Список записей -->
-<div class="records-list">
-    <h3>Записи рабочего времени ({{ position_name|default:"наша должность" }})</h3>
+<!-- Forest_apps/employees/templates/WorkTimeRecord/worktime_list.html -->
+{% extends "base.html" %}
 
-    {% if records %}
-        <table class="records-table">
-            <thead>
-                <tr>
-                    <th>Дата и время</th>
-                    <th>Сотрудник</th>
-                    <th>Должность</th>
-                    <th>Склад</th>
-                    <th>Часы</th>
-                    <th>Должность создателя</th>
-                    <th>Действия</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for record in records %}
-                <tr>
-                    <td>{{ record.date_time|date:"d.m.Y H:i" }}</td>
-                    <td>
-                        <a href="{% url 'employees:worktime_employee_report' record.employee.id %}" class="employee-link">
-                            {{ record.employee.short_name }}
-                        </a>
-                    </td>
-                    <td>{{ record.employee.position.name }}</td>
-                    <td>{{ record.warehouse.name }}</td>
-                    <td><strong>{{ record.hours|floatformat:1 }}</strong></td>
-                    <td>
-                        {% if record.created_by_position %}
-                            <span class="position-badge">{{ record.created_by_position.name }}</span>
-                        {% else %}
-                            <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
-                    <td class="actions">
-                        <a href="{% url 'employees:worktime_edit' record.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
-                        <a href="{% url 'employees:worktime_delete' record.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Вы уверены, что хотите удалить запись для {{ record.employee.short_name }} на {{ record.date_time.date }}?');">🗑️</a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-            <tfoot>
-                <tr class="total-row">
-                    <td colspan="4"><strong>Итого:</strong></td>
-                    <td><strong>{{ total_hours|floatformat:1 }}</strong></td>
-                    <td colspan="2"></td>
-                </tr>
-            </tfoot>
-        </table>
-    {% else %}
-        <div class="empty-message">
-            {% if filter_form.data.date_from or filter_form.data.date_to or filter_form.data.employee or filter_form.data.warehouse or filter_form.data.search %}
-                <p>По заданным критериям ничего не найдено.</p>
-                <a href="{% url 'employees:worktime_list' %}" class="btn btn-secondary">Сбросить фильтры</a>
-            {% else %}
-                <p>У {{ position_name|default:"вашей должности" }} пока нет ни одной записи о рабочем времени.</p>
-            {% endif %}
+{% block title %}Учет рабочего времени{% endblock %}
+
+{% block header %}Учет рабочего времени{% endblock %}
+
+{% block content %}
+<div class="worktime-container">
+    <!-- Кнопка Добавить запись на всю ширину (ДОБАВЛЕНА) -->
+    <div class="create-button-container">
+        <a href="{% url 'employees:worktime_create' %}" class="create-button">
+            <span class="create-icon">⏱️</span>
+            <span class="create-text">Добавить запись рабочего времени</span>
+        </a>
+    </div>
+
+    <!-- Статистика -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_hours|floatformat:1 }}</div>
+                <div class="stat-label">Всего часов</div>
+            </div>
         </div>
-    {% endif %}
+        <div class="stat-card">
+            <div class="stat-icon">📅</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ today_hours|floatformat:1 }}</div>
+                <div class="stat-label">Часов сегодня</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ today_employees }}</div>
+                <div class="stat-label">Сотрудников сегодня</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="filters-container">
+        <form method="get" class="filters-form" id="filter-form">
+            <!-- Автоматические фильтры (отправляются при изменении) -->
+            <div class="auto-filters-row">
+                <div class="filter-group">
+                    {{ filter_form.date_from.label_tag }}
+                    {{ filter_form.date_from }}
+                </div>
+                <div class="filter-group">
+                    {{ filter_form.date_to.label_tag }}
+                    {{ filter_form.date_to }}
+                </div>
+                <div class="filter-group">
+                    {{ filter_form.employee.label_tag }}
+                    {{ filter_form.employee }}
+                </div>
+                <div class="filter-group">
+                    {{ filter_form.warehouse.label_tag }}
+                    {{ filter_form.warehouse }}
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <a href="{% url 'employees:worktime_list' %}" class="filter-clear">✖ Сбросить всё</a>
+                </div>
+            </div>
+
+            <!-- Поиск с кнопкой -->
+            <div class="search-row">
+                <div class="search-group">
+                    {{ filter_form.search.label_tag }}
+                    {{ filter_form.search }}
+                </div>
+                <div class="search-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="search-btn">🔍 Найти</button>
+                </div>
+                {% if filter_form.search.value %}
+                <div class="search-group">
+                    <label>&nbsp;</label>
+                    <a href="{% url 'employees:worktime_list' %}" class="search-clear">✖ Очистить поиск</a>
+                </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Список записей -->
+    <div class="records-list">
+        <h3>Записи рабочего времени ({{ position_name|default:"наша должность" }})</h3>
+
+        {% if records %}
+            <table class="records-table">
+                <thead>
+                    <tr>
+                        <th>Дата и время</th>
+                        <th>Сотрудник</th>
+                        <th>Должность</th>
+                        <th>Склад</th>
+                        <th>Часы</th>
+                        <th>Должность создателя</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record.date_time|date:"d.m.Y H:i" }}</td>
+                        <td>
+                            <a href="{% url 'employees:worktime_employee_report' record.employee.id %}" class="employee-link">
+                                {{ record.employee.short_name }}
+                            </a>
+                        </td>
+                        <td>{{ record.employee.position.name }}</td>
+                        <td>{{ record.warehouse.name }}</td>
+                        <td><strong>{{ record.hours|floatformat:1 }}</strong></td>
+                        <td>
+                            {% if record.created_by_position %}
+                                <span class="position-badge">{{ record.created_by_position.name }}</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions">
+                            <a href="{% url 'employees:worktime_edit' record.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                            <a href="{% url 'employees:worktime_delete' record.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Вы уверены, что хотите удалить запись для {{ record.employee.short_name }} на {{ record.date_time.date }}?');">🗑️</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td colspan="4"><strong>Итого:</strong></td>
+                        <td><strong>{{ total_hours|floatformat:1 }}</strong></td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        {% else %}
+            <div class="empty-message">
+                {% if filter_form.data.date_from or filter_form.data.date_to or filter_form.data.employee or filter_form.data.warehouse or filter_form.data.search %}
+                    <p>По заданным критериям ничего не найдено.</p>
+                    <a href="{% url 'employees:worktime_list' %}" class="btn btn-secondary">Сбросить фильтры</a>
+                {% else %}
+                    <p>У {{ position_name|default:"вашей должности" }} пока нет ни одной записи о рабочем времени.</p>
+                    <p class="text-muted">Добавьте первую запись, чтобы начать учет рабочего времени.</p>
+                    <a href="{% url 'employees:worktime_create' %}" class="btn btn-primary">➕ Добавить первую запись</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
 </div>
+
+<style>
+    .worktime-container {
+        padding: 20px;
+    }
+
+    /* Кнопка создания на всю ширину */
+    .create-button-container {
+        width: 100%;
+        margin-bottom: 30px;
+    }
+
+    .create-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        padding: 20px;
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        border-radius: 16px;
+        text-decoration: none;
+        color: white;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+        gap: 15px;
+    }
+
+    .create-button:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.2);
+        background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
+    }
+
+    .create-icon {
+        font-size: 32px;
+        line-height: 1;
+    }
+
+    .create-text {
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    /* Статистика */
+    .stats-cards {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        min-width: 200px;
+        transition: transform 0.3s, box-shadow 0.3s;
+        flex: 1;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .stat-icon {
+        font-size: 40px;
+        color: #2c5e2e;
+    }
+
+    .stat-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #2c5e2e;
+        line-height: 1.2;
+    }
+
+    .stat-label {
+        font-size: 14px;
+        color: #666;
+    }
+
+    /* Фильтры */
+    .filters-container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .filters-form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .auto-filters-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 150px;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .filter-clear {
+        padding: 8px 16px;
+        background: #f8f9fa;
+        color: #666;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: background 0.3s;
+        display: inline-block;
+        white-space: nowrap;
+        width: 100%;
+        text-align: center;
+        border: 1px solid #ddd;
+    }
+
+    .filter-clear:hover {
+        background: #e9ecef;
+    }
+
+    /* Поиск */
+    .search-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        border-top: 1px solid #eee;
+        padding-top: 20px;
+    }
+
+    .search-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .search-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .search-group input {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .search-group input:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .search-btn {
+        padding: 8px 24px;
+        background: #2c5e2e;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+        white-space: nowrap;
+        width: 100%;
+    }
+
+    .search-btn:hover {
+        background: #1e4220;
+    }
+
+    .search-clear {
+        padding: 8px 16px;
+        background: #f8f9fa;
+        color: #666;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: background 0.3s;
+        display: inline-block;
+        white-space: nowrap;
+        width: 100%;
+        text-align: center;
+        border: 1px solid #ddd;
+    }
+
+    .search-clear:hover {
+        background: #e9ecef;
+    }
+
+    /* Таблица */
+    .records-list {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .records-list h3 {
+        color: #2c5e2e;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .records-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .records-table th {
+        background: #2c5e2e;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .records-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+        vertical-align: middle;
+    }
+
+    .records-table tr:hover {
+        background: #f5f5f5;
+    }
+
+    .records-table tfoot td {
+        background: #f8f9fa;
+        font-weight: 600;
+        border-top: 2px solid #2c5e2e;
+    }
+
+    .employee-link {
+        color: #2c5e2e;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .employee-link:hover {
+        text-decoration: underline;
+    }
+
+    .position-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #e9ecef;
+        color: #495057;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
+    .actions {
+        white-space: nowrap;
+    }
+
+    .btn-action {
+        text-decoration: none;
+        margin: 0 5px;
+        font-size: 18px;
+        opacity: 0.7;
+        transition: opacity 0.3s, transform 0.2s;
+        display: inline-block;
+    }
+
+    .btn-action:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    .edit-btn {
+        color: #ffc107;
+    }
+
+    .delete-btn {
+        color: #dc3545;
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 60px 40px;
+        color: #666;
+        font-style: italic;
+        background: #f8f9fa;
+        border-radius: 12px;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s;
+        display: inline-block;
+        margin: 5px;
+    }
+
+    .btn-primary {
+        background: #2c5e2e;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1e4220;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    @media (max-width: 768px) {
+        .records-table {
+            display: block;
+            overflow-x: auto;
+        }
+
+        .auto-filters-row {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-group {
+            width: 100%;
+        }
+
+        .stat-card {
+            width: 100%;
+        }
+
+        .create-button {
+            padding: 15px;
+        }
+
+        .create-icon {
+            font-size: 28px;
+        }
+
+        .create-text {
+            font-size: 18px;
+        }
+
+        .search-row {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .search-group {
+            width: 100%;
+        }
+    }
+</style>
+
+<!-- JavaScript для автоматической отправки -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('filter-form');
+        const autoSubmitFields = document.querySelectorAll('.auto-submit');
+        const searchInput = document.querySelector('input[name="search"]');
+
+        // Автоматическая отправка при изменении auto-submit полей
+        autoSubmitFields.forEach(field => {
+            field.addEventListener('change', function() {
+                form.submit();
+            });
+
+            // Для date полей также отправляем по изменению
+            if (field.type === 'date') {
+                field.addEventListener('change', function() {
+                    form.submit();
+                });
+            }
+        });
+
+        // Для поиска используем кнопку или Enter
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    form.submit();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

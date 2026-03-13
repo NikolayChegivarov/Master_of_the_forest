@@ -1,5 +1,7 @@
 # Forest_apps.authorization.urls
 from django.urls import path
+
+from Forest_apps.authorization.views.booker_views import booker_balances_view, booker_movements_view
 from Forest_apps.authorization.views.login import login_view, logout_view
 from Forest_apps.authorization.views.management_dashboards import (
     supervisor_dashboard, booker_dashboard, mechanic_dashboard,
@@ -28,4 +30,8 @@ urlpatterns = [
     path('third-party/', third_party_interfaces_view, name='third_party_interfaces'),
     path('switch-to/<str:position_name>/', switch_to_position_view, name='switch_to_position'),
     path('return-to-original/', return_to_original_position_view, name='return_to_original'),
+
+    # === БУХГАЛТЕР ===
+    path('booker/balances/', booker_balances_view, name='booker_balances'),
+    path('booker/movements/', booker_movements_view, name='booker_movements'),
 ]

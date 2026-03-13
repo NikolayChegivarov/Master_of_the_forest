@@ -1,4 +1,4 @@
-<!-- Forest_apps/authorization/templates/Management/master_Forest.html -->
+<!-- Forest_apps/authorization/templates/Management/mechanic.html -->
 {% extends "base.html" %}
 
 {% block title %}Механик - Панель управления{% endblock %}
@@ -11,27 +11,8 @@
 
 {% block content %}
 <div class="dashboard-container">
-    <!-- Первый ряд кнопок -->
+    <!-- Первый ряд: Материалы, Остатки, Движение материалов -->
     <div class="dashboard-row">
-        <!-- Кнопка Лесничества (существующая) -->
-        <a href="{% url 'forestry:forestry' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">🌲</div>
-                <div class="card-title">Лесничества</div>
-                <div class="card-description">Управление лесничествами</div>
-            </div>
-        </a>
-
-        <!-- Кнопка Лесосека (существующая) -->
-        <a href="{% url 'forestry:logging_site' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">🪓</div>
-                <div class="card-title">Лесосека</div>
-                <div class="card-description">Управление лесосеками</div>
-            </div>
-        </a>
-
-        <!-- Кнопка Материалы (существующая) -->
         <a href="{% url 'forestry:materials' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">📦</div>
@@ -39,20 +20,7 @@
                 <div class="card-description">Учет и движение материалов</div>
             </div>
         </a>
-    </div>
 
-    <!-- Второй ряд кнопок (новые) -->
-    <div class="dashboard-row">
-        <!-- Кнопка Склады -->
-        <a href="{% url 'core:warehouse_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">🏭</div>
-                <div class="card-title">Склады</div>
-                <div class="card-description">Управление складами</div>
-            </div>
-        </a>
-
-        <!-- Кнопка Остатки материалов -->
         <a href="{% url 'inventory:material_balance_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">📊</div>
@@ -61,7 +29,6 @@
             </div>
         </a>
 
-        <!-- Кнопка Движение материалов -->
         <a href="{% url 'inventory:material_movement_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">🔄</div>
@@ -71,80 +38,24 @@
         </a>
     </div>
 
-    <!-- Третий ряд кнопок (новые) -->
+    <!-- Второй ряд: Склады, Техпроцессы, Транспорт -->
     <div class="dashboard-row">
-        <!-- Кнопка Конвертация материалов (заглушка) -->
-        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+        <a href="{% url 'core:warehouse_list' %}" class="dashboard-card">
             <div class="card-content">
-                <div class="card-icon">🔄</div>
-                <div class="card-title">Конвертация</div>
-                <div class="card-description">Переработка сырья в готовую продукцию</div>
-                <div class="card-badge">В разработке</div>
+                <div class="card-icon">🏭</div>
+                <div class="card-title">Склады</div>
+                <div class="card-description">Управление складами</div>
             </div>
         </a>
 
-        <!-- Кнопка Техпроцессы (заглушка) -->
-        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+        <a href="{% url 'operations:operations_home' %}" class="dashboard-card">
             <div class="card-content">
-                <div class="card-icon">🏗️️</div>
+                <div class="card-icon">🔧</div>
                 <div class="card-title">Техпроцессы</div>
-                <div class="card-description">Управление технологическими процессами</div>
-                <div class="card-badge">В разработке</div>
+                <div class="card-description">Управление типами операций и учет выполненных работ</div>
             </div>
         </a>
 
-        <!-- Кнопка Бригады -->
-        <a href="{% url 'core:brigade_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">👷</div>
-                <div class="card-title">Бригады</div>
-                <div class="card-description">Управление бригадами</div>
-            </div>
-        </a>
-    </div>
-
-    <!-- Четвертый ряд кнопок (Персонал) -->
-    <div class="dashboard-row">
-        <!-- Кнопка Сотрудники -->
-        <a href="{% url 'employees:employee_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">👥</div>
-                <div class="card-title">Сотрудники</div>
-                <div class="card-description">Управление персоналом</div>
-            </div>
-        </a>
-
-        <!-- Кнопка Должности -->
-        <a href="{% url 'core:position_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">👤</div>
-                <div class="card-title">Должности</div>
-                <div class="card-description">Управление должностями</div>
-            </div>
-        </a>
-
-        <!-- Кнопка Учет времени -->
-        <a href="{% url 'employees:worktime_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">⏱️</div>
-                <div class="card-title">Учет времени</div>
-                <div class="card-description">Рабочее время сотрудников</div>
-            </div>
-        </a>
-    </div>
-
-    <!-- Пятый ряд кнопок (Логистика и хранение) -->
-    <div class="dashboard-row">
-        <!-- Кнопка Места хранения -->
-        <a href="{% url 'inventory:storage_location_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">📍</div>
-                <div class="card-title">Места хранения</div>
-                <div class="card-description">Склады, ТС, контрагенты, бригады</div>
-            </div>
-        </a>
-
-        <!-- Кнопка Транспорт -->
         <a href="{% url 'core:vehicle_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">🚛</div>
@@ -152,15 +63,29 @@
                 <div class="card-description">Управление ТС</div>
             </div>
         </a>
+    </div>
 
-        <!-- Кнопка Контрагенты -->
-        <a href="{% url 'core:counterparty_list' %}" class="dashboard-card">
+    <!-- Третий ряд: Учет рабочего времени + Конвертация древесины + пустой блок для сетки -->
+    <div class="dashboard-row">
+        <a href="{% url 'employees:worktime_list' %}" class="dashboard-card">
             <div class="card-content">
-                <div class="card-icon">🏢</div>
-                <div class="card-title">Контрагенты</div>
-                <div class="card-description">Управление контрагентами</div>
+                <div class="card-icon">⏱️</div>
+                <div class="card-title">Учет времени</div>
+                <div class="card-description">Рабочее время сотрудников</div>
             </div>
         </a>
+
+        <!-- Кнопка Конвертация древесины -->
+        <a href="{% url 'inventory:conversion_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🔄</div>
+                <div class="card-title">Конвертация древесины</div>
+                <div class="card-description">Переработка бревен в доски, брус и т.д.</div>
+            </div>
+        </a>
+
+        <!-- Пустой элемент для сохранения сетки (невидимый) -->
+        <div class="dashboard-card" style="visibility: hidden;"></div>
     </div>
 </div>
 
@@ -205,26 +130,11 @@
         position: relative;
     }
 
-    .dashboard-card.placeholder .card-content {
-        background: linear-gradient(145deg, #4a6b4c, #2c4a2e);
-        opacity: 0.9;
-    }
-
-    .dashboard-card.disabled .card-content {
-        background: linear-gradient(145deg, #6c757d, #495057);
-        cursor: not-allowed;
-        opacity: 0.7;
-    }
-
     .dashboard-card:hover .card-content {
         transform: translateY(-12px);
         box-shadow: 0 24px 36px rgba(0,0,0,0.25);
         background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
         border: 1px solid rgba(255,255,255,0.2);
-    }
-
-    .dashboard-card.placeholder:hover .card-content {
-        background: linear-gradient(145deg, #5a7e5c, #3a5a3c);
     }
 
     .card-icon {
@@ -248,20 +158,6 @@
         line-height: 1.5;
         max-width: 90%;
         font-weight: 400;
-    }
-
-    .card-badge {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        background: rgba(255, 255, 255, 0.2);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 600;
-        backdrop-filter: blur(4px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
     }
 
     /* Адаптация для планшетов */
@@ -312,6 +208,11 @@
         .card-description {
             font-size: 13px;
         }
+
+        /* Скрываем пустые элементы на мобильных */
+        .dashboard-card[style*="visibility: hidden"] {
+            display: none;
+        }
     }
 
     /* Адаптация для маленьких экранов */
@@ -355,14 +256,13 @@
             max-width: 100%;
         }
 
-        .card-badge {
-            position: static;
-            margin-top: 5px;
-            display: inline-block;
-        }
-
         .dashboard-card:hover .card-content {
             transform: translateY(-4px);
+        }
+
+        /* Скрываем пустые элементы на мобильных */
+        .dashboard-card[style*="visibility: hidden"] {
+            display: none;
         }
     }
 

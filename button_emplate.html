@@ -18,29 +18,31 @@
         <a href="{% url 'forestry:logging_site' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">🪓</div>
-                <div class="card-title">Лесосека</div>
+                <div class="card-title">Лесосеки</div>
                 <div class="card-description">Управление лесосеками</div>
             </div>
         </a>
 
-        <!-- Кнопка МВТЕРИАЛЫ (существующая) -->
-        <a href="{% url 'forestry:materials' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">📦</div>
-                <div class="card-title">Материалы</div>
-                <div class="card-description">Учет и движение материалов</div>
-            </div>
-        </a>
-    </div>
-
-    <!-- Второй ряд кнопок (новые) -->
-    <div class="dashboard-row">
         <!-- Кнопка СКЛАДЫ -->
         <a href="{% url 'core:warehouse_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">🏭</div>
                 <div class="card-title">Склады</div>
                 <div class="card-description">Управление складами</div>
+            </div>
+        </a>
+
+    </div>
+
+    <!-- Второй ряд кнопок (новые) -->
+    <div class="dashboard-row">
+
+        <!-- Кнопка МAТЕРИАЛЫ -->
+        <a href="{% url 'forestry:materials' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">📦</div>
+                <div class="card-title">Материалы</div>
+                <div class="card-description">Учет и движение материалов</div>
             </div>
         </a>
 
@@ -66,43 +68,44 @@
 
     <!-- Третий ряд кнопок (новые) -->
     <div class="dashboard-row">
-        <!-- Кнопка Конвертация материалов (заглушка) -->
-        <a href="#" class="dashboard-card placeholder" onclick="alert('Функционал в разработке'); return false;">
+
+        <!-- Кнопка Конвертация древесины -->
+        <a href="{% url 'inventory:conversion_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">🔄</div>
-                <div class="card-title">Конвертация</div>
-                <div class="card-description">Переработка сырья в готовую продукцию</div>
-                <div class="card-badge">В разработке</div>
+                <div class="card-title">Конвертация древесины</div>
+                <div class="card-description">Переработка бревен в доски, брус и т.д.</div>
             </div>
         </a>
-
 
         <!-- Кнопка Техпроцессы (ведет на страницу operations.html) -->
-        <a href="{% url 'operations:operations_home' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">🔧</div>
-                <div class="card-title">Техпроцессы</div>
-                <div class="card-description">Управление типами операций и учет выполненных работ</div>
-            </div>
-        </a>
+        <div class="dashboard-row">
+            <a href="{% url 'inventory:conversion_list' %}" class="dashboard-card">
+                <div class="card-content">
+                    <div class="card-icon">🔄</div>
+                    <div class="card-title">Конвертация древесины</div>
+                    <div class="card-description">Переработка бревен в доски, брус и т.д.</div>
+                </div>
+            </a>
 
-        <!-- Кнопка Типы операций (операции) -->
-        <a href="{% url 'operations:operation_type_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">⚙️</div>
-                <div class="card-title">Типы операций</div>
-                <div class="card-description">Типы операций: распиловка, сушка и т.д.</div>
-            </div>
-        </a>
+            <!-- Внутренние кнопки -->
+            <!-- Кнопка Типы операций (операции) -->
+            <a href="{% url 'operations:operation_type_list' %}" class="dashboard-card">
+                <div class="card-content">
+                    <div class="card-icon">⚙️</div>
+                    <div class="card-title">Типы операций</div>
+                    <div class="card-description">Типы операций: распиловка, сушка и т.д.</div>
+                </div>
+            </a>
 
-        <!-- Кнопка Учет операций -->
-        <a href="{% url 'operations:operation_record_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">📊</div>
-                <div class="card-title">Учет операций</div>
-                <div class="card-description">Журнал выполненных операций на складах</div>
-            </div>
-        </a>
+            <!-- Кнопка Учет операций -->
+            <a href="{% url 'operations:operation_record_list' %}" class="dashboard-card">
+                <div class="card-content">
+                    <div class="card-icon">📊</div>
+                    <div class="card-title">Учет операций</div>
+                    <div class="card-description">Журнал выполненных операций на складах</div>
+                </div>
+            </a>
 
         <!-- Кнопка ДОЛЖНОСТИ -->
         <a href="{% url 'core:position_list' %}" class="dashboard-card">
@@ -110,6 +113,15 @@
                 <div class="card-icon">👤</div>
                 <div class="card-title">Должности</div>
                 <div class="card-description">Управление должностями</div>
+            </div>
+        </a>
+
+        <!-- Кнопка СОТРУДНИКИ -->
+        <a href="{% url 'employees:employee_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">👥</div>
+                <div class="card-title">Сотрудники</div>
+                <div class="card-description">Управление персоналом</div>
             </div>
         </a>
 
@@ -140,15 +152,6 @@
             </div>
         </a>
 
-        <!-- Кнопка СОТРУДНИКИ -->
-        <a href="{% url 'employees:employee_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">👥</div>
-                <div class="card-title">Сотрудники</div>
-                <div class="card-description">Управление персоналом</div>
-            </div>
-        </a>
-
         <!-- Кнопка Учет времени -->
         <a href="{% url 'employees:worktime_list' %}" class="dashboard-card">
             <div class="card-content">
@@ -164,15 +167,6 @@
                 <div class="card-icon">📍</div>
                 <div class="card-title">Места хранения</div>
                 <div class="card-description">Склады, ТС, контрагенты, бригады</div>
-            </div>
-        </a>
-
-        <!-- Кнопка Конвертация древесины -->
-        <a href="{% url 'inventory:conversion_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">🔄</div>
-                <div class="card-title">Конвертация древесины</div>
-                <div class="card-description">Переработка бревен в доски, брус и т.д.</div>
             </div>
         </a>
 

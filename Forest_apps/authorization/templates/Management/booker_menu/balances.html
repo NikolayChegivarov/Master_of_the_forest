@@ -1,0 +1,531 @@
+<!-- Forest_apps/authorization/templates/Management/booker_menu/balances.html -->
+{% extends "base.html" %}
+
+{% block title %}Остатки материалов{% endblock %}
+
+{% block header %}Остатки материалов (все должности){% endblock %}
+
+{% block content %}
+<div class="balance-container">
+    <!-- Итоги и статистика -->
+    <div class="stats-grid">
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_pieces|floatformat:1 }}</div>
+                    <div class="stat-label">Всего штук</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📏</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_meters|floatformat:1 }}</div>
+                    <div class="stat-label">Всего п.м.</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🧊</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_cubic|floatformat:1 }}</div>
+                    <div class="stat-label">Всего м³</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📋</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ balances.count }}</div>
+                    <div class="stat-label">Записей</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Статистика по типам мест хранения -->
+        <div class="type-stats">
+            <div class="type-stat">
+                <span class="type-badge type-склад">🏭 Склады</span>
+                <span class="type-count">{{ stats_by_type.склад }}</span>
+            </div>
+            <div class="type-stat">
+                <span class="type-badge type-автомобиль">🚛 Автомобили</span>
+                <span class="type-count">{{ stats_by_type.автомобиль }}</span>
+            </div>
+            <div class="type-stat">
+                <span class="type-badge type-бригады">👥 Бригады</span>
+                <span class="type-count">{{ stats_by_type.бригады }}</span>
+            </div>
+            <div class="type-stat">
+                <span class="type-badge type-контрагент">🏢 Контрагенты</span>
+                <span class="type-count">{{ stats_by_type.контрагент }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="filters-container">
+        <form method="get" class="filters-form" id="filter-form">
+            <div class="filters-row">
+                <!-- Фильтр по должности создателя -->
+                <div class="filter-group">
+                    <label for="position">Должность:</label>
+                    <select name="position" id="position" class="filter-select auto-submit">
+                        <option value="">Все должности</option>
+                        {% for position in positions %}
+                            <option value="{{ position.id }}" {% if selected_position|stringformat:"s" == position.id|stringformat:"s" %}selected{% endif %}>
+                                {{ position.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Фильтр по месту хранения -->
+                <div class="filter-group">
+                    {{ filter_form.storage_location.label_tag }}
+                    {{ filter_form.storage_location }}
+                </div>
+
+                <!-- Фильтр по типу материала -->
+                <div class="filter-group">
+                    {{ filter_form.material_type.label_tag }}
+                    {{ filter_form.material_type }}
+                </div>
+
+                <!-- Фильтр по конкретному материалу -->
+                <div class="filter-group">
+                    {{ filter_form.material.label_tag }}
+                    {{ filter_form.material }}
+                </div>
+
+                <!-- Поиск -->
+                <div class="filter-group">
+                    {{ filter_form.search.label_tag }}
+                    {{ filter_form.search }}
+                </div>
+
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="filter-btn">🔍 Применить</button>
+                </div>
+
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <a href="{% url 'authorization:booker_balances' %}" class="filter-clear">✖ Сбросить</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Сообщения -->
+    {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Таблица остатков -->
+    <div class="balances-list">
+        <h3>Все остатки материалов</h3>
+
+        {% if balances %}
+            <div class="table-responsive">
+                <table class="balances-table">
+                    <thead>
+                        <tr>
+                            <th>Место хранения</th>
+                            <th>Тип места</th>
+                            <th>Должность владельца</th>
+                            <th>Материал</th>
+                            <th>Тип материала</th>
+                            <th class="text-right">Штуки</th>
+                            <th class="text-right">П.м.</th>
+                            <th class="text-right">м³</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for balance in balances %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'inventory:storage_location_detail' balance.storage_location.id %}" class="location-link">
+                                    {{ balance.storage_location.get_source_name }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge type-{{ balance.storage_location.source_type }}">
+                                    {{ balance.storage_location.get_source_type_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if balance.created_by_position %}
+                                    <span class="position-badge">{{ balance.created_by_position.name }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ balance.material.name }}</td>
+                            <td>
+                                <span class="material-type-badge {{ balance.material.material_type }}">
+                                    {{ balance.material.get_material_type_display }}
+                                </span>
+                            </td>
+                            <td class="text-right quantity">{{ balance.quantity_pieces|floatformat:1|default:"-" }}</td>
+                            <td class="text-right quantity">{{ balance.quantity_meters|floatformat:1|default:"-" }}</td>
+                            <td class="text-right quantity">{{ balance.quantity_cubic|floatformat:1|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-message">
+                <p>Остатки материалов не найдены.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .balance-container {
+        padding: 20px;
+    }
+
+    /* Статистика */
+    .stats-grid {
+        margin-bottom: 30px;
+    }
+
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 15px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .stat-icon {
+        font-size: 36px;
+        color: #2c5e2e;
+    }
+
+    .stat-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: #2c5e2e;
+        line-height: 1.2;
+    }
+
+    .stat-label {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .type-stats {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        background: white;
+        border-radius: 12px;
+        padding: 15px 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .type-stat {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 10px;
+        background: #f8f9fa;
+        border-radius: 20px;
+    }
+
+    .type-badge {
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .type-count {
+        font-weight: 700;
+        color: #2c5e2e;
+    }
+
+    /* Фильтры */
+    .filters-container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .filters-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 150px;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .filter-btn {
+        padding: 8px 16px;
+        background: #2c5e2e;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+        white-space: nowrap;
+        width: 100%;
+    }
+
+    .filter-btn:hover {
+        background: #1e4220;
+    }
+
+    .filter-clear {
+        padding: 8px 16px;
+        background: #f8f9fa;
+        color: #666;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: background 0.3s;
+        display: inline-block;
+        white-space: nowrap;
+        width: 100%;
+        text-align: center;
+        border: 1px solid #ddd;
+    }
+
+    .filter-clear:hover {
+        background: #e9ecef;
+    }
+
+    /* Таблица */
+    .balances-list {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .balances-list h3 {
+        color: #2c5e2e;
+        margin-bottom: 20px;
+        font-size: 24px;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .balances-table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 1000px;
+    }
+
+    .balances-table th {
+        background: #2c5e2e;
+        color: white;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .balances-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e0e0e0;
+        vertical-align: middle;
+    }
+
+    .balances-table tr:hover {
+        background: #f5f5f5;
+    }
+
+    .location-link {
+        color: #2c5e2e;
+        text-decoration: none;
+        font-weight: 500;
+    }
+
+    .location-link:hover {
+        text-decoration: underline;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .badge.type-склад {
+        background: #cce5ff;
+        color: #004085;
+    }
+
+    .badge.type-автомобиль {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge.type-контрагент {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .badge.type-бригады {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .material-type-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .material-type-badge.древесина {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .material-type-badge.ГСМ {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .material-type-badge.запчасти {
+        background: #cce5ff;
+        color: #004085;
+    }
+
+    .position-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #e9ecef;
+        color: #495057;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
+    .text-right {
+        text-align: right;
+    }
+
+    .quantity {
+        font-weight: 500;
+        color: #333;
+    }
+
+    .empty-message {
+        text-align: center;
+        padding: 60px 40px;
+        color: #666;
+        font-style: italic;
+        background: #f8f9fa;
+        border-radius: 12px;
+    }
+
+    @media (max-width: 768px) {
+        .balance-container {
+            padding: 10px;
+        }
+
+        .stats-cards {
+            grid-template-columns: 1fr;
+        }
+
+        .filters-row {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-group {
+            width: 100%;
+        }
+
+        .balances-list {
+            padding: 20px;
+        }
+
+        .balances-list h3 {
+            font-size: 20px;
+        }
+    }
+</style>
+
+<!-- JavaScript для автоматической отправки -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('filter-form');
+        const autoSubmitFields = document.querySelectorAll('.auto-submit');
+
+        autoSubmitFields.forEach(field => {
+            field.addEventListener('change', function() {
+                form.submit();
+            });
+        });
+    });
+</script>
+{% endblock %}

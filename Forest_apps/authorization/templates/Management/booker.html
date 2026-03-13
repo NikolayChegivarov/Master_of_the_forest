@@ -5,17 +5,25 @@
 
 {% block header %}Панель бухгалтера{% endblock %}
 
-{% block nav_items %}
-    <!-- Навигационное меню пустое -->
-{% endblock %}
-
 {% block content %}
 <div class="dashboard-container">
-    <div class="placeholder-message">
-        <h2>Добро пожаловать, {{ employee_name }}!</h2>
-        <p>Здесь будет располагаться панель управления бухгалтера.</p>
-        <p class="placeholder-note">Содержимое страницы будет добавлено позже.</p>
-    </div>
+    <!-- Кнопка Остатки -->
+    <a href="{% url 'authorization:booker_balances' %}" class="dashboard-card">
+        <div class="card-content">
+            <div class="card-icon">📊</div>
+            <div class="card-title">Остатки</div>
+            <div class="card-description">Просмотр остатков материалов</div>
+        </div>
+    </a>
+
+    <!-- Кнопка Движения материалов -->
+    <a href="{% url 'authorization:booker_movements' %}" class="dashboard-card">
+        <div class="card-content">
+            <div class="card-icon">🔄</div>
+            <div class="card-title">Движения материалов</div>
+            <div class="card-description">Просмотр всех перемещений</div>
+        </div>
+    </a>
 </div>
 
 <style>
@@ -24,51 +32,135 @@
         justify-content: center;
         align-items: center;
         min-height: 60vh;
+        gap: 30px;
+        flex-wrap: wrap;
         padding: 20px;
     }
 
-    .placeholder-message {
-        text-align: center;
-        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
-        color: white;
-        padding: 60px 40px;
-        border-radius: 24px;
-        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-        max-width: 600px;
+    .dashboard-card {
+        text-decoration: none;
+        width: 280px;
+        height: 280px;
+        transition: all 0.3s ease;
+    }
+
+    .card-content {
         width: 100%;
+        height: 100%;
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        border-radius: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        color: white;
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        transition: transform 0.3s, box-shadow 0.3s, background 0.3s;
+        cursor: pointer;
+        padding: 20px;
+        box-sizing: border-box;
+        border: 1px solid rgba(255,255,255,0.1);
     }
 
-    .placeholder-message h2 {
-        font-size: 32px;
-        margin-bottom: 20px;
+    .dashboard-card:hover .card-content {
+        transform: translateY(-12px);
+        box-shadow: 0 24px 36px rgba(0,0,0,0.25);
+        background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .card-icon {
+        font-size: 72px;
+        margin-bottom: 24px;
+        text-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .card-title {
+        font-size: 26px;
         font-weight: 700;
+        margin-bottom: 12px;
+        letter-spacing: 0.5px;
+        text-align: center;
     }
 
-    .placeholder-message p {
-        font-size: 18px;
-        margin-bottom: 15px;
+    .card-description {
+        font-size: 15px;
         opacity: 0.9;
+        text-align: center;
+        line-height: 1.5;
+        max-width: 90%;
+        font-weight: 400;
     }
 
-    .placeholder-note {
-        font-size: 14px;
-        opacity: 0.7;
-        margin-top: 30px;
-        font-style: italic;
-    }
-
-    /* Адаптация для мобильных */
     @media (max-width: 768px) {
-        .placeholder-message {
-            padding: 40px 20px;
+        .dashboard-container {
+            gap: 20px;
+            min-height: 50vh;
         }
 
-        .placeholder-message h2 {
-            font-size: 24px;
+        .dashboard-card {
+            width: 220px;
+            height: 220px;
         }
 
-        .placeholder-message p {
-            font-size: 16px;
+        .card-icon {
+            font-size: 56px;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .card-description {
+            font-size: 13px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .dashboard-container {
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .dashboard-card {
+            width: 100%;
+            height: auto;
+            min-height: 140px;
+        }
+
+        .card-content {
+            flex-direction: row;
+            justify-content: flex-start;
+            padding: 16px 24px;
+        }
+
+        .card-icon {
+            font-size: 48px;
+            margin-bottom: 0;
+            margin-right: 20px;
+            width: 60px;
+            text-align: center;
+        }
+
+        .card-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex: 1;
+        }
+
+        .card-title {
+            font-size: 20px;
+            margin-bottom: 4px;
+            text-align: left;
+        }
+
+        .card-description {
+            font-size: 13px;
+            text-align: left;
+            max-width: 100%;
         }
     }
 </style>

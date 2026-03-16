@@ -149,8 +149,29 @@ class MaterialMovementCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
+        self.user_position = kwargs.pop('user_position', None)  # ДОБАВЛЯЕМ
         self.instance = kwargs.get('instance', None)
         super().__init__(*args, **kwargs)
+
+        # ОПРЕДЕЛЯЕМ ДОЛЖНОСТЬ ПОЛЬЗОВАТЕЛЯ
+        is_supervisor = (self.user_position and self.user_position.lower() == 'руководитель')
+
+        # ФОРМИРУЕМ СПИСОК ТИПОВ ДВИЖЕНИЯ В ЗАВИСИМОСТИ ОТ ДОЛЖНОСТИ
+        all_choices = MaterialMovement.ACCOUNTING_TYPE_CHOICES
+
+        if is_supervisor:
+            # Для руководителя - только Реализация
+            filtered_choices = [choice for choice in all_choices if choice[0] == 'Реализация']
+        else:
+            # Для всех остальных - все кроме Реализации
+            filtered_choices = [choice for choice in all_choices if choice[0] != 'Реализация']
+
+        # Применяем отфильтрованные choices к полю
+        self.fields['accounting_type'].choices = filtered_choices
+
+        # Если есть только один вариант и он не выбран, устанавливаем его по умолчанию
+        if len(filtered_choices) == 1 and not self.initial.get('accounting_type') and not self.instance:
+            self.initial['accounting_type'] = filtered_choices[0][0]
 
         # Получаем ID мест хранения, принадлежащих пользователю
         self.user_location_ids = self._get_user_location_ids()
@@ -174,7 +195,7 @@ class MaterialMovementCreateForm(forms.ModelForm):
 
         # Находим должность "водитель" по точному названию
         self.fields['employee'].queryset = Employee.objects.filter(
-            position__name='водитель',  # Точное совпадение
+            position__name='водитель',
             is_active=True
         ).order_by('last_name', 'first_name')
 

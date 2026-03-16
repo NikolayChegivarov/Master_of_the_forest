@@ -147,8 +147,19 @@ def material_movement_list_view(request):
 def material_movement_create_view(request):
     """Создание нового движения материалов"""
 
+    # Получаем должность пользователя из сессии
+    user_position = request.session.get('position_name')
+
+    # Логируем для отладки (можно удалить после проверки)
+    print(f"Создание движения. Пользователь: {request.user}, Должность: {user_position}")
+
     if request.method == 'POST':
-        form = MaterialMovementCreateForm(request.POST, user=request.user)
+        form = MaterialMovementCreateForm(
+            request.POST,
+            user=request.user,
+            user_position=user_position  # ПЕРЕДАЕМ ДОЛЖНОСТЬ В ФОРМУ
+        )
+
         if form.is_valid():
             # Сохраняем движение
             movement = form.save(commit=False)
@@ -160,6 +171,7 @@ def material_movement_create_view(request):
                 position = Position.objects.get(name__iexact=position_name)
                 movement.created_by_position = position
             except Position.DoesNotExist:
+                # Если должность не найдена, создаем
                 position, _ = Position.objects.get_or_create(
                     name=position_name,
                     defaults={'is_active': True}
@@ -184,6 +196,11 @@ def material_movement_create_view(request):
                     movement.delete()
                     messages.error(request, str(e))
                     return redirect('inventory:material_movement_create')
+                except Exception as e:
+                    # Другие ошибки
+                    movement.delete()
+                    messages.error(request, f'Ошибка при выполнении движения: {str(e)}')
+                    return redirect('inventory:material_movement_create')
             else:
                 # Для отправления просто сохраняем
                 messages.success(
@@ -192,8 +209,17 @@ def material_movement_create_view(request):
                 )
 
             return redirect('inventory:material_movement_list')
+        else:
+            # Если форма невалидна, показываем ошибки
+            # Можно добавить логирование ошибок для отладки
+            print(f"Ошибки формы: {form.errors}")
+
     else:
-        form = MaterialMovementCreateForm(user=request.user)
+        # GET-запрос - создаем пустую форму с передачей должности
+        form = MaterialMovementCreateForm(
+            user=request.user,
+            user_position=user_position  # ПЕРЕДАЕМ ДОЛЖНОСТЬ В ФОРМУ
+        )
 
     context = {
         'title': 'Создание движения',
@@ -233,19 +259,31 @@ def material_movement_detail_view(request, movement_id):
 def material_movement_edit_view(request, movement_id):
     """Редактирование движения (только для своей должности и только невыполненных)"""
 
-    # Получаем должность текущего пользователя
-    position_name = request.session.get('position_name')
+    # Получаем должность текущего пользователя из сессии
+    user_position = request.session.get('position_name')
+    user_position_name = user_position
+
+    # Логируем для отладки (можно удалить после проверки)
+    print(f"Редактирование движения #{movement_id}. Пользователь: {request.user}, Должность: {user_position}")
+
+    # Находим должность по названию
     try:
-        position = Position.objects.get(name__iexact=position_name)
+        position = Position.objects.get(name__iexact=user_position)
+        user_position_id = position.id
     except Position.DoesNotExist:
         messages.error(request, 'Ошибка определения должности')
         return redirect('inventory:material_movement_list')
 
-    movement = get_object_or_404(
-        MaterialMovement,
-        id=movement_id,
-        created_by_position=position
-    )
+    # Получаем движение по ID и проверяем, что оно создано этой должностью
+    try:
+        movement = get_object_or_404(
+            MaterialMovement,
+            id=movement_id,
+            created_by_position=position
+        )
+    except:
+        messages.error(request, 'Движение не найдено или у вас нет прав для его редактирования')
+        return redirect('inventory:material_movement_list')
 
     # Проверка на выполненное движение
     if movement.is_completed:
@@ -260,16 +298,33 @@ def material_movement_edit_view(request, movement_id):
             return redirect('inventory:material_movement_detail', movement_id=movement.id)
 
     if request.method == 'POST':
-        form = MaterialMovementCreateForm(request.POST, instance=movement, user=request.user)
+        form = MaterialMovementCreateForm(
+            request.POST,
+            instance=movement,
+            user=request.user,
+            user_position=user_position  # ПЕРЕДАЕМ ДОЛЖНОСТЬ В ФОРМУ
+        )
+
         if form.is_valid():
-            form.save()
+            # Сохраняем изменения
+            updated_movement = form.save()
+
             messages.success(
                 request,
-                f'Движение №{movement.id} успешно обновлено!'
+                f'Движение №{updated_movement.id} успешно обновлено!'
             )
-            return redirect('inventory:material_movement_detail', movement_id=movement.id)
+            return redirect('inventory:material_movement_detail', movement_id=updated_movement.id)
+        else:
+            # Если форма невалидна, показываем ошибки
+            print(f"Ошибки формы при редактировании: {form.errors}")
+
     else:
-        form = MaterialMovementCreateForm(instance=movement, user=request.user)
+        # GET-запрос - создаем форму с данными движения и передачей должности
+        form = MaterialMovementCreateForm(
+            instance=movement,
+            user=request.user,
+            user_position=user_position  # ПЕРЕДАЕМ ДОЛЖНОСТЬ В ФОРМУ
+        )
 
     context = {
         'title': f'Редактирование движения №{movement.id}',

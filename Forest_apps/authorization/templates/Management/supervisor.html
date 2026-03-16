@@ -7,52 +7,74 @@
 
 {% block content %}
 <div class="dashboard-container">
-    <!-- Кнопка Должности -->
-    <a href="{% url 'core:position_list' %}" class="dashboard-card">
-        <div class="card-content">
-            <div class="card-icon">👤</div>
-            <div class="card-title">Должности</div>
-            <div class="card-description">Управление должностями</div>
-        </div>
-    </a>
+    <!-- Первый ряд кнопок -->
+    <div class="dashboard-row">
+        <!-- Кнопка Должности -->
+        <a href="{% url 'core:position_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">👤</div>
+                <div class="card-title">Должности</div>
+                <div class="card-description">Управление должностями</div>
+            </div>
+        </a>
 
-    <!-- Кнопка Сотрудники -->
-    <a href="{% url 'employees:employee_list' %}" class="dashboard-card">
-        <div class="card-content">
-            <div class="card-icon">👥</div>
-            <div class="card-title">Сотрудники</div>
-            <div class="card-description">Управление персоналом</div>
-        </div>
-    </a>
+        <!-- Кнопка Сотрудники -->
+        <a href="{% url 'employees:employee_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">👥</div>
+                <div class="card-title">Сотрудники</div>
+                <div class="card-description">Управление персоналом</div>
+            </div>
+        </a>
 
-    <!-- Кнопка Контрагенты -->
-    <a href="{% url 'core:counterparty_list' %}" class="dashboard-card">
-        <div class="card-content">
-            <div class="card-icon">🏢</div>
-            <div class="card-title">Контрагенты</div>
-            <div class="card-description">Клиенты и партнеры</div>
-        </div>
-    </a>
+        <!-- Кнопка Контрагенты -->
+        <a href="{% url 'core:counterparty_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🏢</div>
+                <div class="card-title">Контрагенты</div>
+                <div class="card-description">Клиенты и партнеры</div>
+            </div>
+        </a>
+    </div>
 
-    <!-- Кнопка Сторонние интерфейсы -->
-    <a href="{% url 'authorization:third_party_interfaces' %}" class="dashboard-card">
-        <div class="card-content">
-            <div class="card-icon">🔄</div>
-            <div class="card-title">Сторонние интерфейсы</div>
-            <div class="card-description">Интеграции и внешние системы</div>
-        </div>
-    </a>
+    <!-- Второй ряд кнопок -->
+    <div class="dashboard-row">
+        <!-- Кнопка Сторонние интерфейсы -->
+        <a href="{% url 'authorization:third_party_interfaces' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🔄</div>
+                <div class="card-title">Сторонние интерфейсы</div>
+                <div class="card-description">Интеграции и внешние системы</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Движение материалов (НОВАЯ) -->
+        <a href="{% url 'inventory:material_movement_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">📤</div>
+                <div class="card-title">Движение материалов</div>
+                <div class="card-description">Перемещение, реализация, списание</div>
+            </div>
+        </a>
+
+        <!-- Пустой элемент для сохранения сетки (невидимый) -->
+        <div class="dashboard-card" style="visibility: hidden;"></div>
+    </div>
 </div>
 
 <style>
     .dashboard-container {
         display: flex;
+        flex-direction: column;
+        gap: 30px;
+        padding: 20px;
+    }
+
+    .dashboard-row {
+        display: flex;
         justify-content: center;
-        align-items: center;
-        min-height: 60vh;
         gap: 30px;
         flex-wrap: wrap;
-        padding: 20px;
     }
 
     .dashboard-card {
@@ -110,8 +132,33 @@
         font-weight: 400;
     }
 
+    /* Адаптация для планшетов */
+    @media (max-width: 1024px) {
+        .dashboard-card {
+            width: 250px;
+            height: 250px;
+        }
+
+        .card-icon {
+            font-size: 64px;
+        }
+
+        .card-title {
+            font-size: 24px;
+        }
+
+        .card-description {
+            font-size: 14px;
+        }
+    }
+
+    /* Адаптация для мобильных устройств */
     @media (max-width: 768px) {
         .dashboard-container {
+            gap: 20px;
+        }
+
+        .dashboard-row {
             gap: 20px;
         }
 
@@ -132,6 +179,55 @@
 
         .card-description {
             font-size: 13px;
+        }
+
+        /* Скрываем пустые элементы на мобильных */
+        .dashboard-card[style*="visibility: hidden"] {
+            display: none;
+        }
+    }
+
+    /* Адаптация для маленьких экранов */
+    @media (max-width: 480px) {
+        .dashboard-card {
+            width: 100%;
+            height: auto;
+            min-height: 140px;
+        }
+
+        .card-content {
+            flex-direction: row;
+            justify-content: flex-start;
+            padding: 16px 24px;
+        }
+
+        .card-icon {
+            font-size: 48px;
+            margin-bottom: 0;
+            margin-right: 20px;
+            width: 60px;
+            text-align: center;
+        }
+
+        .card-title {
+            font-size: 20px;
+            margin-bottom: 4px;
+            text-align: left;
+        }
+
+        .card-description {
+            font-size: 13px;
+            text-align: left;
+            max-width: 100%;
+        }
+
+        .dashboard-card:hover .card-content {
+            transform: translateY(-4px);
+        }
+
+        /* Скрываем пустые элементы на мобильных */
+        .dashboard-card[style*="visibility: hidden"] {
+            display: none;
         }
     }
 </style>

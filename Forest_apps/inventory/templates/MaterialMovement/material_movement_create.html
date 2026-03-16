@@ -344,6 +344,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!typeSelect) return;
 
+    // Получаем все доступные опции из select
+    const typeOptions = Array.from(typeSelect.options).map(opt => opt.value).filter(v => v);
+    console.log('Доступные типы:', typeOptions);
+
     // Сохраняем все материалы для фильтрации
     let allMaterials = [];
 
@@ -353,6 +357,15 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             allMaterials = data;
             console.log('Все материалы загружены:', allMaterials);
+
+            // Если доступен только один тип, автоматически загружаем данные для него
+            if (typeOptions.length === 1) {
+                console.log('Доступен только один тип, автоматически загружаем данные');
+                updateFields();
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки материалов:', error);
         });
 
     function filterMaterialsByType(materialType) {
@@ -494,8 +507,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     typeSelect.addEventListener('change', updateFields);
 
+    // Если тип уже выбран при загрузке страницы, обновляем поля
     if (typeSelect.value) {
-        updateFields();
+        // Небольшая задержка, чтобы материалы успели загрузиться
+        setTimeout(updateFields, 300);
+    } else if (typeOptions.length === 1) {
+        // Если доступен только один тип, но он не выбран, выбираем его
+        typeSelect.value = typeOptions[0];
+        setTimeout(updateFields, 300);
     }
 });
 </script>
@@ -517,4 +536,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </style>
 {% endblock %}
 {% endblock %}
-

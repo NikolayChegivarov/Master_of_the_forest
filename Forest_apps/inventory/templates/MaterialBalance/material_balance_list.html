@@ -100,7 +100,7 @@
                 </div>
             </div>
 
-            <!-- НОВОЕ: Чекбокс для скрытия пустых мест хранения -->
+            <!-- Чекбокс для скрытия пустых мест хранения -->
             <div class="hide-empty-row">
                 <div class="hide-empty-group">
                     <label class="checkbox-label">
@@ -130,7 +130,6 @@
                             <th class="text-right">Штуки</th>
                             <th class="text-right">П.м.</th>
                             <th class="text-right">м³</th>
-                            <th class="text-center">Действия</th>
                             <th>Должность создателя</th>
                         </tr>
                     </thead>
@@ -156,28 +155,6 @@
                             <td class="text-right quantity-cell {% if balance.quantity_pieces == 0 %}zero-quantity{% endif %}">{{ balance.quantity_pieces|floatformat:1|default:"-" }}</td>
                             <td class="text-right quantity-cell {% if balance.quantity_meters == 0 %}zero-quantity{% endif %}">{{ balance.quantity_meters|floatformat:1|default:"-" }}</td>
                             <td class="text-right quantity-cell {% if balance.quantity_cubic == 0 %}zero-quantity{% endif %}">{{ balance.quantity_cubic|floatformat:1|default:"-" }}</td>
-                            <td class="actions-cell">
-                                <div class="action-buttons-group">
-                                    <a href="{% url 'inventory:material_balance_detail' balance.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
-
-                                    {% with loc=balance.storage_location %}
-                                        {% if loc.source_type == 'склад' and loc.source_id in user_warehouses %}
-                                            <a href="{% url 'inventory:material_balance_edit' balance.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
-                                            <a href="{% url 'inventory:material_balance_delete' balance.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Вы уверены, что хотите удалить этот остаток?');">🗑️</a>
-                                        {% elif loc.source_type == 'бригады' and loc.source_id in user_brigades %}
-                                            <a href="{% url 'inventory:material_balance_edit' balance.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
-                                            <a href="{% url 'inventory:material_balance_delete' balance.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Вы уверены, что хотите удалить этот остаток?');">🗑️</a>
-                                        {% elif loc.source_type == 'автомобиль' and loc.source_id in user_vehicles %}
-                                            <a href="{% url 'inventory:material_balance_edit' balance.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
-                                            <a href="{% url 'inventory:material_balance_delete' balance.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Вы уверены, что хотите удалить этот остаток?');">🗑️</a>
-                                        {% elif loc.source_type == 'контрагент' %}
-                                            <span class="no-action" title="Остатки контрагентов нельзя редактировать">🔒</span>
-                                        {% else %}
-                                            <span class="no-action" title="Чужое место хранения">👀</span>
-                                        {% endif %}
-                                    {% endwith %}
-                                </div>
-                            </td>
                             <td>
                                 {% if balance.created_by_position %}
                                     <span class="position-badge">{{ balance.created_by_position.name }}</span>
@@ -407,7 +384,7 @@
         background: #e9ecef;
     }
 
-    /* НОВЫЙ СТИЛЬ: Чекбокс для скрытия пустых мест */
+    /* Чекбокс для скрытия пустых мест */
     .hide-empty-row {
         margin-top: 20px;
         padding-top: 15px;
@@ -466,7 +443,7 @@
     .balances-table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 1200px;
+        min-width: 1000px; /* Уменьшили с 1200px, так как убрали столбец действий */
     }
 
     .balances-table th {
@@ -499,7 +476,7 @@
         opacity: 1;
     }
 
-    /* НОВЫЙ СТИЛЬ: Скрытые пустые строки */
+    /* Скрытые пустые строки */
     .empty-balance {
         display: none;
     }
@@ -606,79 +583,8 @@
         white-space: nowrap;
     }
 
-    .actions-cell {
-        min-width: 120px;
-        text-align: center;
-    }
-
-    .action-buttons-group {
-        display: flex;
-        gap: 5px;
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .btn-action {
-        text-decoration: none;
-        width: 32px;
-        height: 32px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 6px;
-        font-size: 16px;
-        transition: all 0.2s;
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-    }
-
-    .btn-action:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-
-    .view-btn {
-        color: #2c5e2e;
-    }
-
-    .view-btn:hover {
-        background: #2c5e2e;
-        color: white;
-        border-color: #2c5e2e;
-    }
-
-    .edit-btn {
-        color: #ffc107;
-    }
-
-    .edit-btn:hover {
-        background: #ffc107;
-        color: white;
-        border-color: #ffc107;
-    }
-
-    .delete-btn {
-        color: #dc3545;
-    }
-
-    .delete-btn:hover {
-        background: #dc3545;
-        color: white;
-        border-color: #dc3545;
-    }
-
-    .no-action {
-        display: inline-block;
-        width: 32px;
-        height: 32px;
-        line-height: 32px;
-        text-align: center;
-        font-size: 16px;
-        color: #999;
-        cursor: default;
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
+    .text-muted {
+        color: #6c757d;
     }
 
     .empty-message {
@@ -722,10 +628,6 @@
         background: #5a6268;
     }
 
-    .text-muted {
-        color: #6c757d;
-    }
-
     @media (max-width: 768px) {
         .balance-container {
             padding: 10px;
@@ -760,16 +662,6 @@
         .type-stat {
             width: 100%;
         }
-
-        .action-buttons-group {
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .btn-action, .no-action {
-            width: 100%;
-            margin: 2px 0;
-        }
     }
 </style>
 
@@ -780,7 +672,7 @@
         const autoSubmitFields = document.querySelectorAll('select[name="storage_location"], select[name="material_type"], select[name="material"]');
         const searchInput = document.querySelector('input[name="search"]');
 
-        // НОВОЕ: Чекбокс для скрытия пустых мест
+        // Чекбокс для скрытия пустых мест
         const hideEmptyCheckbox = document.getElementById('hide_empty');
 
         // Автоматическая отправка при изменении select-полей
@@ -800,7 +692,7 @@
             });
         }
 
-        // НОВОЕ: Автоматическая отправка при изменении чекбокса
+        // Автоматическая отправка при изменении чекбокса
         if (hideEmptyCheckbox) {
             hideEmptyCheckbox.addEventListener('change', function() {
                 form.submit();

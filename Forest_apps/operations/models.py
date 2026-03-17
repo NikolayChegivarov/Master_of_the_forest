@@ -72,20 +72,39 @@ class OperationRecord(models.Model):
     )
     date_time = models.DateTimeField('Дата/время', auto_now_add=True)
     warehouse = models.ForeignKey(
-        'core.Warehouse',  # ✅ Исправлено: строковая ссылка
+        'core.Warehouse',
         on_delete=models.PROTECT,
         verbose_name='Склад'
     )
     material = models.ForeignKey(
-        'forestry.Material',  # ✅ Исправлено: строковая ссылка
+        'forestry.Material',
         on_delete=models.PROTECT,
         verbose_name='Материал'
     )
     quantity = models.DecimalField(
-        'Количество',
+        'Количество (шт)',
         max_digits=12,
         decimal_places=3,
-        validators=[MinValueValidator(0.001)]
+        validators=[MinValueValidator(0.001)],
+        help_text='Количество в штуках'
+    )
+    square_meters = models.DecimalField(
+        'Площадь (м²)',
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0.001)],
+        null=True,
+        blank=True,
+        help_text='Площадь в квадратных метрах'
+    )
+    cubic_meters = models.DecimalField(
+        'Объем (м³)',
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0.001)],
+        null=True,
+        blank=True,
+        help_text='Объем в кубических метрах'
     )
     created_by = models.ForeignKey(
         User,
@@ -108,6 +127,8 @@ class OperationRecord(models.Model):
         verbose_name_plural = 'Учет операций'
         indexes = [
             models.Index(fields=['date_time', 'operation_type']),
+            models.Index(fields=['square_meters']),
+            models.Index(fields=['cubic_meters']),
         ]
 
     def __str__(self):
@@ -115,15 +136,17 @@ class OperationRecord(models.Model):
 
     @classmethod
     def create_operation_record(cls, operation_type, warehouse, material,
-                                quantity, date_time=None):
+                                quantity, square_meters=None, cubic_meters=None, date_time=None):
         """
-        Создание новой записи об операции
+        Создание новой записи об операции с возможностью указания площади и объема
         """
         return cls.objects.create(
             operation_type=operation_type,
             warehouse=warehouse,
             material=material,
             quantity=quantity,
+            square_meters=square_meters,
+            cubic_meters=cubic_meters,
             date_time=date_time if date_time else timezone.now()
         )
 
@@ -173,9 +196,43 @@ class OperationRecord(models.Model):
         return total or 0
 
     @classmethod
+    def get_total_square_meters_by_material(cls, material_id, start_date=None, end_date=None):
+        """
+        Получение общей площади по материалу
+        """
+        from django.db.models import Sum
+
+        queryset = cls.objects.filter(material_id=material_id)
+
+        if start_date:
+            queryset = queryset.filter(date_time__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(date_time__lte=end_date)
+
+        total = queryset.aggregate(total_square=Sum('square_meters'))['total_square']
+        return total or 0
+
+    @classmethod
+    def get_total_cubic_meters_by_material(cls, material_id, start_date=None, end_date=None):
+        """
+        Получение общего объема по материалу
+        """
+        from django.db.models import Sum
+
+        queryset = cls.objects.filter(material_id=material_id)
+
+        if start_date:
+            queryset = queryset.filter(date_time__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(date_time__lte=end_date)
+
+        total = queryset.aggregate(total_cubic=Sum('cubic_meters'))['total_cubic']
+        return total or 0
+
+    @classmethod
     def get_operations_summary(cls, start_date=None, end_date=None):
         """
-        Получение сводки по операциям
+        Получение сводки по операциям с учетом площади и объема
         """
         from django.db.models import Sum, Count
 
@@ -191,5 +248,7 @@ class OperationRecord(models.Model):
             'material__name'
         ).annotate(
             total_quantity=Sum('quantity'),
+            total_square_meters=Sum('square_meters'),
+            total_cubic_meters=Sum('cubic_meters'),
             operation_count=Count('id')
         ).order_by('operation_type__name', 'material__name')

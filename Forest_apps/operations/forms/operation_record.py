@@ -1,3 +1,4 @@
+# Forest_apps/operations/forms/operation_record.py
 from django import forms
 from Forest_apps.operations.models import OperationRecord
 from Forest_apps.core.models import Warehouse
@@ -9,7 +10,7 @@ class OperationRecordCreateForm(forms.ModelForm):
 
     class Meta:
         model = OperationRecord
-        fields = ['operation_type', 'warehouse', 'material', 'quantity']
+        fields = ['operation_type', 'warehouse', 'material', 'quantity', 'square_meters', 'cubic_meters']
         widgets = {
             'operation_type': forms.Select(attrs={
                 'class': 'form-control',
@@ -23,7 +24,19 @@ class OperationRecordCreateForm(forms.ModelForm):
             }),
             'quantity': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Количество',
+                'placeholder': 'Количество в штуках',
+                'step': '0.001',
+                'min': '0.001'
+            }),
+            'square_meters': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Площадь в м²',
+                'step': '0.001',
+                'min': '0.001'
+            }),
+            'cubic_meters': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Объем в м³',
                 'step': '0.001',
                 'min': '0.001'
             }),
@@ -32,7 +45,9 @@ class OperationRecordCreateForm(forms.ModelForm):
             'operation_type': 'Тип операции',
             'warehouse': 'Склад',
             'material': 'Материал',
-            'quantity': 'Количество',
+            'quantity': 'Количество (шт)',
+            'square_meters': 'Площадь (м²)',
+            'cubic_meters': 'Объем (м³)',
         }
 
     def __init__(self, *args, **kwargs):
@@ -54,6 +69,10 @@ class OperationRecordCreateForm(forms.ModelForm):
         # Все материалы, сортировка по типу и названию
         self.fields['material'].queryset = Material.objects.all().order_by('material_type', 'name')
 
+        # Делаем поля площади и объема необязательными
+        self.fields['square_meters'].required = False
+        self.fields['cubic_meters'].required = False
+
     def _get_user_warehouse_ids(self):
         """Получает ID складов, принадлежащих пользователю"""
         if not self.user or not self.user.is_authenticated:
@@ -63,6 +82,22 @@ class OperationRecordCreateForm(forms.ModelForm):
 
         # Склады, созданные пользователем
         return Warehouse.objects.filter(created_by=self.user).values_list('id', flat=True)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        square_meters = cleaned_data.get('square_meters')
+        cubic_meters = cleaned_data.get('cubic_meters')
+
+        # Проверка, что хотя бы одно из полей (количество, площадь или объем) заполнено
+        if not square_meters and not cubic_meters:
+            # Если не заполнены ни площадь, ни объем, то количество обязательно
+            quantity = cleaned_data.get('quantity')
+            if not quantity:
+                raise forms.ValidationError(
+                    'Необходимо указать хотя бы одно из значений: количество, площадь или объем'
+                )
+
+        return cleaned_data
 
 
 class OperationRecordFilterForm(forms.Form):
@@ -114,6 +149,18 @@ class OperationRecordFilterForm(forms.Form):
             'class': 'form-control',
             'placeholder': 'Поиск по материалу...'
         })
+    )
+
+    has_measurements = forms.ChoiceField(
+        choices=[
+            ('', 'Все записи'),
+            ('with_square', 'Только с площадью'),
+            ('with_cubic', 'Только с объемом'),
+            ('with_both', 'С площадью и объемом'),
+        ],
+        required=False,
+        label='Измерения',
+        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
     )
 
     def __init__(self, *args, **kwargs):

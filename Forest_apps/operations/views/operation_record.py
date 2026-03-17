@@ -1,3 +1,4 @@
+# Forest_apps/operations/views/operation_record.py
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -41,6 +42,7 @@ def operation_record_list_view(request):
         date_from = filter_form.cleaned_data.get('date_from')
         date_to = filter_form.cleaned_data.get('date_to')
         search = filter_form.cleaned_data.get('search')
+        has_measurements = filter_form.cleaned_data.get('has_measurements')
 
         if operation_type:
             records = records.filter(operation_type=operation_type)
@@ -63,9 +65,22 @@ def operation_record_list_view(request):
                 Q(operation_type__name__icontains=search)
             )
 
+        # Фильтр по наличию измерений
+        if has_measurements == 'with_square':
+            records = records.filter(square_meters__isnull=False)
+        elif has_measurements == 'with_cubic':
+            records = records.filter(cubic_meters__isnull=False)
+        elif has_measurements == 'with_both':
+            records = records.filter(
+                square_meters__isnull=False,
+                cubic_meters__isnull=False
+            )
+
     # Статистика
     total_count = records.count()
     total_quantity = records.aggregate(total=Sum('quantity'))['total'] or 0
+    total_square_meters = records.aggregate(total=Sum('square_meters'))['total'] or 0
+    total_cubic_meters = records.aggregate(total=Sum('cubic_meters'))['total'] or 0
 
     # Статистика по типам операций
     stats_by_type = []
@@ -73,11 +88,15 @@ def operation_record_list_view(request):
         type_records = records.filter(operation_type=op_type)
         type_count = type_records.count()
         type_quantity = type_records.aggregate(total=Sum('quantity'))['total'] or 0
+        type_square = type_records.aggregate(total=Sum('square_meters'))['total'] or 0
+        type_cubic = type_records.aggregate(total=Sum('cubic_meters'))['total'] or 0
         if type_count > 0:
             stats_by_type.append({
                 'name': op_type.name,
                 'count': type_count,
-                'quantity': type_quantity
+                'quantity': type_quantity,
+                'square_meters': type_square,
+                'cubic_meters': type_cubic,
             })
 
     context = {
@@ -88,6 +107,8 @@ def operation_record_list_view(request):
         'filter_form': filter_form,
         'total_count': total_count,
         'total_quantity': total_quantity,
+        'total_square_meters': total_square_meters,
+        'total_cubic_meters': total_cubic_meters,
         'stats_by_type': stats_by_type,
     }
 

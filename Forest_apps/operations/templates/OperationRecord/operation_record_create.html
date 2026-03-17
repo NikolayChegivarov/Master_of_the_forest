@@ -68,7 +68,9 @@
                 {% endif %}
             </div>
 
-            <!-- Поле Количество -->
+<!-- После поля Количество (где-то после строки 60-70) -->
+
+            <!-- Поле Количество (шт) -->
             <div class="form-group">
                 <label for="{{ form.quantity.id_for_label }}">{{ form.quantity.label }}:</label>
                 {{ form.quantity }}
@@ -79,7 +81,35 @@
                         {% endfor %}
                     </div>
                 {% endif %}
-                <small class="form-text text-muted">Введите количество (минимум 0.001)</small>
+                <small class="form-text text-muted">Введите количество в штуках (минимум 0.001)</small>
+            </div>
+
+            <!-- Поле Площадь (м²) -->
+            <div class="form-group">
+                <label for="{{ form.square_meters.id_for_label }}">{{ form.square_meters.label }}:</label>
+                {{ form.square_meters }}
+                {% if form.square_meters.errors %}
+                    <div class="field-error">
+                        {% for error in form.square_meters.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Площадь в квадратных метрах (необязательно)</small>
+            </div>
+
+            <!-- Поле Объем (м³) -->
+            <div class="form-group">
+                <label for="{{ form.cubic_meters.id_for_label }}">{{ form.cubic_meters.label }}:</label>
+                {{ form.cubic_meters }}
+                {% if form.cubic_meters.errors %}
+                    <div class="field-error">
+                        {% for error in form.cubic_meters.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Объем в кубических метрах (необязательно)</small>
             </div>
 
             <!-- Кнопки -->

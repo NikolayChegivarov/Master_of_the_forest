@@ -38,8 +38,23 @@
 
             <div class="detail-row">
                 <div class="detail-label">Количество:</div>
-                <div class="detail-value quantity">{{ record.quantity|floatformat:3 }} {{ record.material.unit }}</div>
+                <div class="detail-value quantity">{{ record.quantity|floatformat:3 }} шт</div>
             </div>
+
+            <!-- НОВЫЕ ПОЛЯ -->
+            {% if record.square_meters %}
+            <div class="detail-row">
+                <div class="detail-label">Площадь:</div>
+                <div class="detail-value">{{ record.square_meters|floatformat:3 }} м²</div>
+            </div>
+            {% endif %}
+
+            {% if record.cubic_meters %}
+            <div class="detail-row">
+                <div class="detail-label">Объем:</div>
+                <div class="detail-value">{{ record.cubic_meters|floatformat:3 }} м³</div>
+            </div>
+            {% endif %}
 
             <div class="detail-row">
                 <div class="detail-label">Кто создал:</div>

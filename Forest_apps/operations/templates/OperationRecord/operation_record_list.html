@@ -28,7 +28,21 @@
             <div class="stat-icon">📊</div>
             <div class="stat-content">
                 <div class="stat-value">{{ total_quantity|floatformat:1 }}</div>
-                <div class="stat-label">Всего обработано</div>
+                <div class="stat-label">Всего шт</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📐</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_square_meters|floatformat:1 }}</div>
+                <div class="stat-label">Всего м²</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_cubic_meters|floatformat:1 }}</div>
+                <div class="stat-label">Всего м³</div>
             </div>
         </div>
     </div>
@@ -42,7 +56,13 @@
             <div class="type-stat-item">
                 <span class="type-name">{{ stat.name }}</span>
                 <span class="type-count">{{ stat.count }} опер.</span>
-                <span class="type-quantity">{{ stat.quantity|floatformat:1 }} ед.</span>
+                <span class="type-quantity">{{ stat.quantity|floatformat:1 }} шт</span>
+                {% if stat.square_meters %}
+                <span class="type-square">{{ stat.square_meters|floatformat:1 }} м²</span>
+                {% endif %}
+                {% if stat.cubic_meters %}
+                <span class="type-cubic">{{ stat.cubic_meters|floatformat:1 }} м³</span>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
@@ -76,6 +96,10 @@
                     {{ filter_form.date_to }}
                 </div>
                 <div class="filter-group">
+                    {{ filter_form.has_measurements.label_tag }}
+                    {{ filter_form.has_measurements }}
+                </div>
+                <div class="filter-group">
                     {{ filter_form.search.label_tag }}
                     {{ filter_form.search }}
                 </div>
@@ -105,7 +129,9 @@
                             <th>Тип операции</th>
                             <th>Склад</th>
                             <th>Материал</th>
-                            <th class="text-right">Количество</th>
+                            <th class="text-right">Количество (шт)</th>
+                            <th class="text-right">Площадь (м²)</th>
+                            <th class="text-right">Объем (м³)</th>
                             <th>Должность создателя</th>
                             <th class="text-center">Действия</th>
                         </tr>
@@ -120,7 +146,21 @@
                             </td>
                             <td class="warehouse-cell">{{ record.warehouse.name }}</td>
                             <td class="material-cell">{{ record.material.name }}</td>
-                            <td class="text-right quantity-cell">{{ record.quantity|floatformat:1 }} {{ record.material.unit }}</td>
+                            <td class="text-right quantity-cell">{{ record.quantity|floatformat:1 }} шт</td>
+                            <td class="text-right">
+                                {% if record.square_meters %}
+                                    <span class="measurement-value">{{ record.square_meters|floatformat:1 }} м²</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-right">
+                                {% if record.cubic_meters %}
+                                    <span class="measurement-value">{{ record.cubic_meters|floatformat:1 }} м³</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if record.created_by_position %}
                                     <span class="position-badge">{{ record.created_by_position.name }}</span>
@@ -261,7 +301,7 @@
 
     .type-stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 15px;
     }
 
@@ -272,22 +312,40 @@
         padding: 10px 15px;
         background: #f8f9fa;
         border-radius: 8px;
+        flex-wrap: wrap;
     }
 
     .type-name {
         font-weight: 600;
         color: #2c5e2e;
         flex: 1;
+        min-width: 120px;
     }
 
     .type-count {
         color: #666;
         font-size: 13px;
+        background: #e9ecef;
+        padding: 2px 8px;
+        border-radius: 12px;
     }
 
     .type-quantity {
         font-weight: 600;
         color: #2c5e2e;
+        font-size: 13px;
+    }
+
+    .type-square {
+        color: #17a2b8;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .type-cubic {
+        color: #fd7e14;
+        font-size: 13px;
+        font-weight: 500;
     }
 
     /* Фильтры */
@@ -398,7 +456,7 @@
     .records-table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 1000px;
+        min-width: 1200px;
     }
 
     .records-table th {
@@ -451,6 +509,10 @@
     .quantity-cell {
         font-weight: 600;
         color: #2c5e2e;
+    }
+
+    .measurement-value {
+        font-weight: 500;
     }
 
     .text-right {
@@ -589,6 +651,16 @@
             grid-template-columns: 1fr;
         }
 
+        .type-stat-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+
+        .type-name {
+            min-width: auto;
+        }
+
         .filters-row {
             flex-direction: column;
             gap: 10px;
@@ -614,7 +686,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('filter-form');
-        const autoSubmitFields = document.querySelectorAll('select[name="operation_type"], select[name="warehouse"], select[name="material"], input[name="date_from"], input[name="date_to"]');
+        const autoSubmitFields = document.querySelectorAll('select[name="operation_type"], select[name="warehouse"], select[name="material"], input[name="date_from"], input[name="date_to"], select[name="has_measurements"]');
         const searchInput = document.querySelector('input[name="search"]');
 
         // Автоматическая отправка при изменении select-полей

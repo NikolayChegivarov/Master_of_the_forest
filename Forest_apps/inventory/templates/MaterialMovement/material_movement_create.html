@@ -47,6 +47,9 @@
                         {% endfor %}
                     </div>
                 {% endif %}
+                {% if is_manager %}
+                    <small class="form-text manager-hint">🏭 При реализации доступны только склады</small>
+                {% endif %}
             </div>
 
             <!-- Поле Куда -->
@@ -60,13 +63,6 @@
                         {% endfor %}
                     </div>
                 {% endif %}
-                    <small class="form-text text-muted">
-                        {% if is_manager %}
-                            Для реализации укажите контрагента
-                        {% else %}
-                            Для списания можно указать склад, бригаду или ТС
-                        {% endif %}
-                    </small>
             </div>
 
             <!-- Поле Материал -->

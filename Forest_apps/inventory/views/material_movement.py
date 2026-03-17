@@ -522,7 +522,9 @@ def get_locations_by_type(request):
         to_locations = StorageLocation.objects.exclude(id__in=user_location_ids).exclude(source_type='контрагент')
 
     elif movement_type == 'Реализация':
-        from_locations = StorageLocation.objects.all()
+        # Откуда - только склады (все, не только свои)
+        from_locations = StorageLocation.objects.filter(source_type='склад')
+        # Куда - только контрагенты
         to_locations = StorageLocation.objects.filter(source_type='контрагент')
 
     elif movement_type == 'Списание':

@@ -285,8 +285,11 @@ class MaterialMovementCreateForm(forms.ModelForm):
             ).order_by('source_type')
 
         elif accounting_type == 'Реализация':
-            # Реализация: откуда - все, куда - только контрагенты
-            self.fields['from_location'].queryset = StorageLocation.objects.all().order_by('source_type')
+            # Реализация: откуда - только склады (все, не только свои)
+            self.fields['from_location'].queryset = StorageLocation.objects.filter(
+                source_type='склад'
+            ).order_by('source_type')
+            # Куда - только контрагенты
             self.fields['to_location'].queryset = StorageLocation.objects.filter(
                 source_type='контрагент'
             ).order_by('source_type')
@@ -359,10 +362,15 @@ class MaterialMovementCreateForm(forms.ModelForm):
                 raise forms.ValidationError('Контрагенты не могут участвовать в отправлении')
 
         elif accounting_type == 'Реализация':
+
             if not from_location:
                 raise forms.ValidationError('Для реализации необходимо указать отправителя')
             if not to_location:
                 raise forms.ValidationError('Для реализации необходимо указать получателя')
+
+            # Проверка, что отправитель - склад
+            if from_location and from_location.source_type != 'склад':
+                raise forms.ValidationError('Отправителем при реализации может быть только склад')
 
             # Проверка, что получатель - контрагент
             if to_location and to_location.source_type != 'контрагент':

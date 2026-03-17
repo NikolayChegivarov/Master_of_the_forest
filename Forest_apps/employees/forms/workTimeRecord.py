@@ -1,7 +1,7 @@
 from django import forms
 from django.utils import timezone
 from Forest_apps.employees.models import WorkTimeRecord, Employee
-from Forest_apps.core.models import Warehouse
+from Forest_apps.core.models import Warehouse, Position
 
 
 class WorkTimeRecordCreateForm(forms.ModelForm):
@@ -37,13 +37,46 @@ class WorkTimeRecordCreateForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        self.user_position = kwargs.pop('user_position', None)
         super().__init__(*args, **kwargs)
-        # Ограничиваем выбор только активными складами и сотрудниками
-        self.fields['warehouse'].queryset = Warehouse.get_active_warehouses()
-        self.fields['employee'].queryset = Employee.get_active_employees().select_related('position')
+
+        # Получаем ID складов, принадлежащих должности пользователя
+        user_warehouse_ids = self._get_user_warehouse_ids()
+
+        # Ограничиваем выбор складов только теми, что принадлежат должности пользователя
+        self.fields['warehouse'].queryset = Warehouse.objects.filter(
+            id__in=user_warehouse_ids,
+            is_active=True
+        ).order_by('name')
+
+        # Ограничиваем выбор сотрудников только теми, кто привязан к этим складам
+        self.fields['employee'].queryset = Employee.objects.filter(
+            warehouse_id__in=user_warehouse_ids,
+            is_active=True
+        ).select_related('position').order_by('last_name', 'first_name')
 
         # Устанавливаем начальное значение даты на сегодня
         self.fields['date_time'].initial = timezone.now().strftime('%Y-%m-%dT%H:%M')
+
+    def _get_user_warehouse_ids(self):
+        """Получает ID складов, принадлежащих должности пользователя"""
+        if not self.user_position:
+            return []
+
+        try:
+            # Находим должность по названию
+            position = Position.objects.get(name__iexact=self.user_position)
+
+            # Находим все склады, созданные этой должностью
+            warehouses = Warehouse.objects.filter(
+                created_by_position=position,
+                is_active=True
+            ).values_list('id', flat=True)
+
+            return list(warehouses)
+        except Position.DoesNotExist:
+            return []
 
     def clean_hours(self):
         """Валидация количества часов"""
@@ -59,10 +92,17 @@ class WorkTimeRecordCreateForm(forms.ModelForm):
         cleaned_data = super().clean()
         date_time = cleaned_data.get('date_time')
         employee = cleaned_data.get('employee')
+        warehouse = cleaned_data.get('warehouse')
 
         # Проверка на будущие даты
         if date_time and date_time > timezone.now():
             raise forms.ValidationError('Нельзя создавать записи на будущее время')
+
+        # Проверка, что сотрудник действительно привязан к выбранному складу
+        if employee and warehouse and employee.warehouse_id != warehouse.id:
+            raise forms.ValidationError(
+                f'Сотрудник {employee.short_name} не привязан к складу "{warehouse.name}"'
+            )
 
         # Проверка на дубликаты записей для сотрудника в один день
         if date_time and employee:
@@ -111,14 +151,47 @@ class WorkTimeRecordEditForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        self.user_position = kwargs.pop('user_position', None)
         super().__init__(*args, **kwargs)
-        # Ограничиваем выбор только активными складами и сотрудниками
-        self.fields['warehouse'].queryset = Warehouse.get_active_warehouses()
-        self.fields['employee'].queryset = Employee.get_active_employees().select_related('position')
+
+        # Получаем ID складов, принадлежащих должности пользователя
+        user_warehouse_ids = self._get_user_warehouse_ids()
+
+        # Ограничиваем выбор складов только теми, что принадлежат должности пользователя
+        self.fields['warehouse'].queryset = Warehouse.objects.filter(
+            id__in=user_warehouse_ids,
+            is_active=True
+        ).order_by('name')
+
+        # Ограничиваем выбор сотрудников только теми, кто привязан к этим складам
+        self.fields['employee'].queryset = Employee.objects.filter(
+            warehouse_id__in=user_warehouse_ids,
+            is_active=True
+        ).select_related('position').order_by('last_name', 'first_name')
 
         # Форматируем дату для поля ввода
         if self.instance and self.instance.date_time:
             self.fields['date_time'].initial = self.instance.date_time.strftime('%Y-%m-%dT%H:%M')
+
+    def _get_user_warehouse_ids(self):
+        """Получает ID складов, принадлежащих должности пользователя"""
+        if not self.user_position:
+            return []
+
+        try:
+            # Находим должность по названию
+            position = Position.objects.get(name__iexact=self.user_position)
+
+            # Находим все склады, созданные этой должностью
+            warehouses = Warehouse.objects.filter(
+                created_by_position=position,
+                is_active=True
+            ).values_list('id', flat=True)
+
+            return list(warehouses)
+        except Position.DoesNotExist:
+            return []
 
     def clean_hours(self):
         """Валидация количества часов"""
@@ -134,11 +207,18 @@ class WorkTimeRecordEditForm(forms.ModelForm):
         cleaned_data = super().clean()
         date_time = cleaned_data.get('date_time')
         employee = cleaned_data.get('employee')
+        warehouse = cleaned_data.get('warehouse')
         instance = self.instance
 
         # Проверка на будущие даты
         if date_time and date_time > timezone.now():
             raise forms.ValidationError('Нельзя создавать записи на будущее время')
+
+        # Проверка, что сотрудник действительно привязан к выбранному складу
+        if employee and warehouse and employee.warehouse_id != warehouse.id:
+            raise forms.ValidationError(
+                f'Сотрудник {employee.short_name} не привязан к складу "{warehouse.name}"'
+            )
 
         # Проверка на дубликаты записей для сотрудника в один день (исключая текущую)
         if date_time and employee:

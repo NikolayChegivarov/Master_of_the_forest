@@ -127,6 +127,11 @@ def material_movement_list_view(request):
     )['total'] or 0
     pending_count = movements.filter(is_completed=False).count()
 
+    # Новая статистика по количествам
+    total_pieces = movements.aggregate(total=Sum('quantity_pieces'))['total'] or 0
+    total_meters = movements.aggregate(total=Sum('quantity_meters'))['total'] or 0
+    total_cubic = movements.aggregate(total=Sum('quantity_cubic'))['total'] or 0
+
     context = {
         'title': 'Движение материалов',
         'employee_name': request.session.get('employee_name'),
@@ -136,11 +141,15 @@ def material_movement_list_view(request):
         'total_count': total_count,
         'total_amount': total_amount,
         'pending_count': pending_count,
+        'total_pieces': total_pieces,
+        'total_meters': total_meters,
+        'total_cubic': total_cubic,
         'pending_shipments_count': pending_shipments_count,
         'user_locations': user_locations,
     }
 
     return render(request, 'MaterialMovement/material_movement_list.html', context)
+
 
 
 @login_required

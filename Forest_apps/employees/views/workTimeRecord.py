@@ -90,8 +90,15 @@ def worktime_list_view(request):
 def worktime_create_view(request):
     """Создание новой записи рабочего времени"""
 
+    # Получаем должность пользователя из сессии
+    user_position = request.session.get('position_name')
+
     if request.method == 'POST':
-        form = WorkTimeRecordCreateForm(request.POST)
+        form = WorkTimeRecordCreateForm(
+            request.POST,
+            user=request.user,
+            user_position=user_position  # ПЕРЕДАЕМ ДОЛЖНОСТЬ В ФОРМУ
+        )
         if form.is_valid():
             # Сохраняем запись
             record = form.save(commit=False)
@@ -121,7 +128,10 @@ def worktime_create_view(request):
 
             return redirect('employees:worktime_list')
     else:
-        form = WorkTimeRecordCreateForm()
+        form = WorkTimeRecordCreateForm(
+            user=request.user,
+            user_position=user_position  # ПЕРЕДАЕМ ДОЛЖНОСТЬ В ФОРМУ
+        )
 
     context = {
         'title': 'Добавление записи',
@@ -137,9 +147,9 @@ def worktime_edit_view(request, record_id):
     """Редактирование записи рабочего времени (только для своей должности)"""
 
     # Получаем должность текущего пользователя
-    position_name = request.session.get('position_name')
+    user_position = request.session.get('position_name')
     try:
-        position = Position.objects.get(name__iexact=position_name)
+        position = Position.objects.get(name__iexact=user_position)
     except Position.DoesNotExist:
         messages.error(request, 'Ошибка определения должности')
         return redirect('employees:worktime_list')
@@ -152,7 +162,12 @@ def worktime_edit_view(request, record_id):
     )
 
     if request.method == 'POST':
-        form = WorkTimeRecordEditForm(request.POST, instance=record)
+        form = WorkTimeRecordEditForm(
+            request.POST,
+            instance=record,
+            user=request.user,
+            user_position=user_position  # ПЕРЕДАЕМ ДОЛЖНОСТЬ В ФОРМУ
+        )
         if form.is_valid():
             form.save()
             messages.success(
@@ -161,7 +176,11 @@ def worktime_edit_view(request, record_id):
             )
             return redirect('employees:worktime_list')
     else:
-        form = WorkTimeRecordEditForm(instance=record)
+        form = WorkTimeRecordEditForm(
+            instance=record,
+            user=request.user,
+            user_position=user_position  # ПЕРЕДАЕМ ДОЛЖНОСТЬ В ФОРМУ
+        )
 
     context = {
         'title': 'Редактирование записи',

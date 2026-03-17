@@ -28,26 +28,53 @@
     </div>
 
     <!-- Статистика -->
-    <div class="stats-cards">
-        <div class="stat-card">
-            <div class="stat-icon">📋</div>
-            <div class="stat-content">
-                <div class="stat-value">{{ total_count }}</div>
-                <div class="stat-label">Всего операций</div>
+    <div class="stats-grid">
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="stat-icon">📋</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_count }}</div>
+                    <div class="stat-label">Всего операций</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏳</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ pending_count }}</div>
+                    <div class="stat-label">Ожидают выполнения</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_amount|floatformat:2 }} ₽</div>
+                    <div class="stat-label">Сумма реализаций</div>
+                </div>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon">⏳</div>
-            <div class="stat-content">
-                <div class="stat-value">{{ pending_count }}</div>
-                <div class="stat-label">Ожидают выполнения</div>
+
+        <!-- Новая статистика по количествам -->
+        <div class="stats-cards quantity-stats">
+            <div class="stat-card small-stat">
+                <div class="stat-icon">📦</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_pieces|floatformat:1 }}</div>
+                    <div class="stat-label">Всего штук</div>
+                </div>
             </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">💰</div>
-            <div class="stat-content">
-                <div class="stat-value">{{ total_amount|floatformat:2 }} ₽</div>
-                <div class="stat-label">Сумма реализаций</div>
+            <div class="stat-card small-stat">
+                <div class="stat-icon">📏</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_meters|floatformat:1 }}</div>
+                    <div class="stat-label">Всего м.п.</div>
+                </div>
+            </div>
+            <div class="stat-card small-stat">
+                <div class="stat-icon">🧊</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_cubic|floatformat:1 }}</div>
+                    <div class="stat-label">Всего м³</div>
+                </div>
             </div>
         </div>
     </div>
@@ -128,11 +155,15 @@
                             <th>Откуда</th>
                             <th>Куда</th>
                             <th>Материал</th>
-                            <th>Количество</th>
+                            <th class="text-right">Штуки</th>
+                            <th class="text-right">П.м.</th>
+                            <th class="text-right">м³</th>
                             <th>Сумма</th>
                             <th>Статус</th>
-                            <th>Должность создателя</th>
-                            <th>Действия</th>
+                            <th>Водитель</th>
+                            <th>Т.С.</th>
+                            <th>Создатель</th>
+                            <th class="text-center">Действия</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -154,15 +185,9 @@
                                 {% endif %}
                             </td>
                             <td>{{ movement.material.name }}</td>
-                            <td class="quantity-cell">
-                                {{ movement.quantity_display }}
-                                <!-- Временная отладка -->
-                                <div style="font-size: 10px; color: #666; margin-top: 2px;">
-                                    (шт:{{ movement.quantity_pieces|default:'0' }},
-                                    м.п.:{{ movement.quantity_meters|default:'0' }},
-                                    м³:{{ movement.quantity_cubic|default:'0' }})
-                                </div>
-                            </td>
+                            <td class="text-right quantity-cell">{{ movement.quantity_pieces|default:"0"|floatformat:1 }}</td>
+                            <td class="text-right quantity-cell">{{ movement.quantity_meters|default:"0"|floatformat:1 }}</td>
+                            <td class="text-right quantity-cell">{{ movement.quantity_cubic|default:"0"|floatformat:1 }}</td>
                             <td class="text-right amount-cell">
                                 {% if movement.total_amount %}
                                     {{ movement.total_amount|floatformat:2 }} ₽
@@ -175,6 +200,20 @@
                                     <span class="badge completed">✅ Выполнено</span>
                                 {% else %}
                                     <span class="badge pending">⏳ Ожидает</span>
+                                {% endif %}
+                            </td>
+                            <td class="employee-cell">
+                                {% if movement.employee %}
+                                    {{ movement.employee.last_name }} {{ movement.employee.first_name|first }}.
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="vehicle-cell">
+                                {% if movement.vehicle %}
+                                    {{ movement.vehicle.brand }} {{ movement.vehicle.model }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -299,24 +338,26 @@
     }
 
     @keyframes pulse {
-        0% {
-            transform: scale(1);
-        }
-        50% {
-            transform: scale(1.1);
-        }
-        100% {
-            transform: scale(1);
-        }
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
     }
 
     /* Статистика */
+    .stats-grid {
+        margin-bottom: 30px;
+    }
+
     .stats-cards {
         display: flex;
         justify-content: center;
         gap: 20px;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
         flex-wrap: wrap;
+    }
+
+    .quantity-stats {
+        margin-top: 10px;
     }
 
     .stat-card {
@@ -327,9 +368,13 @@
         display: flex;
         align-items: center;
         gap: 15px;
-        min-width: 200px;
+        min-width: 180px;
         transition: transform 0.3s, box-shadow 0.3s;
         flex: 1;
+    }
+
+    .small-stat {
+        min-width: 150px;
     }
 
     .stat-card:hover {
@@ -338,7 +383,7 @@
     }
 
     .stat-icon {
-        font-size: 40px;
+        font-size: 36px;
         color: #2c5e2e;
     }
 
@@ -348,14 +393,14 @@
     }
 
     .stat-value {
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 700;
         color: #2c5e2e;
         line-height: 1.2;
     }
 
     .stat-label {
-        font-size: 14px;
+        font-size: 13px;
         color: #666;
     }
 
@@ -523,24 +568,24 @@
     .movements-table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 1300px;
+        min-width: 1800px; /* Увеличено для новых колонок */
     }
 
     .movements-table th {
         background: #2c5e2e;
         color: white;
-        padding: 14px 12px;
+        padding: 14px 8px;
         text-align: left;
         font-weight: 600;
-        font-size: 14px;
+        font-size: 13px;
         white-space: nowrap;
     }
 
     .movements-table td {
-        padding: 14px 12px;
+        padding: 14px 8px;
         border-bottom: 1px solid #e0e0e0;
         vertical-align: middle;
-        font-size: 14px;
+        font-size: 13px;
     }
 
     .movements-table tbody tr:hover {
@@ -556,8 +601,16 @@
     }
 
     .location-cell {
-        max-width: 200px;
+        max-width: 150px;
         white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .employee-cell,
+    .vehicle-cell {
+        white-space: nowrap;
+        max-width: 100px;
         overflow: hidden;
         text-overflow: ellipsis;
     }
@@ -565,18 +618,20 @@
     .quantity-cell {
         white-space: nowrap;
         font-weight: 500;
+        text-align: right;
     }
 
     .amount-cell {
         white-space: nowrap;
         font-weight: 500;
+        text-align: right;
     }
 
     .badge {
         display: inline-block;
-        padding: 5px 10px;
+        padding: 4px 8px;
         border-radius: 20px;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
         white-space: nowrap;
     }
@@ -613,11 +668,11 @@
 
     .position-badge {
         display: inline-block;
-        padding: 4px 8px;
+        padding: 3px 6px;
         background: #e9ecef;
         color: #495057;
         border-radius: 4px;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
         white-space: nowrap;
     }
@@ -631,26 +686,31 @@
         text-align: right;
     }
 
+    .text-center {
+        text-align: center;
+    }
+
     .actions-cell {
-        min-width: 120px;
+        min-width: 100px;
+        text-align: center;
     }
 
     .action-buttons-group {
         display: flex;
-        gap: 5px;
+        gap: 3px;
         flex-wrap: wrap;
         justify-content: center;
     }
 
     .btn-action {
         text-decoration: none;
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 6px;
-        font-size: 16px;
+        border-radius: 4px;
+        font-size: 14px;
         transition: all 0.2s;
         background: #f8f9fa;
         border: 1px solid #dee2e6;
@@ -761,20 +821,6 @@
 
         .create-button {
             padding: 15px;
-        }
-
-        .create-icon {
-            font-size: 28px;
-        }
-
-        .create-text {
-            font-size: 16px;
-        }
-
-        .pending-badge {
-            width: 25px;
-            height: 25px;
-            font-size: 14px;
         }
 
         .stats-cards {

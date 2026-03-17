@@ -517,8 +517,17 @@ def get_locations_by_type(request):
         to_locations = StorageLocation.objects.filter(source_type='контрагент')
 
     elif movement_type == 'Списание':
-        from_locations = StorageLocation.objects.filter(id__in=user_location_ids)
-        to_locations = StorageLocation.objects.filter(source_type__in=['бригады', 'автомобиль'])
+        # Откуда - только свои склады
+        from_locations = StorageLocation.objects.filter(
+            id__in=user_location_ids,
+            source_type='склад'
+        )
+        # Куда - ВСЕ свои места хранения кроме контрагентов (склады, бригады, автомобили)
+        to_locations = StorageLocation.objects.filter(
+            id__in=user_location_ids
+        ).exclude(
+            source_type='контрагент'
+        )
 
     # Убираем дубликаты и сортируем
     from_locations = from_locations.distinct().order_by('source_type')

@@ -60,7 +60,13 @@
                         {% endfor %}
                     </div>
                 {% endif %}
-                <small class="form-text text-muted">Для списания оставьте пустым</small>
+                    <small class="form-text text-muted">
+                        {% if is_manager %}
+                            Для реализации укажите контрагента
+                        {% else %}
+                            Для списания можно указать склад, бригаду или ТС
+                        {% endif %}
+                    </small>
             </div>
 
             <!-- Поле Материал -->

@@ -292,15 +292,17 @@ class MaterialMovementCreateForm(forms.ModelForm):
             ).order_by('source_type')
 
         elif accounting_type == 'Списание':
-            # Списание: откуда - свои склады и автомобили
+            # Списание: откуда - только свои склады
             self.fields['from_location'].queryset = StorageLocation.objects.filter(
                 id__in=self.user_location_ids,
-                source_type__in=['склад', 'автомобиль']
+                source_type='склад'
             ).order_by('source_type')
-            # Куда - свои бригады и автомобили
+
+            # Куда - ВСЕ свои места хранения кроме контрагентов (склады, бригады, автомобили)
             self.fields['to_location'].queryset = StorageLocation.objects.filter(
-                id__in=self.user_location_ids,
-                source_type__in=['бригады', 'автомобиль']
+                id__in=self.user_location_ids
+            ).exclude(
+                source_type='контрагент'
             ).order_by('source_type')
 
             # Материалы - только ГСМ и запчасти
@@ -373,25 +375,23 @@ class MaterialMovementCreateForm(forms.ModelForm):
                 raise forms.ValidationError('Цена должна быть положительным числом')
 
         elif accounting_type == 'Списание':
+
             if not from_location:
                 raise forms.ValidationError('Для списания необходимо указать отправителя')
             if not to_location:
-                raise forms.ValidationError('Для списания необходимо указать получателя (бригаду или ТС)')
+                raise forms.ValidationError('Для списания необходимо указать получателя')
 
-            # Проверка, что отправитель - склад или автомобиль (свои)
+            # Проверка, что отправитель - только склад (свой)
             if from_location and from_location.id not in self.user_location_ids:
                 raise forms.ValidationError('Списывать можно только со своих мест хранения')
-            if from_location and from_location.source_type not in ['склад', 'автомобиль']:
-                raise forms.ValidationError('Списание возможно только со склада или автомобиля')
+            if from_location and from_location.source_type != 'склад':
+                raise forms.ValidationError('Списание возможно только со склада')
 
-            # Проверка, что получатель - бригада или автомобиль
-            if to_location and to_location.source_type not in ['бригады', 'автомобиль']:
-                raise forms.ValidationError(
-                    'Получателем при списании может быть только бригада или транспортное средство')
-
-            # Проверка, что получатель - свой
+            # Проверка, что получатель - свое место хранения (кроме контрагентов)
             if to_location and to_location.id not in self.user_location_ids:
-                raise forms.ValidationError('Можно списывать только на свои бригады и ТС')
+                raise forms.ValidationError('Можно списывать только на свои места хранения')
+            if to_location and to_location.source_type == 'контрагент':
+                raise forms.ValidationError('Нельзя списывать на контрагентов')
 
             # Проверка типа материала
             if material and material.material_type not in ['ГСМ', 'запчасти']:

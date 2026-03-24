@@ -64,14 +64,14 @@
                     <tbody>
                         {% for conversion in conversions %}
                         <tr class="{% if not conversion.is_completed %}pending-row{% endif %}">
-                            <td><strong>{{ conversion.id }}</strong></td>
-                            <td>{{ conversion.created_at|date:"d.m.Y H:i" }}</td>
-                            <td class="location-cell">{{ conversion.storage_location.get_source_name|truncatechars:30 }}</td>
-                            <td>{{ conversion.source_material.name }}</td>
-                            <td class="quantity-cell">{{ conversion.source_quantity_display }}</td>
+                            <td><strong>{{ conversion.id }}</strong>2d
+                            <td>{{ conversion.created_at|date:"d.m.Y H:i" }}2d
+                            <td class="location-cell">{{ conversion.storage_location.get_source_name|truncatechars:30 }}2d
+                            <td>{{ conversion.source_material.name }}2d
+                            <td class="quantity-cell">{{ conversion.source_quantity_display }}2d
                             <td class="arrow-cell">→</td>
-                            <td>{{ conversion.target_material.name }}</td>
-                            <td class="quantity-cell">{{ conversion.target_quantity_display }}</td>
+                            <td>{{ conversion.target_material.name }}2d
+                            <td class="quantity-cell">{{ conversion.target_quantity_display }}2d
                             <td>
                                 {% if conversion.is_completed %}
                                     <span class="badge completed">✅ Выполнено</span>
@@ -118,7 +118,7 @@
         justify-content: center;
         width: 100%;
         padding: 20px;
-        background: linear-gradient(145deg, #8B4513, #5D3A1A);
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
         border-radius: 16px;
         text-decoration: none;
         color: white;
@@ -130,7 +130,7 @@
     .create-button:hover {
         transform: translateY(-5px);
         box-shadow: 0 12px 24px rgba(0,0,0,0.2);
-        background: linear-gradient(145deg, #A0522D, #8B4513);
+        background: linear-gradient(145deg, #3a7a3c, #2c5e2e);
     }
 
     .create-icon {
@@ -173,7 +173,7 @@
 
     .stat-icon {
         font-size: 40px;
-        color: #8B4513;
+        color: #2c5e2e;
     }
 
     .stat-content {
@@ -184,7 +184,7 @@
     .stat-value {
         font-size: 28px;
         font-weight: 700;
-        color: #8B4513;
+        color: #2c5e2e;
         line-height: 1.2;
     }
 
@@ -203,7 +203,7 @@
     }
 
     .conversions-list h3 {
-        color: #8B4513;
+        color: #2c5e2e;
         margin-bottom: 20px;
         font-size: 24px;
     }
@@ -220,7 +220,7 @@
     }
 
     .conversions-table th {
-        background: #8B4513;
+        background: #2c5e2e;
         color: white;
         padding: 14px 12px;
         text-align: left;
@@ -258,13 +258,13 @@
     .quantity-cell {
         white-space: nowrap;
         font-weight: 500;
-        color: #8B4513;
+        color: #2c5e2e;
     }
 
     .arrow-cell {
         text-align: center;
         font-size: 18px;
-        color: #8B4513;
+        color: #2c5e2e;
     }
 
     .badge {
@@ -326,12 +326,12 @@
     }
 
     .btn-primary {
-        background: #8B4513;
+        background: #2c5e2e;
         color: white;
     }
 
     .btn-primary:hover {
-        background: #5D3A1A;
+        background: #1e4220;
     }
 
     @media (max-width: 768px) {

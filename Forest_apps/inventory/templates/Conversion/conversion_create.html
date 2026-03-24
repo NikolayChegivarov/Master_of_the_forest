@@ -8,6 +8,13 @@
 {% block content %}
 <div class="create-container">
     <div class="create-form">
+        <!-- Кнопка возврата к списку конвертаций -->
+        <div class="back-link">
+            <a href="{% url 'inventory:conversion_list' %}" class="back-button">
+                ← Конвертации древесины
+            </a>
+        </div>
+
         <h2>Новая конвертация</h2>
         <p class="subtitle">Списание одного материала и создание другого (только древесина)</p>
 
@@ -186,8 +193,35 @@
         max-width: 700px;
     }
 
+    /* Кнопка возврата */
+    .back-link {
+        margin-bottom: 20px;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 8px 15px;
+        background: #f8f9fa;
+        color: #2c5e2e;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        border: 1px solid #e0e0e0;
+    }
+
+    .back-button:hover {
+        background: #2c5e2e;
+        color: white;
+        border-color: #2c5e2e;
+        transform: translateX(-3px);
+    }
+
     .create-form h2 {
-        color: #8B4513;
+        color: #2c5e2e;
         margin-bottom: 5px;
         text-align: center;
         font-size: 28px;
@@ -226,7 +260,7 @@
         text-align: center;
         font-size: 18px;
         font-weight: bold;
-        color: #8B4513;
+        color: #2c5e2e;
         margin: 15px 0;
         padding: 10px;
         background: #f0f0f0;
@@ -269,7 +303,7 @@
     .form-group input:focus,
     .form-group select:focus {
         outline: none;
-        border-color: #8B4513;
+        border-color: #2c5e2e;
     }
 
     .form-text {
@@ -325,12 +359,12 @@
     }
 
     .btn-primary {
-        background: #8B4513;
+        background: #2c5e2e;
         color: white;
     }
 
     .btn-primary:hover {
-        background: #5D3A1A;
+        background: #1e4220;
     }
 
     .btn-secondary {

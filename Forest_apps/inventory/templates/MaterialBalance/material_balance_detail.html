@@ -1,0 +1,263 @@
+<!-- Forest_apps/inventory/templates/MaterialBalance/material_balance_detail.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block header %}Детали остатка{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+    <div class="detail-card">
+        <div class="detail-header">
+            <div class="detail-icon">📦</div>
+            <h2>{{ balance.material.name }}</h2>
+        </div>
+
+        <div class="detail-content">
+            <div class="detail-row">
+                <div class="detail-label">Место хранения:</div>
+                <div class="detail-value">{{ balance.storage_location.get_source_name }}</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Тип места:</div>
+                <div class="detail-value">
+                    <span class="badge type-{{ balance.storage_location.source_type }}">
+                        {{ balance.storage_location.get_source_type_display }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Тип материала:</div>
+                <div class="detail-value">
+                    <span class="material-type-badge {{ balance.material.material_type }}">
+                        {{ balance.material.get_material_type_display }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Штуки:</div>
+                <div class="detail-value quantity">{{ balance.quantity_pieces|floatformat:1|default:"0" }} шт</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Погонные метры:</div>
+                <div class="detail-value quantity">{{ balance.quantity_meters|floatformat:1|default:"0" }} м.п.</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Кубические метры:</div>
+                <div class="detail-value quantity">{{ balance.quantity_cubic|floatformat:1|default:"0" }} м³</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Дата последнего обновления:</div>
+                <div class="detail-value">{{ balance.last_updated|date:"d.m.Y H:i:s" }}</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Должность создателя:</div>
+                <div class="detail-value">
+                    {% if balance.created_by_position %}
+                        <span class="position-badge">{{ balance.created_by_position.name }}</span>
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-actions">
+            <a href="{% url 'inventory:material_balance_list' %}" class="btn btn-secondary">← К списку</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .detail-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 20px;
+    }
+
+    .detail-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 600px;
+        overflow: hidden;
+    }
+
+    .detail-header {
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        color: white;
+        padding: 30px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .detail-icon {
+        font-size: 48px;
+    }
+
+    .detail-header h2 {
+        margin: 0;
+        font-size: 24px;
+    }
+
+    .detail-content {
+        padding: 30px;
+    }
+
+    .detail-row {
+        display: flex;
+        padding: 12px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        width: 180px;
+        font-weight: 600;
+        color: #666;
+    }
+
+    .detail-value {
+        flex: 1;
+        color: #333;
+    }
+
+    .detail-value.quantity {
+        font-weight: 700;
+        color: #2c5e2e;
+        font-size: 18px;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .badge.type-склад {
+        background: #cce5ff;
+        color: #004085;
+    }
+
+    .badge.type-автомобиль {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge.type-контрагент {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .badge.type-бригады {
+        background: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .material-type-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .material-type-badge.древесина {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .material-type-badge.ГСМ {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .material-type-badge.запчасти {
+        background: #cce5ff;
+        color: #004085;
+    }
+
+    .position-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #e9ecef;
+        color: #495057;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
+    .detail-actions {
+        display: flex;
+        gap: 10px;
+        padding: 20px 30px 30px;
+        justify-content: center;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    @media (max-width: 768px) {
+        .detail-row {
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .detail-label {
+            width: 100%;
+        }
+
+        .detail-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

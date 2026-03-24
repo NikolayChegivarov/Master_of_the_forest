@@ -1159,3 +1159,167 @@ class Conversion(models.Model):
         if self.target_quantity_cubic and self.target_quantity_cubic > 0:
             parts.append(f"{self.target_quantity_cubic} м³")
         return ", ".join(parts) if parts else "0"
+
+
+class Receipt(models.Model):
+    """Документ поступления материалов"""
+
+    receipt_date = models.DateTimeField(
+        'Дата поступления',
+        default=timezone.now
+    )
+
+    material = models.ForeignKey(
+        'forestry.Material',
+        on_delete=models.PROTECT,
+        verbose_name='Материал'
+    )
+
+    storage_location = models.ForeignKey(
+        'inventory.StorageLocation',
+        on_delete=models.PROTECT,
+        verbose_name='Место хранения',
+        limit_choices_to={'source_type': 'склад'}
+    )
+
+    source_location = models.ForeignKey(
+        'inventory.StorageLocation',
+        on_delete=models.PROTECT,
+        verbose_name='Источник поступления',
+        related_name='receipts_source',
+        null=True,
+        blank=True
+    )
+
+    quantity_pieces = models.DecimalField(
+        'Количество в штуках',
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        default=None
+    )
+
+    quantity_meters = models.DecimalField(
+        'Количество в погонных метрах',
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        default=None
+    )
+
+    quantity_cubic = models.DecimalField(
+        'Количество в кубических метрах',
+        max_digits=12,
+        decimal_places=3,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        default=None
+    )
+
+    price = models.DecimalField(
+        'Цена за единицу',
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        default=None
+    )
+
+    total_amount = models.DecimalField(
+        'Сумма',
+        max_digits=15,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        default=0
+    )
+
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Кто создал',
+        related_name='created_receipts'
+    )
+
+    created_by_position = models.ForeignKey(
+        'core.Position',
+        on_delete=models.PROTECT,
+        verbose_name='Должность создателя',
+        related_name='receipts_created',
+        null=True
+    )
+
+    created_at = models.DateTimeField(
+        'Дата создания',
+        auto_now_add=True
+    )
+
+    updated_at = models.DateTimeField(
+        'Дата обновления',
+        auto_now=True
+    )
+
+    class Meta:
+        verbose_name = 'Поступление материала'
+        verbose_name_plural = 'Поступления материалов'
+        ordering = ['-receipt_date']
+        indexes = [
+            models.Index(fields=['receipt_date']),
+            models.Index(fields=['storage_location', 'material']),
+        ]
+
+    def __str__(self):
+        return f"Поступление №{self.id} от {self.receipt_date.date()}"
+
+    def clean(self):
+        """Валидация данных"""
+        # Проверка, что указано хотя бы одно количество
+        if not self.quantity_pieces and not self.quantity_meters and not self.quantity_cubic:
+            raise ValidationError('Необходимо указать хотя бы одно количество')
+
+        # Проверка, что место хранения - склад
+        if self.storage_location and self.storage_location.source_type != 'склад':
+            raise ValidationError('Поступление возможно только на склад')
+
+    def save(self, *args, **kwargs):
+        """Сохранение с расчетом суммы"""
+        if self.price:
+            if self.quantity_pieces:
+                self.total_amount = self.quantity_pieces * self.price
+            elif self.quantity_meters:
+                self.total_amount = self.quantity_meters * self.price
+            elif self.quantity_cubic:
+                self.total_amount = self.quantity_cubic * self.price
+            else:
+                self.total_amount = 0
+        else:
+            self.total_amount = 0
+
+        super().save(*args, **kwargs)
+
+    @property
+    def can_edit(self):
+        """Проверка, можно ли редактировать поступление (5 дней)"""
+        time_diff = timezone.now() - self.created_at
+        return time_diff.days < 5
+
+    @property
+    def quantity_display(self):
+        """Возвращает строковое представление количества"""
+        parts = []
+        if self.quantity_pieces and self.quantity_pieces > 0:
+            parts.append(f"{self.quantity_pieces} шт")
+        if self.quantity_meters and self.quantity_meters > 0:
+            parts.append(f"{self.quantity_meters} м.п.")
+        if self.quantity_cubic and self.quantity_cubic > 0:
+            parts.append(f"{self.quantity_cubic} м³")
+        return ", ".join(parts) if parts else "0"

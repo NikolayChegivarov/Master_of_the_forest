@@ -2,14 +2,17 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q, Sum
-from Forest_apps.inventory.models import MaterialBalance, StorageLocation
+from django.utils import timezone
+from decimal import Decimal
+from datetime import timedelta
+
+from Forest_apps.inventory.models import MaterialBalance, StorageLocation, Receipt
 from Forest_apps.forestry.models import Material
 from Forest_apps.core.models import Position, Warehouse, Brigade, Vehicle
 from Forest_apps.inventory.forms.material_balance import (
     MaterialBalanceCreateForm,
     MaterialBalanceFilterForm
 )
-from decimal import Decimal
 
 
 @login_required
@@ -149,45 +152,35 @@ def material_balance_create_view(request):
     if request.method == 'POST':
         form = MaterialBalanceCreateForm(request.POST, user=request.user)
         if form.is_valid():
-            # Сохраняем остаток (форма сама решит - создать новый или обновить существующий)
-            balance = form.save(commit=False)
-
-            # Добавляем создателя (пользователя) только для нового объекта
-            if not balance.pk:  # Это новый объект
-                balance.created_by = request.user
-
-                # Добавляем должность создателя
+            try:
+                # Получаем должность создателя
                 position_name = request.session.get('position_name')
-                try:
-                    position = Position.objects.get(name__iexact=position_name)
-                    balance.created_by_position = position
-                except Position.DoesNotExist:
-                    # Если должность не найдена, создаем
-                    position, _ = Position.objects.get_or_create(
-                        name=position_name,
-                        defaults={'is_active': True}
-                    )
-                    balance.created_by_position = position
+                position = None
+                if position_name:
+                    try:
+                        position = Position.objects.get(name__iexact=position_name)
+                    except Position.DoesNotExist:
+                        position, _ = Position.objects.get_or_create(
+                            name=position_name,
+                            defaults={'is_active': True}
+                        )
 
-                balance.save()
+                # Сохраняем форму, передавая должность
+                balance = form.save(commit=False, position=position, user=request.user)
 
                 messages.success(
                     request,
-                    f'✅ Остаток создан: {balance.material.name} на {balance.storage_location.get_source_name()}. '
-                    f'Количество: {balance.quantity_display}'
-                )
-            else:
-                # Это существующий объект, который мы обновили
-                balance.save()
-                messages.success(
-                    request,
-                    f'✅ Остаток пополнен: {balance.material.name} на {balance.storage_location.get_source_name()}. '
-                    f'Теперь: {balance.quantity_display}'
+                    f'✅ Поступление материала "{form.cleaned_data["material"].name}" '
+                    f'на склад "{form.cleaned_data["storage_location"].get_source_name()}" '
+                    f'успешно создано!'
                 )
 
-            return redirect('inventory:material_balance_list')
+                return redirect('inventory:material_balance_list')
+
+            except ValueError as e:
+                messages.error(request, str(e))
+                return redirect('inventory:material_balance_create')
         else:
-            # Если форма невалидна, показываем ее с ошибками
             context = {
                 'title': 'Добавление остатка',
                 'form': form,
@@ -196,11 +189,10 @@ def material_balance_create_view(request):
             return render(request, 'MaterialBalance/material_balance_create.html', context)
     else:
         form = MaterialBalanceCreateForm(user=request.user)
-        # Проверяем, есть ли у пользователя свои места хранения
         if form.fields['storage_location'].queryset.count() == 0:
             messages.warning(
                 request,
-                '⚠️ У вас нет мест хранения (складов, ТС, бригад), на которые можно создать остаток. Сначала создайте их в соответствующих разделах.'
+                '⚠️ У вас нет складов для поступления материалов. Сначала создайте склад.'
             )
 
     context = {
@@ -213,112 +205,223 @@ def material_balance_create_view(request):
 
 
 @login_required
-def material_balance_edit_view(request, balance_id):
-    """Редактирование остатка материала (только для своей должности)"""
+def receipt_list_view(request):
+    """Список поступлений материалов"""
 
-    # Получаем должность текущего пользователя
-    position_name = request.session.get('position_name')
-    try:
-        position = Position.objects.get(name__iexact=position_name)
-    except Position.DoesNotExist:
-        messages.error(request, 'Ошибка определения должности')
-        return redirect('inventory:material_balance_list')
+    user_position_name = request.session.get('position_name')
 
-    balance = get_object_or_404(
-        MaterialBalance,
-        id=balance_id,
-        created_by_position=position
-    )
+    # Получаем ID складов пользователя
+    user_warehouse_ids = _get_user_warehouse_ids(request.user)
 
-    # Проверяем, принадлежит ли место хранения пользователю
-    from Forest_apps.core.models import Warehouse, Brigade, Vehicle
+    # Поступления на склады пользователя
+    receipts = Receipt.objects.filter(
+        storage_location_id__in=user_warehouse_ids
+    ).select_related(
+        'storage_location', 'material', 'source_location', 'created_by_position'
+    ).order_by('-receipt_date')
 
-    is_owner = False
-    loc = balance.storage_location
-
-    if loc.source_type == 'склад':
-        is_owner = Warehouse.objects.filter(id=loc.source_id, created_by=request.user).exists()
-    elif loc.source_type == 'бригады':
-        is_owner = Brigade.objects.filter(id=loc.source_id, created_by=request.user).exists()
-    elif loc.source_type == 'автомобиль':
-        is_owner = Vehicle.objects.filter(id=loc.source_id, created_by=request.user).exists()
-
-    if not is_owner:
-        messages.error(request, 'Вы можете редактировать только остатки на своих местах хранения')
-        return redirect('inventory:material_balance_list')
-
-    if request.method == 'POST':
-        form = MaterialBalanceCreateForm(request.POST, instance=balance, user=request.user)
-        if form.is_valid():
-            form.save()
-            messages.success(
-                request,
-                f'Остаток для {balance.material.name} успешно обновлен!'
-            )
-            return redirect('inventory:material_balance_list')
-        else:
-            context = {
-                'title': 'Редактирование остатка',
-                'form': form,
-                'balance': balance,
-                'employee_name': request.session.get('employee_name'),
-            }
-            return render(request, 'MaterialBalance/material_balance_edit.html', context)
-    else:
-        form = MaterialBalanceCreateForm(instance=balance, user=request.user)
+    # Статистика
+    total_count = receipts.count()
+    total_pieces = receipts.aggregate(total=Sum('quantity_pieces'))['total'] or 0
+    total_meters = receipts.aggregate(total=Sum('quantity_meters'))['total'] or 0
+    total_cubic = receipts.aggregate(total=Sum('quantity_cubic'))['total'] or 0
+    total_amount = receipts.aggregate(total=Sum('total_amount'))['total'] or 0
 
     context = {
-        'title': 'Редактирование остатка',
-        'form': form,
-        'balance': balance,
+        'title': 'Поступления материалов',
         'employee_name': request.session.get('employee_name'),
+        'position_name': user_position_name,
+        'receipts': receipts,
+        'total_count': total_count,
+        'total_pieces': total_pieces,
+        'total_meters': total_meters,
+        'total_cubic': total_cubic,
+        'total_amount': total_amount,
     }
 
-    return render(request, 'MaterialBalance/material_balance_edit.html', context)
+    return render(request, 'MaterialBalance/receipt_list.html', context)
 
 
 @login_required
-def material_balance_delete_view(request, balance_id):
-    """Удаление остатка материала (только для своей должности)"""
+def receipt_edit_view(request, receipt_id):
+    """Редактирование поступления"""
 
-    # Получаем должность текущего пользователя
-    position_name = request.session.get('position_name')
-    try:
-        position = Position.objects.get(name__iexact=position_name)
-    except Position.DoesNotExist:
-        messages.error(request, 'Ошибка определения должности')
-        return redirect('inventory:material_balance_list')
+    receipt = get_object_or_404(
+        Receipt.objects.select_related('storage_location', 'material'),
+        id=receipt_id
+    )
 
-    try:
-        balance = get_object_or_404(
-            MaterialBalance,
-            id=balance_id,
-            created_by_position=position
+    # Проверка, что склад принадлежит пользователю
+    user_warehouse_ids = _get_user_warehouse_ids(request.user)
+    if receipt.storage_location.id not in user_warehouse_ids:
+        messages.error(request, 'Вы можете редактировать только поступления на свои склады')
+        return redirect('inventory:receipt_list')
+
+    # Проверка, можно ли редактировать
+    if not receipt.can_edit:
+        messages.error(request, 'Поступление старше 5 дней, редактирование невозможно')
+        return redirect('inventory:receipt_list')
+
+    if request.method == 'POST':
+        form = MaterialBalanceCreateForm(
+            request.POST,
+            user=request.user,
+            receipt_instance=receipt  # Передаем экземпляр поступления
+        )
+        if form.is_valid():
+            try:
+                # Получаем должность создателя
+                position_name = request.session.get('position_name')
+                position = None
+                if position_name:
+                    try:
+                        position = Position.objects.get(name__iexact=position_name)
+                    except Position.DoesNotExist:
+                        position, _ = Position.objects.get_or_create(
+                            name=position_name,
+                            defaults={'is_active': True}
+                        )
+
+                # Сохраняем форму, передавая должность
+                balance = form.save(commit=False, position=position, user=request.user)
+                messages.success(request, f'✅ Поступление №{receipt.id} успешно обновлено!')
+                return redirect('inventory:receipt_list')
+            except ValueError as e:
+                messages.error(request, str(e))
+        else:
+            context = {
+                'title': f'Редактирование поступления №{receipt.id}',
+                'form': form,
+                'receipt': receipt,
+                'employee_name': request.session.get('employee_name'),
+            }
+            return render(request, 'MaterialBalance/material_balance_create.html', context)
+    else:
+        # GET запрос - передаем receipt_instance в форму
+        form = MaterialBalanceCreateForm(
+            user=request.user,
+            receipt_instance=receipt
         )
 
-        # Проверяем, принадлежит ли место хранения пользователю
-        from Forest_apps.core.models import Warehouse, Brigade, Vehicle
+    context = {
+        'title': f'Редактирование поступления №{receipt.id}',
+        'form': form,
+        'receipt': receipt,
+        'employee_name': request.session.get('employee_name'),
+    }
 
-        is_owner = False
-        loc = balance.storage_location
+    return render(request, 'MaterialBalance/material_balance_create.html', context)
 
-        if loc.source_type == 'склад':
-            is_owner = Warehouse.objects.filter(id=loc.source_id, created_by=request.user).exists()
-        elif loc.source_type == 'бригады':
-            is_owner = Brigade.objects.filter(id=loc.source_id, created_by=request.user).exists()
-        elif loc.source_type == 'автомобиль':
-            is_owner = Vehicle.objects.filter(id=loc.source_id, created_by=request.user).exists()
 
-        if not is_owner:
-            messages.error(request, 'Вы можете удалять только остатки на своих местах хранения')
-            return redirect('inventory:material_balance_list')
+@login_required
+def receipt_delete_view(request, receipt_id):
+    """Удаление поступления"""
 
-        balance.delete()
-        messages.success(request, 'Остаток успешно удален!')
-    except Exception as e:
+    receipt = get_object_or_404(
+        Receipt.objects.select_related('storage_location', 'material'),
+        id=receipt_id
+    )
+
+    # Проверка, что склад принадлежит пользователю
+    user_warehouse_ids = _get_user_warehouse_ids(request.user)
+    if receipt.storage_location.id not in user_warehouse_ids:
+        messages.error(request, 'Вы можете удалять только поступления на свои склады')
+        return redirect('inventory:receipt_list')
+
+    # Проверка, можно ли удалять
+    if not receipt.can_edit:
+        messages.error(request, 'Поступление старше 5 дней, удаление невозможно')
+        return redirect('inventory:receipt_list')
+
+    try:
+        # Получаем баланс
+        balance = MaterialBalance.objects.get(
+            storage_location=receipt.storage_location,
+            material=receipt.material
+        )
+
+        # Проверяем, достаточно ли остатков для удаления
+        pieces_to_remove = receipt.quantity_pieces or 0
+        meters_to_remove = receipt.quantity_meters or 0
+        cubic_to_remove = receipt.quantity_cubic or 0
+
+        if pieces_to_remove > 0 and balance.quantity_pieces < pieces_to_remove:
+            raise ValueError(
+                f'Недостаточно материала на складе. В наличии: {balance.quantity_pieces} шт, '
+                f'требуется удалить: {pieces_to_remove} шт'
+            )
+        if meters_to_remove > 0 and (balance.quantity_meters or 0) < meters_to_remove:
+            raise ValueError(
+                f'Недостаточно материала на складе. В наличии: {balance.quantity_meters or 0} м.п., '
+                f'требуется удалить: {meters_to_remove} м.п.'
+            )
+        if cubic_to_remove > 0 and (balance.quantity_cubic or 0) < cubic_to_remove:
+            raise ValueError(
+                f'Недостаточно материала на складе. В наличии: {balance.quantity_cubic or 0} м³, '
+                f'требуется удалить: {cubic_to_remove} м³'
+            )
+
+        # Уменьшаем баланс
+        balance.quantity_pieces -= pieces_to_remove
+        balance.quantity_meters = (balance.quantity_meters or 0) - meters_to_remove
+        balance.quantity_cubic = (balance.quantity_cubic or 0) - cubic_to_remove
+        balance.save()
+
+        # Удаляем поступление
+        receipt.delete()
+
+        messages.success(request, f'✅ Поступление №{receipt.id} успешно удалено!')
+
+    except MaterialBalance.DoesNotExist:
+        messages.error(request, f'Остаток материала не найден на складе')
+    except ValueError as e:
         messages.error(request, str(e))
+    except Exception as e:
+        messages.error(request, f'Ошибка при удалении: {str(e)}')
 
-    return redirect('inventory:material_balance_list')
+    return redirect('inventory:receipt_list')
+
+
+@login_required
+def receipt_detail_view(request, receipt_id):
+    """Детальный просмотр поступления"""
+
+    receipt = get_object_or_404(
+        Receipt.objects.select_related(
+            'storage_location', 'material', 'source_location',
+            'created_by', 'created_by_position'
+        ),
+        id=receipt_id
+    )
+
+    context = {
+        'title': f'Поступление №{receipt.id}',
+        'employee_name': request.session.get('employee_name'),
+        'receipt': receipt,
+    }
+
+    return render(request, 'MaterialBalance/receipt_detail.html', context)
+
+
+def _get_user_warehouse_ids(user):
+    """Вспомогательная функция для получения ID складов пользователя"""
+    if not user or not user.is_authenticated:
+        return []
+
+    from Forest_apps.inventory.models import StorageLocation
+    from Forest_apps.core.models import Warehouse
+
+    user_warehouse_ids = []
+
+    warehouses = Warehouse.objects.filter(created_by=user)
+    for wh in warehouses:
+        try:
+            location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
+            user_warehouse_ids.append(location.id)
+        except StorageLocation.DoesNotExist:
+            pass
+
+    return user_warehouse_ids
 
 
 @login_required

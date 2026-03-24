@@ -1,0 +1,273 @@
+<!-- Forest_apps/inventory/templates/MaterialBalance/receipt_detail.html -->
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block header %}Детали поступления{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+    <div class="detail-card">
+        <div class="detail-header">
+            <div class="detail-icon">📥</div>
+            <h2>Поступление #{{ receipt.id }}</h2>
+        </div>
+
+        <div class="detail-content">
+            <div class="detail-row">
+                <div class="detail-label">Дата поступления:</div>
+                <div class="detail-value">{{ receipt.receipt_date|date:"d.m.Y H:i:s" }}</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Склад:</div>
+                <div class="detail-value">{{ receipt.storage_location.get_source_name }}</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Источник:</div>
+                <div class="detail-value">
+                    {% if receipt.source_location %}
+                        {{ receipt.source_location.get_source_name }}
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Материал:</div>
+                <div class="detail-value">{{ receipt.material.name }}</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Количество:</div>
+                <div class="detail-value quantity">{{ receipt.quantity_display }}</div>
+            </div>
+
+            {% if receipt.price %}
+            <div class="detail-row">
+                <div class="detail-label">Цена за единицу:</div>
+                <div class="detail-value">{{ receipt.price|floatformat:2 }} ₽</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Общая сумма:</div>
+                <div class="detail-value total">{{ receipt.total_amount|floatformat:2 }} ₽</div>
+            </div>
+            {% endif %}
+
+            <div class="detail-row">
+                <div class="detail-label">Кто создал:</div>
+                <div class="detail-value">
+                    {% if receipt.created_by %}
+                        {{ receipt.created_by.get_full_name|default:receipt.created_by.username }}
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Должность создателя:</div>
+                <div class="detail-value">
+                    {% if receipt.created_by_position %}
+                        <span class="position-badge">{{ receipt.created_by_position.name }}</span>
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Дата создания:</div>
+                <div class="detail-value">{{ receipt.created_at|date:"d.m.Y H:i:s" }}</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Дата обновления:</div>
+                <div class="detail-value">{{ receipt.updated_at|date:"d.m.Y H:i:s" }}</div>
+            </div>
+        </div>
+
+        <div class="detail-actions">
+            {% if receipt.can_edit %}
+                <a href="{% url 'inventory:receipt_edit' receipt.id %}" class="btn btn-warning">✏️ Редактировать</a>
+                <a href="{% url 'inventory:receipt_delete' receipt.id %}" class="btn btn-danger" onclick="return confirm('Удалить это поступление?');">🗑️ Удалить</a>
+            {% else %}
+                <span class="btn-disabled" title="Поступление старше 5 дней, редактирование невозможно">🔒 Редактирование недоступно</span>
+            {% endif %}
+            <a href="{% url 'inventory:receipt_list' %}" class="btn btn-secondary">← К списку</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .detail-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 20px;
+    }
+
+    .detail-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 600px;
+        overflow: hidden;
+    }
+
+    .detail-header {
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        color: white;
+        padding: 30px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .detail-icon {
+        font-size: 48px;
+    }
+
+    .detail-header h2 {
+        margin: 0;
+        font-size: 24px;
+    }
+
+    .detail-content {
+        padding: 30px;
+    }
+
+    .detail-row {
+        display: flex;
+        padding: 12px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        width: 150px;
+        font-weight: 600;
+        color: #666;
+    }
+
+    .detail-value {
+        flex: 1;
+        color: #333;
+    }
+
+    .detail-value.quantity {
+        font-weight: 700;
+        color: #2c5e2e;
+        font-size: 18px;
+    }
+
+    .detail-value.total {
+        font-weight: 700;
+        color: #2c5e2e;
+        font-size: 18px;
+    }
+
+    .position-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #e9ecef;
+        color: #495057;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
+    .detail-actions {
+        display: flex;
+        gap: 10px;
+        padding: 20px 30px 30px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-warning {
+        background: #ffc107;
+        color: #212529;
+    }
+
+    .btn-warning:hover {
+        background: #e0a800;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background: #c82333;
+    }
+
+    .btn-disabled {
+        padding: 10px 20px;
+        background: #e9ecef;
+        color: #999;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: not-allowed;
+    }
+
+    @media (max-width: 768px) {
+        .detail-row {
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .detail-label {
+            width: 100%;
+        }
+
+        .detail-actions {
+            flex-direction: column;
+        }
+
+        .btn, .btn-disabled {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,17 +1,31 @@
 <!-- Forest_apps/inventory/templates/MaterialBalance/material_balance_create.html -->
 {% extends "base.html" %}
 
-{% block title %}Добавление остатка{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 
-{% block header %}Добавление остатка материала{% endblock %}
+{% block header %}{{ title }}{% endblock %}
 
 {% block content %}
 <div class="create-container">
     <div class="create-form">
-        <h2>Новый остаток</h2>
+        <!-- Кнопка возврата к остаткам -->
+        <div class="back-link">
+            <a href="{% url 'inventory:material_balance_list' %}" class="back-button">
+                ← Остатки материалов
+            </a>
+        </div>
+
+        <h2>
+            {% if receipt %}
+                Редактирование поступления №{{ receipt.id }}
+            {% else %}
+                Приходование материалов
+            {% endif %}
+        </h2>
+
 
         <!-- Форма создания -->
-        <form method="post" action="{% url 'inventory:material_balance_create' %}">
+        <form method="post">
             {% csrf_token %}
 
             <!-- Отображение ошибок формы -->
@@ -23,7 +37,21 @@
                 </div>
             {% endif %}
 
-            <!-- Поле Место хранения -->
+            <!-- Поле Дата поступления -->
+            <div class="form-group">
+                <label for="{{ form.receipt_date.id_for_label }}">{{ form.receipt_date.label }}:</label>
+                {{ form.receipt_date }}
+                {% if form.receipt_date.errors %}
+                    <div class="field-error">
+                        {% for error in form.receipt_date.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Можно указать дату не более 7 дней назад</small>
+            </div>
+
+            <!-- Поле Место хранения (склад) -->
             <div class="form-group">
                 <label for="{{ form.storage_location.id_for_label }}">{{ form.storage_location.label }}:</label>
                 {{ form.storage_location }}
@@ -34,6 +62,20 @@
                         {% endfor %}
                     </div>
                 {% endif %}
+            </div>
+
+            <!-- Поле Источник поступления -->
+            <div class="form-group">
+                <label for="{{ form.source_location.id_for_label }}">{{ form.source_location.label }}:</label>
+                {{ form.source_location }}
+                {% if form.source_location.errors %}
+                    <div class="field-error">
+                        {% for error in form.source_location.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Необязательное поле. Укажите контрагента, от которого поступил материал</small>
             </div>
 
             <!-- Поле Материал -->
@@ -88,13 +130,33 @@
                 {% endif %}
             </div>
 
+            <!-- Поле Цена -->
+            <div class="form-group">
+                <label for="{{ form.price.id_for_label }}">{{ form.price.label }}:</label>
+                {{ form.price }}
+                {% if form.price.errors %}
+                    <div class="field-error">
+                        {% for error in form.price.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Необязательное поле</small>
+            </div>
+
             <div class="form-text">
-                Укажите хотя бы одно количество. Допускаются значения с тремя десятичными знаками.
+                Укажите хотя бы одно количество.
             </div>
 
             <!-- Кнопки -->
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Сохранить</button>
+                <button type="submit" class="btn btn-primary">
+                    {% if receipt %}
+                        💾 Сохранить изменения
+                    {% else %}
+                        ✅ Создать поступление
+                    {% endif %}
+                </button>
                 <a href="{% url 'inventory:material_balance_list' %}" class="btn btn-secondary">Отмена</a>
             </div>
         </form>
@@ -121,9 +183,16 @@
 
     .create-form h2 {
         color: #2c5e2e;
-        margin-bottom: 30px;
+        margin-bottom: 5px;
         text-align: center;
         font-size: 28px;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #666;
+        margin-bottom: 30px;
+        font-style: italic;
     }
 
     .form-group {
@@ -252,6 +321,31 @@
         .btn {
             width: 100%;
         }
+    }
+    .back-link {
+        margin-bottom: 20px;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 8px 15px;
+        background: #f8f9fa;
+        color: #2c5e2e;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        border: 1px solid #e0e0e0;
+    }
+
+    .back-button:hover {
+        background: #2c5e2e;
+        color: white;
+        border-color: #2c5e2e;
+        transform: translateX(-3px);
     }
 </style>
 {% endblock %}

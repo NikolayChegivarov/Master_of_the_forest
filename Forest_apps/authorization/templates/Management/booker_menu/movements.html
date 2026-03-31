@@ -23,13 +23,7 @@
                 <div class="stat-label">Ожидают выполнения</div>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon">💰</div>
-            <div class="stat-content">
-                <div class="stat-value">{{ total_amount|floatformat:2 }} ₽</div>
-                <div class="stat-label">Сумма реализаций</div>
-            </div>
-        </div>
+        <!-- Карточка с суммой реализаций удалена -->
     </div>
 
     <!-- Фильтры -->
@@ -137,7 +131,7 @@
                             <th>Куда</th>
                             <th>Материал</th>
                             <th>Количество</th>
-                            <th>Сумма</th>
+                            <!-- Колонка "Сумма" удалена -->
                             <th>Статус</th>
                             <th>Должность создателя</th>
                             <th>Действия</th>
@@ -163,13 +157,7 @@
                             </td>
                             <td>{{ movement.material.name }}</td>
                             <td>{{ movement.quantity_display }}</td>
-                            <td class="text-right">
-                                {% if movement.total_amount %}
-                                    {{ movement.total_amount|floatformat:2 }} ₽
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            </td>
+                            <!-- Ячейка с суммой удалена -->
                             <td>
                                 {% if movement.is_completed %}
                                     <span class="badge completed">✅ Выполнено</span>

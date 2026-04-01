@@ -71,6 +71,17 @@ DATABASES = {
     }
 }
 
+# Static files только для Django (CSS, JavaScript, Images)
+STATIC_URL = '/static/'
+
+# Директория, где будут собраны все статические файлы для продакшена
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Дополнительные директории с вашими статическими файлами (если будут)
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -91,9 +102,6 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
-
-
-STATIC_URL = 'static/'
 
 # Настройки аутентификации
 LOGIN_URL = 'authorization:login'

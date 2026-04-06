@@ -176,22 +176,37 @@ class WorkTimeRecordEditForm(forms.ModelForm):
 
     def _get_user_warehouse_ids(self):
         """Получает ID складов, принадлежащих должности пользователя"""
-        if not self.user_position:
+        if not self.user or not self.user.is_authenticated:
+            return []
+
+        from Forest_apps.inventory.models import StorageLocation
+        from Forest_apps.core.models import Warehouse, Position
+
+        # Получаем должность пользователя из сессии
+        position_name = None
+        if hasattr(self.user, 'session'):
+            position_name = self.user.session.get('position_name')
+
+        if not position_name:
             return []
 
         try:
-            # Находим должность по названию
-            position = Position.objects.get(name__iexact=self.user_position)
-
-            # Находим все склады, созданные этой должностью
-            warehouses = Warehouse.objects.filter(
-                created_by_position=position,
-                is_active=True
-            ).values_list('id', flat=True)
-
-            return list(warehouses)
+            position = Position.objects.get(name__iexact=position_name)
         except Position.DoesNotExist:
             return []
+
+        user_warehouse_ids = []
+
+        # ✅ Фильтруем склады по ДОЛЖНОСТИ создателя
+        warehouses = Warehouse.objects.filter(created_by_position=position)
+        for wh in warehouses:
+            try:
+                location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
+                user_warehouse_ids.append(location.id)
+            except StorageLocation.DoesNotExist:
+                pass
+
+        return user_warehouse_ids
 
     def clean_hours(self):
         """Валидация количества часов"""

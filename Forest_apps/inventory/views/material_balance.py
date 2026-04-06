@@ -149,12 +149,15 @@ def material_balance_list_view(request):
 def material_balance_create_view(request):
     """Создание нового остатка материала (или добавление к существующему)"""
 
+    # Получаем должность из сессии ДО создания формы
+    position_name = request.session.get('position_name')
+    print(f"DEBUG view: position_name = {position_name}")  # Отладка
+
     if request.method == 'POST':
-        form = MaterialBalanceCreateForm(request.POST, user=request.user)
+        form = MaterialBalanceCreateForm(request.POST, user=request.user, position_name=position_name)
         if form.is_valid():
             try:
                 # Получаем должность создателя
-                position_name = request.session.get('position_name')
                 position = None
                 if position_name:
                     try:
@@ -165,7 +168,7 @@ def material_balance_create_view(request):
                             defaults={'is_active': True}
                         )
 
-                # Сохраняем форму, передавая должность
+                # Сохраняем форму, передавая должность и пользователя
                 balance = form.save(commit=False, position=position, user=request.user)
 
                 messages.success(
@@ -188,7 +191,7 @@ def material_balance_create_view(request):
             }
             return render(request, 'MaterialBalance/material_balance_create.html', context)
     else:
-        form = MaterialBalanceCreateForm(user=request.user)
+        form = MaterialBalanceCreateForm(user=request.user, position_name=position_name)
         if form.fields['storage_location'].queryset.count() == 0:
             messages.warning(
                 request,

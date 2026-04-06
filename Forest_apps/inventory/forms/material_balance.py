@@ -152,16 +152,30 @@ class MaterialBalanceCreateForm(forms.ModelForm):
             self.initial['material'] = self.receipt_instance.material.id
 
     def _get_user_warehouse_ids(self):
-        """Получает ID складов, принадлежащих пользователю"""
+        """Получает ID складов, принадлежащих должности пользователя"""
         if not self.user or not self.user.is_authenticated:
             return []
 
         from Forest_apps.inventory.models import StorageLocation
-        from Forest_apps.core.models import Warehouse
+        from Forest_apps.core.models import Warehouse, Position
+
+        # Получаем должность пользователя из сессии
+        position_name = None
+        if hasattr(self.user, 'session'):
+            position_name = self.user.session.get('position_name')
+
+        if not position_name:
+            return []
+
+        try:
+            position = Position.objects.get(name__iexact=position_name)
+        except Position.DoesNotExist:
+            return []
 
         user_warehouse_ids = []
 
-        warehouses = Warehouse.objects.filter(created_by=self.user)
+        # ✅ Фильтруем склады по ДОЛЖНОСТИ создателя
+        warehouses = Warehouse.objects.filter(created_by_position=position)
         for wh in warehouses:
             try:
                 location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)

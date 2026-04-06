@@ -152,12 +152,12 @@ class MaterialBalanceCreateForm(forms.ModelForm):
             self.initial['material'] = self.receipt_instance.material.id
 
     def _get_user_warehouse_ids(self):
-        """Получает ID складов, принадлежащих должности пользователя"""
+        """Получает ID складов (StorageLocation), доступных для должности пользователя"""
         if not self.user or not self.user.is_authenticated:
             return []
 
+        from Forest_apps.core.models import Position
         from Forest_apps.inventory.models import StorageLocation
-        from Forest_apps.core.models import Warehouse, Position
 
         # Получаем должность пользователя из сессии
         position_name = None
@@ -165,24 +165,37 @@ class MaterialBalanceCreateForm(forms.ModelForm):
             position_name = self.user.session.get('position_name')
 
         if not position_name:
+            print(f"DEBUG: position_name not found in session")
             return []
 
         try:
             position = Position.objects.get(name__iexact=position_name)
+            print(f"DEBUG: Found position: {position.name} (ID: {position.id})")
         except Position.DoesNotExist:
+            print(f"DEBUG: Position '{position_name}' not found")
             return []
 
+        # Получаем все StorageLocation складов
+        all_warehouse_locations = StorageLocation.objects.filter(source_type='склад')
+        print(f"DEBUG: Total warehouse StorageLocations: {all_warehouse_locations.count()}")
+
+        # Фильтруем по created_by_position через Warehouse
+        from Forest_apps.core.models import Warehouse
+
         user_warehouse_ids = []
-
-        # ✅ Фильтруем склады по ДОЛЖНОСТИ создателя
-        warehouses = Warehouse.objects.filter(created_by_position=position)
-        for wh in warehouses:
+        for loc in all_warehouse_locations:
             try:
-                location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
-                user_warehouse_ids.append(location.id)
-            except StorageLocation.DoesNotExist:
-                pass
+                wh = Warehouse.objects.get(id=loc.source_id)
+                print(
+                    f"DEBUG: Warehouse {wh.name} - created_by_position_id: {wh.created_by_position_id}, position.id: {position.id}")
+                if wh.created_by_position_id == position.id:
+                    user_warehouse_ids.append(loc.id)
+                    print(f"DEBUG: Added location {loc.id} for warehouse {wh.name}")
+            except Warehouse.DoesNotExist:
+                print(f"DEBUG: Warehouse with id {loc.source_id} not found")
+                continue
 
+        print(f"DEBUG: Final user_warehouse_ids: {user_warehouse_ids}")
         return user_warehouse_ids
 
     def clean_receipt_date(self):

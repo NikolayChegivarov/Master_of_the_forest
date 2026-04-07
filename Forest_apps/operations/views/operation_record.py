@@ -1,4 +1,3 @@
-# Forest_apps/operations/views/operation_record.py
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -11,6 +10,7 @@ from Forest_apps.operations.forms.operation_record import (
     OperationRecordCreateForm,
     OperationRecordFilterForm
 )
+from Forest_apps.inventory.services import StorageLocationService
 
 
 @login_required
@@ -20,10 +20,11 @@ def operation_record_list_view(request):
     # Получаем должность текущего пользователя из сессии
     user_position_name = request.session.get('position_name')
 
-    # Получаем ID складов, принадлежащих пользователю
-    user_warehouse_ids = Warehouse.objects.filter(
-        created_by=request.user
-    ).values_list('id', flat=True)
+    # Получаем склады пользователя через сервис
+    user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(
+        user_position_name
+    )
+    user_warehouse_ids = [loc.source_id for loc in user_warehouses if loc.source_id]
 
     # Базовый запрос - операции на складах пользователя
     records = OperationRecord.objects.filter(
@@ -33,7 +34,7 @@ def operation_record_list_view(request):
     ).order_by('-date_time')
 
     # Фильтрация
-    filter_form = OperationRecordFilterForm(request.GET or None, user=request.user)
+    filter_form = OperationRecordFilterForm(request.GET or None, position_name=user_position_name)
 
     if filter_form.is_valid():
         operation_type = filter_form.cleaned_data.get('operation_type')
@@ -67,20 +68,20 @@ def operation_record_list_view(request):
 
         # Фильтр по наличию измерений
         if has_measurements == 'with_square':
-            records = records.filter(square_meters__isnull=False)
+            records = records.filter(square_meters__isnull=False, square_meters__gt=0)
         elif has_measurements == 'with_cubic':
-            records = records.filter(cubic_meters__isnull=False)
+            records = records.filter(cubic_meters__isnull=False, cubic_meters__gt=0)
         elif has_measurements == 'with_both':
             records = records.filter(
-                square_meters__isnull=False,
-                cubic_meters__isnull=False
+                square_meters__isnull=False, square_meters__gt=0,
+                cubic_meters__isnull=False, cubic_meters__gt=0
             )
 
     # Статистика
     total_count = records.count()
     total_quantity = records.aggregate(total=Sum('quantity'))['total'] or 0
-    total_square_meters = records.aggregate(total=Sum('square_meters'))['total'] or 0
-    total_cubic_meters = records.aggregate(total=Sum('cubic_meters'))['total'] or 0
+    total_square = records.aggregate(total=Sum('square_meters'))['total'] or 0
+    total_cubic = records.aggregate(total=Sum('cubic_meters'))['total'] or 0
 
     # Статистика по типам операций
     stats_by_type = []
@@ -88,15 +89,11 @@ def operation_record_list_view(request):
         type_records = records.filter(operation_type=op_type)
         type_count = type_records.count()
         type_quantity = type_records.aggregate(total=Sum('quantity'))['total'] or 0
-        type_square = type_records.aggregate(total=Sum('square_meters'))['total'] or 0
-        type_cubic = type_records.aggregate(total=Sum('cubic_meters'))['total'] or 0
         if type_count > 0:
             stats_by_type.append({
                 'name': op_type.name,
                 'count': type_count,
-                'quantity': type_quantity,
-                'square_meters': type_square,
-                'cubic_meters': type_cubic,
+                'quantity': type_quantity
             })
 
     context = {
@@ -107,8 +104,8 @@ def operation_record_list_view(request):
         'filter_form': filter_form,
         'total_count': total_count,
         'total_quantity': total_quantity,
-        'total_square_meters': total_square_meters,
-        'total_cubic_meters': total_cubic_meters,
+        'total_square': total_square,
+        'total_cubic': total_cubic,
         'stats_by_type': stats_by_type,
     }
 
@@ -119,15 +116,17 @@ def operation_record_list_view(request):
 def operation_record_create_view(request):
     """Создание новой записи операции"""
 
+    # Получаем должность пользователя из сессии
+    position_name = request.session.get('position_name')
+
     if request.method == 'POST':
-        form = OperationRecordCreateForm(request.POST, user=request.user)
+        form = OperationRecordCreateForm(request.POST, user=request.user, position_name=position_name)
         if form.is_valid():
             # Сохраняем запись
             record = form.save(commit=False)
             record.created_by = request.user
 
             # Добавляем должность создателя
-            position_name = request.session.get('position_name')
             try:
                 position = Position.objects.get(name__iexact=position_name)
                 record.created_by_position = position
@@ -142,15 +141,16 @@ def operation_record_create_view(request):
 
             messages.success(
                 request,
-                f'✅ Запись операции "{record.operation_type.name}" на {record.quantity} успешно создана!'
+                f'✅ Запись операции "{record.operation_type.name}" на {record.quantity} шт успешно создана!'
             )
 
             return redirect('operations:operation_record_list')
     else:
-        form = OperationRecordCreateForm(user=request.user)
+        form = OperationRecordCreateForm(user=request.user, position_name=position_name)
 
         # Проверяем, есть ли у пользователя склады
-        if form.fields['warehouse'].queryset.count() == 0:
+        user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(position_name)
+        if user_warehouses.count() == 0:
             messages.warning(
                 request,
                 '⚠️ У вас нет складов для учета операций. Сначала создайте склад.'
@@ -181,13 +181,19 @@ def operation_record_edit_view(request, record_id):
         id=record_id
     )
 
-    # Проверка, что запись принадлежит пользователю
-    if record.warehouse.created_by != request.user:
+    # Получаем должность пользователя
+    position_name = request.session.get('position_name')
+
+    # Проверяем, что склад принадлежит пользователю через сервис
+    user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(position_name)
+    user_warehouse_ids = [loc.source_id for loc in user_warehouses if loc.source_id]
+
+    if record.warehouse.id not in user_warehouse_ids:
         messages.error(request, 'Вы можете редактировать только операции на своих складах')
         return redirect('operations:operation_record_list')
 
     if request.method == 'POST':
-        form = OperationRecordCreateForm(request.POST, instance=record, user=request.user)
+        form = OperationRecordCreateForm(request.POST, instance=record, user=request.user, position_name=position_name)
         if form.is_valid():
             form.save()
             messages.success(
@@ -196,7 +202,7 @@ def operation_record_edit_view(request, record_id):
             )
             return redirect('operations:operation_record_list')
     else:
-        form = OperationRecordCreateForm(instance=record, user=request.user)
+        form = OperationRecordCreateForm(instance=record, user=request.user, position_name=position_name)
 
     context = {
         'title': f'Редактирование операции',
@@ -214,8 +220,14 @@ def operation_record_delete_view(request, record_id):
 
     record = get_object_or_404(OperationRecord, id=record_id)
 
-    # Проверка, что запись принадлежит пользователю
-    if record.warehouse.created_by != request.user:
+    # Получаем должность пользователя
+    position_name = request.session.get('position_name')
+
+    # Проверяем, что склад принадлежит пользователю через сервис
+    user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(position_name)
+    user_warehouse_ids = [loc.source_id for loc in user_warehouses if loc.source_id]
+
+    if record.warehouse.id not in user_warehouse_ids:
         messages.error(request, 'Вы можете удалять только операции на своих складах')
         return redirect('operations:operation_record_list')
 
@@ -253,15 +265,20 @@ def get_operation_stats(request):
     """API для получения статистики по операциям (для графиков)"""
     from django.http import JsonResponse
     from django.db.models import Count, Sum
-    from django.utils import timezone
     from datetime import timedelta
+
+    position_name = request.session.get('position_name')
+
+    # Получаем склады пользователя через сервис
+    user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(position_name)
+    user_warehouse_ids = [loc.source_id for loc in user_warehouses if loc.source_id]
 
     # Статистика за последние 30 дней
     end_date = timezone.now().date()
     start_date = end_date - timedelta(days=30)
 
     records = OperationRecord.objects.filter(
-        warehouse__created_by=request.user,
+        warehouse_id__in=user_warehouse_ids,
         date_time__date__gte=start_date,
         date_time__date__lte=end_date
     )

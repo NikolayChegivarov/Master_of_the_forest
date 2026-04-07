@@ -156,18 +156,12 @@ def material_movement_list_view(request):
 def material_movement_create_view(request):
     """Создание нового движения материалов"""
 
-    # Получаем должность пользователя из сессии
-    user_position = request.session.get('position_name')
-
-    # Логируем для отладки (можно удалить после проверки)
-    print(f"Создание движения. Пользователь: {request.user}, Должность: {user_position}")
+    # Получаем должность из сессии
+    position_name = request.session.get('position_name')
+    is_manager = (position_name and position_name.lower() == 'руководитель')
 
     if request.method == 'POST':
-        form = MaterialMovementCreateForm(
-            request.POST,
-            user=request.user,
-            user_position=user_position  # ПЕРЕДАЕМ ДОЛЖНОСТЬ В ФОРМУ
-        )
+        form = MaterialMovementCreateForm(request.POST, user=request.user, position_name=position_name)
 
         if form.is_valid():
             # Сохраняем движение
@@ -224,11 +218,7 @@ def material_movement_create_view(request):
             print(f"Ошибки формы: {form.errors}")
 
     else:
-        # GET-запрос - создаем пустую форму с передачей должности
-        form = MaterialMovementCreateForm(
-            user=request.user,
-            user_position=user_position  # ПЕРЕДАЕМ ДОЛЖНОСТЬ В ФОРМУ
-        )
+        form = MaterialMovementCreateForm(user=request.user, position_name=position_name)
 
     context = {
         'title': 'Создание движения',

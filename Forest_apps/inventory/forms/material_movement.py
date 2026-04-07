@@ -3,77 +3,9 @@ from django.utils import timezone
 from Forest_apps.inventory.models import MaterialMovement, StorageLocation
 from Forest_apps.forestry.models import Material
 from Forest_apps.employees.models import Employee
-from Forest_apps.core.models import Vehicle
+from Forest_apps.core.models import Vehicle, Position
 from decimal import Decimal
-
-
-class MaterialMovementFilterForm(forms.Form):
-    """Форма фильтрации движений материалов"""
-    accounting_type = forms.ChoiceField(
-        choices=[('', 'Все типы')] + MaterialMovement.ACCOUNTING_TYPE_CHOICES,
-        required=False,
-        label='Тип движения',
-        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
-    )
-
-    date_from = forms.DateField(
-        required=False,
-        label='Дата с',
-        widget=forms.DateInput(attrs={
-            'class': 'form-control auto-submit',
-            'type': 'date'
-        })
-    )
-
-    date_to = forms.DateField(
-        required=False,
-        label='Дата по',
-        widget=forms.DateInput(attrs={
-            'class': 'form-control auto-submit',
-            'type': 'date'
-        })
-    )
-
-    from_location = forms.ModelChoiceField(
-        queryset=StorageLocation.objects.all().order_by('source_type'),
-        required=False,
-        label='Откуда',
-        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
-    )
-
-    to_location = forms.ModelChoiceField(
-        queryset=StorageLocation.objects.all().order_by('source_type'),
-        required=False,
-        label='Куда',
-        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
-    )
-
-    material = forms.ModelChoiceField(
-        queryset=Material.objects.all().order_by('name'),
-        required=False,
-        label='Материал',
-        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
-    )
-
-    is_completed = forms.ChoiceField(
-        choices=[
-            ('', 'Все'),
-            ('true', 'Выполнено'),
-            ('false', 'Не выполнено')
-        ],
-        required=False,
-        label='Статус',
-        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
-    )
-
-    search = forms.CharField(
-        required=False,
-        label='Поиск',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Поиск по материалу...'
-        })
-    )
+from Forest_apps.inventory.services import StorageLocationService
 
 
 class MaterialMovementCreateForm(forms.ModelForm):
@@ -149,12 +81,12 @@ class MaterialMovementCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
-        self.user_position = kwargs.pop('user_position', None)  # ДОБАВЛЯЕМ
+        self.position_name = kwargs.pop('position_name', None)  # Получаем должность
         self.instance = kwargs.get('instance', None)
         super().__init__(*args, **kwargs)
 
         # ОПРЕДЕЛЯЕМ ДОЛЖНОСТЬ ПОЛЬЗОВАТЕЛЯ
-        is_supervisor = (self.user_position and self.user_position.lower() == 'руководитель')
+        is_supervisor = (self.position_name and self.position_name.lower() == 'руководитель')
 
         # ФОРМИРУЕМ СПИСОК ТИПОВ ДВИЖЕНИЯ В ЗАВИСИМОСТИ ОТ ДОЛЖНОСТИ
         all_choices = MaterialMovement.ACCOUNTING_TYPE_CHOICES
@@ -173,93 +105,47 @@ class MaterialMovementCreateForm(forms.ModelForm):
         if len(filtered_choices) == 1 and not self.initial.get('accounting_type') and not self.instance:
             self.initial['accounting_type'] = filtered_choices[0][0]
 
+        # ПОЛУЧАЕМ МЕСТА ХРАНЕНИЯ ЧЕРЕЗ СЕРВИС
         # Получаем ID мест хранения, принадлежащих пользователю
-        self.user_location_ids = self._get_user_location_ids()
+        user_locations = StorageLocationService.get_user_storage_locations_by_position_name(
+            self.position_name
+        )
+        self.user_location_ids = list(user_locations.values_list('id', flat=True))
 
         # Получаем ID мест хранения, НЕ принадлежащих пользователю
-        self.foreign_location_ids = self._get_foreign_location_ids()
+        all_location_ids = list(StorageLocation.objects.all().values_list('id', flat=True))
+        self.foreign_location_ids = [loc_id for loc_id in all_location_ids if loc_id not in self.user_location_ids]
 
         # Получаем ID контрагентов
-        self.counterparty_ids = self._get_counterparty_ids()
+        self.counterparty_ids = list(StorageLocation.objects.filter(
+            source_type='контрагент'
+        ).values_list('id', flat=True))
 
         # Получаем ID бригад и автомобилей (для списания)
-        self.brigade_and_vehicle_ids = self._get_brigade_and_vehicle_ids()
+        self.brigade_and_vehicle_ids = list(StorageLocation.objects.filter(
+            source_type__in=['бригады', 'автомобиль']
+        ).values_list('id', flat=True))
 
         # Устанавливаем начальные queryset'ы
         self.fields['from_location'].queryset = StorageLocation.objects.all().order_by('source_type')
         self.fields['to_location'].queryset = StorageLocation.objects.all().order_by('source_type')
         self.fields['material'].queryset = Material.objects.all().order_by('material_type', 'name')
 
-        # ИСПРАВЛЕНО: Явно фильтруем сотрудников только с должностью "водитель"
-        from Forest_apps.employees.models import Employee
-
-        # Находим должность "водитель" по точному названию
-        self.fields['employee'].queryset = Employee.objects.filter(
-            position__name='водитель',
-            is_active=True
-        ).order_by('last_name', 'first_name')
+        # Фильтруем сотрудников только с должностью "водитель"
+        driver_position = Position.objects.filter(name__iexact='водитель').first()
+        if driver_position:
+            self.fields['employee'].queryset = Employee.objects.filter(
+                position=driver_position,
+                is_active=True
+            ).order_by('last_name', 'first_name')
+        else:
+            self.fields['employee'].queryset = Employee.objects.none()
 
         self.fields['vehicle'].queryset = Vehicle.objects.all().order_by('brand', 'model')
 
         # Если это редактирование, применяем фильтры в соответствии с типом движения
         if self.instance and self.instance.pk:
             self._apply_filters_for_type(self.instance.accounting_type)
-
-    def _get_user_location_ids(self):
-        """Получает ID мест хранения, принадлежащих пользователю"""
-        if not self.user or not self.user.is_authenticated:
-            return []
-
-        from Forest_apps.core.models import Warehouse, Brigade, Vehicle
-        from Forest_apps.inventory.models import StorageLocation
-
-        user_location_ids = []
-
-        # Склады, созданные пользователем
-        warehouses = Warehouse.objects.filter(created_by=self.user)
-        for wh in warehouses:
-            try:
-                location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
-                user_location_ids.append(location.id)
-            except StorageLocation.DoesNotExist:
-                pass
-
-        # Бригады, созданные пользователем
-        brigades = Brigade.objects.filter(created_by=self.user)
-        for br in brigades:
-            try:
-                location = StorageLocation.objects.get(source_type='бригады', source_id=br.id)
-                user_location_ids.append(location.id)
-            except StorageLocation.DoesNotExist:
-                pass
-
-        # Транспорт, созданный пользователем
-        vehicles = Vehicle.objects.filter(created_by=self.user)
-        for vh in vehicles:
-            try:
-                location = StorageLocation.objects.get(source_type='автомобиль', source_id=vh.id)
-                user_location_ids.append(location.id)
-            except StorageLocation.DoesNotExist:
-                pass
-
-        return user_location_ids
-
-    def _get_foreign_location_ids(self):
-        """Получает ID мест хранения, НЕ принадлежащих пользователю"""
-        all_locations = StorageLocation.objects.all().values_list('id', flat=True)
-        return [loc_id for loc_id in all_locations if loc_id not in self.user_location_ids]
-
-    def _get_counterparty_ids(self):
-        """Получает ID мест хранения типа 'контрагент'"""
-        from Forest_apps.inventory.models import StorageLocation
-        return list(StorageLocation.objects.filter(source_type='контрагент').values_list('id', flat=True))
-
-    def _get_brigade_and_vehicle_ids(self):
-        """Получает ID мест хранения типа 'бригады' и 'автомобиль'"""
-        from Forest_apps.inventory.models import StorageLocation
-        return list(StorageLocation.objects.filter(
-            source_type__in=['бригады', 'автомобиль']
-        ).values_list('id', flat=True))
 
     def _apply_filters_for_type(self, accounting_type):
         """Применяет фильтры к полям в зависимости от типа движения"""
@@ -362,7 +248,6 @@ class MaterialMovementCreateForm(forms.ModelForm):
                 raise forms.ValidationError('Контрагенты не могут участвовать в отправлении')
 
         elif accounting_type == 'Реализация':
-
             if not from_location:
                 raise forms.ValidationError('Для реализации необходимо указать отправителя')
             if not to_location:
@@ -383,7 +268,6 @@ class MaterialMovementCreateForm(forms.ModelForm):
                 raise forms.ValidationError('Цена должна быть положительным числом')
 
         elif accounting_type == 'Списание':
-
             if not from_location:
                 raise forms.ValidationError('Для списания необходимо указать отправителя')
             if not to_location:
@@ -406,3 +290,73 @@ class MaterialMovementCreateForm(forms.ModelForm):
                 raise forms.ValidationError('Списание возможно только для материалов типа ГСМ или запчасти')
 
         return cleaned_data
+
+
+class MaterialMovementFilterForm(forms.Form):
+    """Форма фильтрации движений материалов"""
+
+    accounting_type = forms.ChoiceField(
+        choices=[('', 'Все типы')] + MaterialMovement.ACCOUNTING_TYPE_CHOICES,
+        required=False,
+        label='Тип движения',
+        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
+    )
+
+    date_from = forms.DateField(
+        required=False,
+        label='Дата с',
+        widget=forms.DateInput(attrs={
+            'class': 'form-control auto-submit',
+            'type': 'date'
+        })
+    )
+
+    date_to = forms.DateField(
+        required=False,
+        label='Дата по',
+        widget=forms.DateInput(attrs={
+            'class': 'form-control auto-submit',
+            'type': 'date'
+        })
+    )
+
+    from_location = forms.ModelChoiceField(
+        queryset=StorageLocation.objects.all().order_by('source_type'),
+        required=False,
+        label='Откуда',
+        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
+    )
+
+    to_location = forms.ModelChoiceField(
+        queryset=StorageLocation.objects.all().order_by('source_type'),
+        required=False,
+        label='Куда',
+        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
+    )
+
+    material = forms.ModelChoiceField(
+        queryset=Material.objects.all().order_by('name'),
+        required=False,
+        label='Материал',
+        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
+    )
+
+    is_completed = forms.ChoiceField(
+        choices=[
+            ('', 'Все'),
+            ('true', 'Выполнено'),
+            ('false', 'Не выполнено')
+        ],
+        required=False,
+        label='Статус',
+        widget=forms.Select(attrs={'class': 'form-control auto-submit'})
+    )
+
+    search = forms.CharField(
+        required=False,
+        label='Поиск',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Поиск по материалу...'
+        })
+    )

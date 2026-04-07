@@ -13,6 +13,7 @@ from Forest_apps.inventory.forms.material_balance import (
     MaterialBalanceCreateForm,
     MaterialBalanceFilterForm
 )
+from Forest_apps.inventory.services import StorageLocationService
 
 
 @login_required
@@ -21,47 +22,12 @@ def material_balance_list_view(request):
 
     # Получаем должность текущего пользователя из сессии
     user_position_name = request.session.get('position_name')
-    user_position_id = None
 
-    # Находим ID должности по названию
-    try:
-        position = Position.objects.get(name__iexact=user_position_name)
-        user_position_id = position.id
-    except Position.DoesNotExist:
-        user_position_id = -1
-
-    # Получаем ВСЕ места хранения, принадлежащие этой должности
-    from Forest_apps.inventory.models import StorageLocation
-
-    # Находим все ID мест хранения, созданные этой должностью
-    user_storage_location_ids = []
-
-    # Склады, созданные этой должностью
-    warehouses = Warehouse.objects.filter(created_by_position_id=user_position_id)
-    for wh in warehouses:
-        try:
-            location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
-            user_storage_location_ids.append(location.id)
-        except StorageLocation.DoesNotExist:
-            pass
-
-    # Бригады, созданные этой должностью
-    brigades = Brigade.objects.filter(created_by_position_id=user_position_id)
-    for br in brigades:
-        try:
-            location = StorageLocation.objects.get(source_type='бригады', source_id=br.id)
-            user_storage_location_ids.append(location.id)
-        except StorageLocation.DoesNotExist:
-            pass
-
-    # Транспорт, созданный этой должностью
-    vehicles = Vehicle.objects.filter(created_by_position_id=user_position_id)
-    for vh in vehicles:
-        try:
-            location = StorageLocation.objects.get(source_type='автомобиль', source_id=vh.id)
-            user_storage_location_ids.append(location.id)
-        except StorageLocation.DoesNotExist:
-            pass
+    # Получаем все места хранения, принадлежащие этой должности, через сервис
+    user_storage_locations = StorageLocationService.get_user_storage_locations_by_position_name(
+        user_position_name
+    )
+    user_storage_location_ids = list(user_storage_locations.values_list('id', flat=True))
 
     # Базовый запрос - все остатки на местах хранения этой должности
     balances = MaterialBalance.objects.filter(
@@ -94,17 +60,23 @@ def material_balance_list_view(request):
                 Q(storage_location__source_type__icontains=search)
             )
 
-    # НОВОЕ: Фильтрация по пустым местам хранения
+    # Фильтрация по пустым местам хранения
     hide_empty = request.GET.get('hide_empty')
     if hide_empty:
-        # Исключаем записи, где все количества равны 0
         balances = balances.exclude(
             quantity_pieces=0,
             quantity_meters=0,
             quantity_cubic=0
         )
 
-    # Получаем ID мест хранения текущего пользователя для проверки прав на редактирование
+    # Получаем ID исходных объектов для проверки прав в шаблоне
+    user_position_id = None
+    try:
+        position = Position.objects.get(name__iexact=user_position_name)
+        user_position_id = position.id
+    except Position.DoesNotExist:
+        user_position_id = -1
+
     user_warehouses = Warehouse.objects.filter(created_by_position_id=user_position_id).values_list('id', flat=True)
     user_brigades = Brigade.objects.filter(created_by_position_id=user_position_id).values_list('id', flat=True)
     user_vehicles = Vehicle.objects.filter(created_by_position_id=user_position_id).values_list('id', flat=True)
@@ -151,7 +123,6 @@ def material_balance_create_view(request):
 
     # Получаем должность из сессии ДО создания формы
     position_name = request.session.get('position_name')
-    print(f"DEBUG view: position_name = {position_name}")  # Отладка
 
     if request.method == 'POST':
         form = MaterialBalanceCreateForm(request.POST, user=request.user, position_name=position_name)
@@ -208,13 +179,32 @@ def material_balance_create_view(request):
 
 
 @login_required
+def material_balance_detail_view(request, balance_id):
+    """Детальный просмотр остатка"""
+
+    balance = get_object_or_404(
+        MaterialBalance.objects.select_related('storage_location', 'material', 'created_by_position'),
+        id=balance_id
+    )
+
+    context = {
+        'title': f'Остаток: {balance.material.name}',
+        'employee_name': request.session.get('employee_name'),
+        'balance': balance,
+    }
+
+    return render(request, 'MaterialBalance/material_balance_detail.html', context)
+
+
+@login_required
 def receipt_list_view(request):
     """Список поступлений материалов"""
 
     user_position_name = request.session.get('position_name')
 
-    # Получаем ID складов пользователя
-    user_warehouse_ids = _get_user_warehouse_ids(request.user)
+    # Получаем склады пользователя через сервис
+    user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(user_position_name)
+    user_warehouse_ids = list(user_warehouses.values_list('id', flat=True))
 
     # Поступления на склады пользователя
     receipts = Receipt.objects.filter(
@@ -254,8 +244,13 @@ def receipt_edit_view(request, receipt_id):
         id=receipt_id
     )
 
-    # Проверка, что склад принадлежит пользователю
-    user_warehouse_ids = _get_user_warehouse_ids(request.user)
+    # Получаем должность пользователя
+    position_name = request.session.get('position_name')
+
+    # Проверка, что склад принадлежит пользователю (через сервис)
+    user_warehouse_ids = list(
+        StorageLocationService.get_user_warehouses_by_position_name(position_name).values_list('id', flat=True)
+    )
     if receipt.storage_location.id not in user_warehouse_ids:
         messages.error(request, 'Вы можете редактировать только поступления на свои склады')
         return redirect('inventory:receipt_list')
@@ -269,12 +264,12 @@ def receipt_edit_view(request, receipt_id):
         form = MaterialBalanceCreateForm(
             request.POST,
             user=request.user,
-            receipt_instance=receipt  # Передаем экземпляр поступления
+            position_name=position_name,
+            receipt_instance=receipt
         )
         if form.is_valid():
             try:
                 # Получаем должность создателя
-                position_name = request.session.get('position_name')
                 position = None
                 if position_name:
                     try:
@@ -285,7 +280,7 @@ def receipt_edit_view(request, receipt_id):
                             defaults={'is_active': True}
                         )
 
-                # Сохраняем форму, передавая должность
+                # Сохраняем форму
                 balance = form.save(commit=False, position=position, user=request.user)
                 messages.success(request, f'✅ Поступление №{receipt.id} успешно обновлено!')
                 return redirect('inventory:receipt_list')
@@ -300,9 +295,9 @@ def receipt_edit_view(request, receipt_id):
             }
             return render(request, 'MaterialBalance/material_balance_create.html', context)
     else:
-        # GET запрос - передаем receipt_instance в форму
         form = MaterialBalanceCreateForm(
             user=request.user,
+            position_name=position_name,
             receipt_instance=receipt
         )
 
@@ -325,8 +320,13 @@ def receipt_delete_view(request, receipt_id):
         id=receipt_id
     )
 
+    # Получаем должность пользователя
+    position_name = request.session.get('position_name')
+
     # Проверка, что склад принадлежит пользователю
-    user_warehouse_ids = _get_user_warehouse_ids(request.user)
+    user_warehouse_ids = list(
+        StorageLocationService.get_user_warehouses_by_position_name(position_name).values_list('id', flat=True)
+    )
     if receipt.storage_location.id not in user_warehouse_ids:
         messages.error(request, 'Вы можете удалять только поступления на свои склады')
         return redirect('inventory:receipt_list')
@@ -404,42 +404,3 @@ def receipt_detail_view(request, receipt_id):
     }
 
     return render(request, 'MaterialBalance/receipt_detail.html', context)
-
-
-def _get_user_warehouse_ids(user):
-    """Вспомогательная функция для получения ID складов пользователя"""
-    if not user or not user.is_authenticated:
-        return []
-
-    from Forest_apps.inventory.models import StorageLocation
-    from Forest_apps.core.models import Warehouse
-
-    user_warehouse_ids = []
-
-    warehouses = Warehouse.objects.filter(created_by=user)
-    for wh in warehouses:
-        try:
-            location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
-            user_warehouse_ids.append(location.id)
-        except StorageLocation.DoesNotExist:
-            pass
-
-    return user_warehouse_ids
-
-
-@login_required
-def material_balance_detail_view(request, balance_id):
-    """Детальный просмотр остатка"""
-
-    balance = get_object_or_404(
-        MaterialBalance.objects.select_related('storage_location', 'material', 'created_by_position'),
-        id=balance_id
-    )
-
-    context = {
-        'title': f'Остаток: {balance.material.name}',
-        'employee_name': request.session.get('employee_name'),
-        'balance': balance,
-    }
-
-    return render(request, 'MaterialBalance/material_balance_detail.html', context)

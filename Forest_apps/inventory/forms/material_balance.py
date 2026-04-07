@@ -5,6 +5,7 @@ from datetime import timedelta
 from Forest_apps.inventory.models import MaterialBalance, StorageLocation, Receipt
 from Forest_apps.forestry.models import Material
 from Forest_apps.core.models import Warehouse, Brigade, Vehicle
+from Forest_apps.inventory.services import StorageLocationService
 
 
 class MaterialBalanceFilterForm(forms.Form):
@@ -121,21 +122,16 @@ class MaterialBalanceCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
-        self.position_name = kwargs.pop('position_name', None)  # Добавить эту строку
+        self.position_name = kwargs.pop('position_name', None)
         self.receipt_instance = kwargs.pop('receipt_instance', None)
         super().__init__(*args, **kwargs)
 
-        print(f"DEBUG form __init__: position_name = {self.position_name}")  # Отладка
+        # Получаем склады через сервис
+        user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(
+            self.position_name
+        )
 
-        # Получаем ID складов, принадлежащих пользователю
-        user_warehouse_ids = self._get_user_warehouse_ids()
-
-        # Только склады, принадлежащие пользователю
-        self.fields['storage_location'].queryset = StorageLocation.objects.filter(
-            id__in=user_warehouse_ids,
-            source_type='склад'
-        ).order_by('source_type')
-
+        self.fields['storage_location'].queryset = user_warehouses
         self.fields['material'].queryset = Material.objects.all().order_by('material_type', 'name')
 
         # Источник поступления - только контрагенты
@@ -159,44 +155,31 @@ class MaterialBalanceCreateForm(forms.ModelForm):
         from Forest_apps.core.models import Position, Warehouse
         from Forest_apps.inventory.models import StorageLocation
 
-        print("=== DEBUG _get_user_warehouse_ids START ===")
-        print(f"DEBUG: self.position_name = '{self.position_name}'")
-
         if not self.user or not self.user.is_authenticated:
-            print("DEBUG: User not authenticated")
             return []
 
         position_name = self.position_name
-        print(f"DEBUG: Using position_name: '{position_name}'")
 
         if not position_name:
-            print("DEBUG: position_name is empty")
             return []
 
         # Ищем должность (регистронезависимо)
         position = Position.objects.filter(name__iexact=position_name).first()
-        print(f"DEBUG: Found position: {position.name if position else 'None'}")
 
         if not position:
-            print(f"DEBUG: Position '{position_name}' not found in database")
             return []
 
         # Получаем все склады с этой должностью
         warehouses = Warehouse.objects.filter(created_by_position=position)
-        print(f"DEBUG: Found {warehouses.count()} warehouses")
 
         # Находим соответствующие StorageLocation
         user_warehouse_ids = []
         for wh in warehouses:
             loc = StorageLocation.objects.filter(source_type='склад', source_id=wh.id).first()
             if loc:
-                print(f"  - Added: {wh.name} (StorageLocation ID: {loc.id})")
                 user_warehouse_ids.append(loc.id)
             else:
                 print(f"  - NOT found: {wh.name}")
-
-        print(f"DEBUG: Final user_warehouse_ids: {user_warehouse_ids}")
-        print("=== DEBUG _get_user_warehouse_ids END ===")
 
         return user_warehouse_ids
 

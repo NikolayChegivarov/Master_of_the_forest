@@ -5,6 +5,7 @@ from Forest_apps.core.models import Warehouse, Position
 from Forest_apps.core.forms.warehouse import WarehouseCreateForm, WarehouseEditForm
 
 
+#----------------------ДЛЯ КОНКРЕТНОЙ ДОЛЖНОСТИ (ПРАВИЛЬНАЯ ВЕРСИЯ)-------------------
 @login_required
 def warehouse_list_view(request):
     """Страница со списком складов (только для должности пользователя)"""
@@ -23,7 +24,7 @@ def warehouse_list_view(request):
     # Получаем склады, созданные этой должностью
     warehouses = Warehouse.objects.filter(
         created_by_position_id=user_position_id
-    ).order_by('-id')  # 👈 ИЗМЕНИТЬ: сортировка по ID (новые сначала)
+    ).order_by('-id')
 
     context = {
         'title': 'Склады',

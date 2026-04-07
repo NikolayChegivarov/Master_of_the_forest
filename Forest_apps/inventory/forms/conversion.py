@@ -1,6 +1,7 @@
 from django import forms
 from Forest_apps.inventory.models import Conversion, StorageLocation
 from Forest_apps.forestry.models import Material
+from Forest_apps.inventory.services import StorageLocationService
 
 
 class ConversionCreateForm(forms.ModelForm):
@@ -75,16 +76,16 @@ class ConversionCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
+        self.position_name = kwargs.pop('position_name', None)  # Добавляем должность
         super().__init__(*args, **kwargs)
 
-        # Получаем ID складов, принадлежащих пользователю
-        user_warehouse_ids = self._get_user_warehouse_ids()
+        # Получаем склады через сервис
+        user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(
+            self.position_name
+        )
 
         # Только склады, принадлежащие пользователю
-        self.fields['storage_location'].queryset = StorageLocation.objects.filter(
-            id__in=user_warehouse_ids,
-            source_type='склад'
-        ).order_by('source_type')
+        self.fields['storage_location'].queryset = user_warehouses.filter(source_type='склад')
 
         # Только материалы типа "древесина"
         self.fields['source_material'].queryset = Material.objects.filter(
@@ -94,27 +95,6 @@ class ConversionCreateForm(forms.ModelForm):
         self.fields['target_material'].queryset = Material.objects.filter(
             material_type='древесина'
         ).order_by('name')
-
-    def _get_user_warehouse_ids(self):
-        """Получает ID складов, принадлежащих пользователю"""
-        if not self.user or not self.user.is_authenticated:
-            return []
-
-        from Forest_apps.core.models import Warehouse
-        from Forest_apps.inventory.models import StorageLocation
-
-        user_warehouse_ids = []
-
-        # Склады, созданные пользователем
-        warehouses = Warehouse.objects.filter(created_by=self.user)
-        for wh in warehouses:
-            try:
-                location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
-                user_warehouse_ids.append(location.id)
-            except StorageLocation.DoesNotExist:
-                pass
-
-        return user_warehouse_ids
 
     def clean(self):
         """Валидация формы"""

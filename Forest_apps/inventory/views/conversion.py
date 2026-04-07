@@ -14,27 +14,10 @@ def conversion_list_view(request):
     # Получаем должность текущего пользователя из сессии
     user_position_name = request.session.get('position_name')
 
-    # Получаем все конвертации для складов пользователя
-    from Forest_apps.core.models import Warehouse
-    from Forest_apps.inventory.models import StorageLocation
-
-    # Находим склады, созданные должностью пользователя
-    user_position_id = None
-    try:
-        position = Position.objects.get(name__iexact=user_position_name)
-        user_position_id = position.id
-    except Position.DoesNotExist:
-        user_position_id = -1
-
-    # Получаем ID складов, принадлежащих должности
-    user_warehouse_ids = []
-    warehouses = Warehouse.objects.filter(created_by_position_id=user_position_id)
-    for wh in warehouses:
-        try:
-            location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
-            user_warehouse_ids.append(location.id)
-        except StorageLocation.DoesNotExist:
-            pass
+    # Получаем склады пользователя через сервис
+    from Forest_apps.inventory.services import StorageLocationService
+    user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(user_position_name)
+    user_warehouse_ids = list(user_warehouses.values_list('id', flat=True))
 
     # Фильтруем конвертации по складам пользователя
     conversions = Conversion.objects.filter(
@@ -65,15 +48,17 @@ def conversion_list_view(request):
 def conversion_create_view(request):
     """Создание новой конвертации древесины"""
 
+    # Получаем должность из сессии
+    position_name = request.session.get('position_name')
+
     if request.method == 'POST':
-        form = ConversionCreateForm(request.POST, user=request.user)
+        form = ConversionCreateForm(request.POST, user=request.user, position_name=position_name)
         if form.is_valid():
             # Сохраняем конвертацию
             conversion = form.save(commit=False)
             conversion.created_by = request.user
 
             # Добавляем должность создателя
-            position_name = request.session.get('position_name')
             try:
                 position = Position.objects.get(name__iexact=position_name)
                 conversion.created_by_position = position
@@ -103,7 +88,7 @@ def conversion_create_view(request):
 
             return redirect('inventory:conversion_list')
     else:
-        form = ConversionCreateForm(user=request.user)
+        form = ConversionCreateForm(user=request.user, position_name=position_name)
 
         # Проверяем, есть ли у пользователя склады
         if form.fields['storage_location'].queryset.count() == 0:

@@ -161,12 +161,21 @@
             </div>
         </a>
 
-        <!-- Кнопка Места хранения -->
+        <!-- Кнопка Все Места хранения -->
         <a href="{% url 'inventory:storage_location_list' %}" class="dashboard-card">
             <div class="card-content">
-                <div class="card-icon">📍</div>
+                <div class="card-icon"> 🗄 </div>
                 <div class="card-title">Места хранения</div>
                 <div class="card-description">Склады, ТС, контрагенты, бригады</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Мои места хранения -->
+        <a href="{% url 'inventory:my_storage_location_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon"> 🗄 </div>
+                <div class="card-title">Мои места хранения</div>
+                <div class="card-description">Только созданные вашей должностью</div>
             </div>
         </a>
 

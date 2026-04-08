@@ -92,13 +92,22 @@
         </a>
     </div>
 
-    <!-- Четвертый ряд: Учет времени + два пустых места для сохранения сетки -->
+    <!-- Четвертый ряд: Учет времени, Мои места хранения + два пустых места для сохранения сетки -->
     <div class="dashboard-row">
         <a href="{% url 'employees:worktime_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">⏱️</div>
                 <div class="card-title">Учет времени</div>
                 <div class="card-description">Рабочее время сотрудников</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Мои места хранения -->
+        <a href="{% url 'inventory:my_storage_location_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🗄</div>
+                <div class="card-title">Мои места хранения</div>
+                <div class="card-description">Только созданные вашей должностью</div>
             </div>
         </a>
 

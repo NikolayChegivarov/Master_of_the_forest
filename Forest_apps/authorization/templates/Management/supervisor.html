@@ -48,7 +48,7 @@
             </div>
         </a>
 
-        <!-- Кнопка Движение материалов (НОВАЯ) -->
+        <!-- Кнопка Движение материалов -->
         <a href="{% url 'inventory:material_movement_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">📤</div>
@@ -57,8 +57,14 @@
             </div>
         </a>
 
-        <!-- Пустой элемент для сохранения сетки (невидимый) -->
-        <div class="dashboard-card" style="visibility: hidden;"></div>
+        <!-- Кнопка Места хранения -->
+        <a href="{% url 'inventory:storage_location_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🗄</div>
+                <div class="card-title">Места хранения</div>
+                <div class="card-description">Склады, ТС, контрагенты, бригады</div>
+            </div>
+        </a>
     </div>
 </div>
 
@@ -180,11 +186,6 @@
         .card-description {
             font-size: 13px;
         }
-
-        /* Скрываем пустые элементы на мобильных */
-        .dashboard-card[style*="visibility: hidden"] {
-            display: none;
-        }
     }
 
     /* Адаптация для маленьких экранов */
@@ -223,11 +224,6 @@
 
         .dashboard-card:hover .card-content {
             transform: translateY(-4px);
-        }
-
-        /* Скрываем пустые элементы на мобильных */
-        .dashboard-card[style*="visibility: hidden"] {
-            display: none;
         }
     }
 </style>

@@ -8,9 +8,11 @@ app_name = 'inventory'
 
 urlpatterns = [
     # Места хранения
+    # Места хранения
     path('storage-locations/', storage_location.storage_location_list_view, name='storage_location_list'),
-    path('storage-locations/<int:location_id>/', storage_location.storage_location_detail_view,
-         name='storage_location_detail'),
+    path('storage-locations/my/', storage_location.my_storage_location_list_view, name='my_storage_location_list'),
+    path('storage-locations/<int:location_id>/', storage_location.storage_location_detail_view, name='storage_location_detail'),
+    path('storage-locations/my/<int:location_id>/', storage_location.my_storage_location_detail_view, name='my_storage_location_detail'),
 
     # Остатки материалов
     path('balances/', material_balance.material_balance_list_view, name='material_balance_list'),

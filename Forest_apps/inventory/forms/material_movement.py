@@ -1,3 +1,4 @@
+# ФОРМЫ ДВИЖЕНИЕ МАТЕРИАЛОВ
 from django import forms
 from django.utils import timezone
 from Forest_apps.inventory.models import MaterialMovement, StorageLocation

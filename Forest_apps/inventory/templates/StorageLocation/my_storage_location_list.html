@@ -1,16 +1,16 @@
-<!-- Forest_apps/inventory/templates/StorageLocation/storage_location_list.html -->
+<!-- Forest_apps/inventory/templates/StorageLocation/my_storage_location_list.html -->
 {% extends "base.html" %}
 
-{% block title %}Все места хранения{% endblock %}
+{% block title %}Мои места хранения{% endblock %}
 
-{% block header %}Все места хранения{% endblock %}
+{% block header %}Мои места хранения ({{ position_name|default:"наша должность" }}){% endblock %}
 
 {% block content %}
 <div class="storage-container">
     <!-- Статистика -->
     <div class="stats-cards">
         <div class="stat-card">
-            <div class="stat-icon">📍</div>
+            <div class="stat-icon"> 🗄 </div>
             <div class="stat-content">
                 <div class="stat-value">{{ stats.total }}</div>
                 <div class="stat-label">Всего мест</div>
@@ -64,7 +64,7 @@
                 </div>
                 <div class="filter-group">
                     <label>&nbsp;</label>
-                    <a href="{% url 'inventory:storage_location_list' %}" class="filter-clear">✖ Сбросить</a>
+                    <a href="{% url 'inventory:my_storage_location_list' %}" class="filter-clear">✖ Сбросить</a>
                 </div>
             </div>
         </form>
@@ -72,7 +72,7 @@
 
     <!-- Список мест хранения -->
     <div class="storage-list">
-        <h3>Все места хранения в системе</h3>
+        <h3>Места хранения, созданные {{ position_name|default:"вашей должностью" }}</h3>
 
         {% if locations %}
             <div class="table-responsive">
@@ -88,16 +88,16 @@
                     <tbody>
                         {% for location in locations %}
                         <tr>
-                            <td>{{ location.id }}</td>  <!-- Исправлено: location.id как ключ словаря -->
+                            <td>{{ location.id }}</td>
                             <td class="name-cell">{{ location.source_name }}</td>
                             <td>
                                 <span class="badge type-{{ location.source_type_raw }}">
                                     {{ location.source_type }}
                                 </span>
                             </td>
-                            <td class="actions">
-                                <a href="{% url 'inventory:storage_location_detail' location.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
-                            </td>
+                                <td class="actions">
+                                    <a href="{% url 'inventory:my_storage_location_detail' location.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
+                                </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -105,7 +105,8 @@
             </div>
         {% else %}
             <div class="empty-message">
-                <p>Места хранения не найдены.</p>
+                <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного места хранения.</p>
+                <p class="text-muted">Создайте склад, транспорт, бригаду или контрагента, чтобы они появились здесь.</p>
             </div>
         {% endif %}
     </div>
@@ -321,7 +322,6 @@
 
     .actions {
         white-space: nowrap;
-        text-align: center;
     }
 
     .btn-action {

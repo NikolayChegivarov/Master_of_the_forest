@@ -199,7 +199,7 @@ def material_balance_detail_view(request, balance_id):
 
 @login_required
 def receipt_list_view(request):
-    """Список поступлений материалов"""
+    """Список поступлений материалов с фильтрацией"""
 
     user_position_name = request.session.get('position_name')
 
@@ -207,12 +207,37 @@ def receipt_list_view(request):
     user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(user_position_name)
     user_warehouse_ids = list(user_warehouses.values_list('id', flat=True))
 
-    # Поступления на склады пользователя
+    # Получаем все контрагенты для фильтра
+    counterparties = StorageLocation.objects.filter(source_type='контрагент').order_by('source_id')
+
+    # Базовый запрос
     receipts = Receipt.objects.filter(
         storage_location_id__in=user_warehouse_ids
     ).select_related(
         'storage_location', 'material', 'source_location', 'created_by_position'
     ).order_by('-receipt_date')
+
+    # Фильтрация
+    storage_location_id = request.GET.get('storage_location')
+    source_location_id = request.GET.get('source_location')
+    material_name = request.GET.get('material')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    if storage_location_id:
+        receipts = receipts.filter(storage_location_id=storage_location_id)
+
+    if source_location_id:
+        receipts = receipts.filter(source_location_id=source_location_id)
+
+    if material_name:
+        receipts = receipts.filter(material__name__icontains=material_name)
+
+    if date_from:
+        receipts = receipts.filter(receipt_date__date__gte=date_from)
+
+    if date_to:
+        receipts = receipts.filter(receipt_date__date__lte=date_to)
 
     # Статистика
     total_count = receipts.count()
@@ -226,6 +251,8 @@ def receipt_list_view(request):
         'employee_name': request.session.get('employee_name'),
         'position_name': user_position_name,
         'receipts': receipts,
+        'user_warehouses': user_warehouses,
+        'counterparties': counterparties,
         'total_count': total_count,
         'total_pieces': total_pieces,
         'total_meters': total_meters,

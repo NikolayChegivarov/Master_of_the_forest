@@ -1,9 +1,9 @@
 <!-- Forest_apps/inventory/templates/MaterialBalance/receipt_list.html -->
 {% extends "base.html" %}
 
-{% block title %}Журнал поступлений{% endblock %}
+{% block title %}Поступления материалов{% endblock %}
 
-{% block header %}Журнал поступлений{% endblock %}
+{% block header %}Поступления материалов{% endblock %}
 
 {% block content %}
 <div class="receipt-container">
@@ -12,6 +12,68 @@
         <a href="{% url 'inventory:material_balance_list' %}" class="back-button">
             ← Остатки материалов
         </a>
+    </div>
+
+    <!-- Фильтры -->
+    <div class="filters-container">
+        <form method="get" class="filters-form" id="filter-form">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label for="storage_location">Склад:</label>
+                    <select name="storage_location" id="storage_location" class="filter-select auto-submit">
+                        <option value="">Все склады</option>
+                        {% for loc in user_warehouses %}
+                            <option value="{{ loc.id }}" {% if request.GET.storage_location|stringformat:"s" == loc.id|stringformat:"s" %}selected{% endif %}>
+                                {{ loc.get_source_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="source_location">Источник:</label>
+                    <select name="source_location" id="source_location" class="filter-select auto-submit">
+                        <option value="">Все источники</option>
+                        {% for counterparty in counterparties %}
+                            <option value="{{ counterparty.id }}" {% if request.GET.source_location|stringformat:"s" == counterparty.id|stringformat:"s" %}selected{% endif %}>
+                                {{ counterparty.get_source_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="material">Материал:</label>
+                    <input type="text" name="material" id="material" class="filter-input"
+                           placeholder="Поиск по названию..."
+                           value="{{ request.GET.material|default:'' }}">
+                </div>
+            </div>
+
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label for="date_from">Дата с:</label>
+                    <input type="date" name="date_from" id="date_from" class="filter-input auto-submit"
+                           value="{{ request.GET.date_from|default:'' }}">
+                </div>
+
+                <div class="filter-group">
+                    <label for="date_to">Дата по:</label>
+                    <input type="date" name="date_to" id="date_to" class="filter-input auto-submit"
+                           value="{{ request.GET.date_to|default:'' }}">
+                </div>
+
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="filter-btn">🔍 Применить</button>
+                </div>
+
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <a href="{% url 'inventory:receipt_list' %}" class="filter-clear">✖ Сбросить все</a>
+                </div>
+            </div>
+        </form>
     </div>
 
     <!-- Статистика -->
@@ -71,27 +133,27 @@
                             <th class="text-right">П.м.</th>
                             <th class="text-right">м³</th>
                             <th class="text-right">Сумма</th>
-                            <th>Создатель</th>
+                            <th>Создатель поступления</th>
                             <th class="text-center">Действия</th>
                           </tr>
                     </thead>
                     <tbody>
                         {% for receipt in receipts %}
                         <tr>
-                            <td><strong>{{ receipt.id }}</strong></td>
-                            <td>{{ receipt.receipt_date|date:"d.m.Y H:i" }}</td>
-                            <td class="location-cell">{{ receipt.storage_location.get_source_name }}</td>
+                            <td><strong>{{ receipt.id }}</strong>2d
+                            <td>{{ receipt.receipt_date|date:"d.m.Y H:i" }}2d
+                            <td class="location-cell">{{ receipt.storage_location.get_source_name }}2d
                             <td class="location-cell">
                                 {% if receipt.source_location %}
                                     {{ receipt.source_location.get_source_name }}
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            </td>
-                            <td>{{ receipt.material.name }}</td>
-                            <td class="text-right quantity-cell">{{ receipt.quantity_pieces|floatformat:1|default:"-" }}</td>
-                            <td class="text-right quantity-cell">{{ receipt.quantity_meters|floatformat:1|default:"-" }}</td>
-                            <td class="text-right quantity-cell">{{ receipt.quantity_cubic|floatformat:1|default:"-" }}</td>
+                            2d
+                            <td>{{ receipt.material.name }}2d
+                            <td class="text-right quantity-cell">{{ receipt.quantity_pieces|floatformat:1|default:"-" }}2d
+                            <td class="text-right quantity-cell">{{ receipt.quantity_meters|floatformat:1|default:"-" }}2d
+                            <td class="text-right quantity-cell">{{ receipt.quantity_cubic|floatformat:1|default:"-" }}2d
                             <td class="text-right amount-cell">{{ receipt.total_amount|floatformat:2|default:"-" }} ₽</td>
                             <td>
                                 {% if receipt.created_by_position %}
@@ -99,7 +161,7 @@
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            </td>
+                            2d
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
                                     <a href="{% url 'inventory:receipt_detail' receipt.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
@@ -111,7 +173,7 @@
                                         <span class="no-action" title="Поступление старше 5 дней, редактирование невозможно">🔒</span>
                                     {% endif %}
                                 </div>
-                            </td>
+                            2d
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -119,7 +181,8 @@
             </div>
         {% else %}
             <div class="empty-message">
-                <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного поступления материалов.</p>
+                <p>Поступления материалов не найдены.</p>
+                <p class="text-muted">Поступления создаются через кнопку "Приходовать материалы" на странице остатков.</p>
                 <a href="{% url 'inventory:material_balance_create' %}" class="btn btn-primary">➕ Приходовать материалы</a>
             </div>
         {% endif %}
@@ -131,6 +194,120 @@
         padding: 20px;
     }
 
+    /* Кнопка возврата */
+    .back-link {
+        margin-bottom: 20px;
+    }
+
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 8px 15px;
+        background: #f8f9fa;
+        color: #2c5e2e;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        border: 1px solid #e0e0e0;
+    }
+
+    .back-button:hover {
+        background: #2c5e2e;
+        color: white;
+        border-color: #2c5e2e;
+        transform: translateX(-3px);
+    }
+
+    /* Фильтры */
+    .filters-container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .filters-form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .filters-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 150px;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .filter-btn {
+        padding: 8px 16px;
+        background: #2c5e2e;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+        white-space: nowrap;
+        width: 100%;
+    }
+
+    .filter-btn:hover {
+        background: #1e4220;
+    }
+
+    .filter-clear {
+        padding: 8px 16px;
+        background: #f8f9fa;
+        color: #666;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: background 0.3s;
+        display: inline-block;
+        white-space: nowrap;
+        width: 100%;
+        text-align: center;
+        border: 1px solid #ddd;
+    }
+
+    .filter-clear:hover {
+        background: #e9ecef;
+    }
+
+    /* Статистика */
     .stats-cards {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -176,6 +353,7 @@
         color: #666;
     }
 
+    /* Таблица */
     .receipts-list {
         background: white;
         border-radius: 16px;
@@ -384,6 +562,15 @@
             font-size: 20px;
         }
 
+        .filters-row {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-group {
+            width: 100%;
+        }
+
         .stats-cards {
             grid-template-columns: 1fr;
         }
@@ -398,30 +585,31 @@
             margin: 2px 0;
         }
     }
-    .back-link {
-        margin-bottom: 20px;
-    }
-
-    .back-button {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        padding: 8px 15px;
-        background: #f8f9fa;
-        color: #2c5e2e;
-        text-decoration: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        transition: all 0.2s;
-        border: 1px solid #e0e0e0;
-    }
-
-    .back-button:hover {
-        background: #2c5e2e;
-        color: white;
-        border-color: #2c5e2e;
-        transform: translateX(-3px);
-    }
 </style>
+
+<!-- JavaScript для автоматической отправки фильтров -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('filter-form');
+        const autoSubmitFields = document.querySelectorAll('.auto-submit');
+        const materialInput = document.querySelector('input[name="material"]');
+
+        // Автоматическая отправка при изменении select-полей и дат
+        autoSubmitFields.forEach(field => {
+            field.addEventListener('change', function() {
+                form.submit();
+            });
+        });
+
+        // Для поиска по материалу используем кнопку или Enter
+        if (materialInput) {
+            materialInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    form.submit();
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

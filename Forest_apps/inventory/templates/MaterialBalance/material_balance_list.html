@@ -25,7 +25,6 @@
 
     <!-- Итоги и статистика -->
     <div class="stats-grid">
-        <!-- Общие итоги -->
         <div class="stats-cards">
             <div class="stat-card">
                 <div class="stat-icon">📦</div>
@@ -56,36 +55,12 @@
                 </div>
             </div>
         </div>
-
-        <!-- Статистика по типам -->
-        <div class="type-stats">
-            <div class="type-stat">
-                <span class="type-badge type-склад">🏭 Склады</span>
-                <span class="type-count">{{ stats_by_type.склад }}</span>
-            </div>
-            <div class="type-stat">
-                <span class="type-badge type-автомобиль">🚛 Автомобили</span>
-                <span class="type-count">{{ stats_by_type.автомобиль }}</span>
-            </div>
-            <div class="type-stat">
-                <span class="type-badge type-бригады">👥 Бригады</span>
-                <span class="type-count">{{ stats_by_type.бригады }}</span>
-            </div>
-            <div class="type-stat">
-                <span class="type-badge type-контрагент">🏢 Контрагенты</span>
-                <span class="type-count">{{ stats_by_type.контрагент }}</span>
-            </div>
-        </div>
     </div>
 
     <!-- Фильтры -->
     <div class="filters-container">
         <form method="get" class="filters-form" id="filter-form">
             <div class="filters-row">
-                <div class="filter-group">
-                    {{ filter_form.storage_location.label_tag }}
-                    {{ filter_form.storage_location }}
-                </div>
                 <div class="filter-group">
                     {{ filter_form.material_type.label_tag }}
                     {{ filter_form.material_type }}
@@ -113,7 +88,7 @@
                 <div class="hide-empty-group">
                     <label class="checkbox-label">
                         <input type="checkbox" name="hide_empty" id="hide_empty" value="1" {% if request.GET.hide_empty %}checked{% endif %}>
-                        <span class="checkbox-text">🚫 Скрыть пустые места хранения (где все количества равны 0)</span>
+                        <span class="checkbox-text">🚫 Скрыть пустые остатки (где все количества равны 0)</span>
                     </label>
                 </div>
             </div>
@@ -122,15 +97,14 @@
 
     <!-- Таблица остатков -->
     <div class="balances-list">
-        <h3>Остатки материалов ({{ position_name|default:"наша должность" }})</h3>
+        <h3>Остатки материалов на складах ({{ position_name|default:"наша должность" }})</h3>
 
         {% if balances %}
             <div class="table-responsive">
                 <table class="balances-table">
                     <thead>
                         <tr>
-                            <th>Место хранения</th>
-                            <th>Тип места</th>
+                            <th>Склад</th>
                             <th>Материал</th>
                             <th>Тип материала</th>
                             <th class="text-right">Штуки</th>
@@ -141,16 +115,11 @@
                     </thead>
                     <tbody>
                         {% for balance in balances %}
-                        <tr class="balance-row {% if not balance.storage_location.source_id in user_warehouses and not balance.storage_location.source_id in user_brigades and not balance.storage_location.source_id in user_vehicles %}foreign-row{% endif %}">
+                        <tr class="balance-row">
                             <td class="location-cell">
                                 <a href="{% url 'inventory:material_balance_detail' balance.id %}" class="location-link">
                                     {{ balance.storage_location.get_source_name }}
                                 </a>
-                            </td>
-                            <td>
-                                <span class="badge type-{{ balance.storage_location.source_type }}">
-                                    {{ balance.storage_location.get_source_type_display }}
-                                </span>
                             </td>
                             <td class="material-cell">{{ balance.material.name }}</td>
                             <td>
@@ -185,8 +154,8 @@
                     <p>По заданным критериям ничего не найдено.</p>
                     <a href="{% url 'inventory:material_balance_list' %}" class="btn btn-secondary">Сбросить фильтры</a>
                 {% else %}
-                    <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного остатка материалов.</p>
-                    <p class="text-muted">Добавьте первый остаток, чтобы начать работу.</p>
+                    <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного остатка материалов на складах.</p>
+                    <p class="text-muted">Приходуйте материалы, чтобы начать учет.</p>
                     <a href="{% url 'inventory:material_balance_create' %}" class="btn btn-primary">Приходовать материалы</a>
                 {% endif %}
             </div>
@@ -301,35 +270,6 @@
         color: #666;
     }
 
-    .type-stats {
-        display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
-        background: white;
-        border-radius: 12px;
-        padding: 15px 20px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-
-    .type-stat {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 5px 10px;
-        background: #f8f9fa;
-        border-radius: 20px;
-    }
-
-    .type-badge {
-        font-size: 14px;
-        font-weight: 500;
-    }
-
-    .type-count {
-        font-weight: 700;
-        color: #2c5e2e;
-    }
-
     /* Фильтры */
     .filters-container {
         background: white;
@@ -410,7 +350,7 @@
         background: #e9ecef;
     }
 
-    /* Чекбокс для скрытия пустых мест */
+    /* Чекбокс для скрытия пустых остатков */
     .hide-empty-row {
         margin-top: 20px;
         padding-top: 15px;
@@ -469,7 +409,7 @@
     .balances-table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 900px;
+        min-width: 700px;
     }
 
     .balances-table th {
@@ -492,15 +432,6 @@
     .balances-table tbody tr:hover {
         background: #f5f5f5;
         cursor: pointer;
-    }
-
-    .foreign-row {
-        opacity: 0.8;
-        background-color: #fafafa;
-    }
-
-    .foreign-row:hover {
-        opacity: 1;
     }
 
     .zero-quantity {
@@ -529,35 +460,6 @@
     .location-link:hover {
         text-decoration: underline;
         color: #1e4220;
-    }
-
-    .badge {
-        display: inline-block;
-        padding: 5px 10px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-        white-space: nowrap;
-    }
-
-    .badge.type-склад {
-        background: #cce5ff;
-        color: #004085;
-    }
-
-    .badge.type-автомобиль {
-        background: #d4edda;
-        color: #155724;
-    }
-
-    .badge.type-контрагент {
-        background: #fff3cd;
-        color: #856404;
-    }
-
-    .badge.type-бригады {
-        background: #d1ecf1;
-        color: #0c5460;
     }
 
     .material-type-badge {
@@ -596,10 +498,6 @@
 
     .text-right {
         text-align: right;
-    }
-
-    .text-center {
-        text-align: center;
     }
 
     .quantity-cell {
@@ -697,15 +595,6 @@
         .filter-group {
             width: 100%;
         }
-
-        .type-stats {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .type-stat {
-            width: 100%;
-        }
     }
 </style>
 
@@ -713,7 +602,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('filter-form');
-        const autoSubmitFields = document.querySelectorAll('select[name="storage_location"], select[name="material_type"], select[name="material"]');
+        const autoSubmitFields = document.querySelectorAll('select[name="material_type"], select[name="material"]');
         const searchInput = document.querySelector('input[name="search"]');
         const hideEmptyCheckbox = document.getElementById('hide_empty');
 

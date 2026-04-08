@@ -19,23 +19,23 @@ from Forest_apps.inventory.services import StorageLocationService
 
 @login_required
 def material_balance_list_view(request):
-    """Список остатков материалов (остатки на складах должности пользователя)"""
+    """Список остатков материалов (только на складах должности пользователя)"""
 
     # Получаем должность текущего пользователя из сессии
     user_position_name = request.session.get('position_name')
 
-    # Получаем все места хранения, принадлежащие этой должности, через сервис
-    user_storage_locations = StorageLocationService.get_user_storage_locations_by_position_name(
+    # Получаем только склады пользователя через сервис
+    user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(
         user_position_name
     )
-    user_storage_location_ids = list(user_storage_locations.values_list('id', flat=True))
+    user_warehouse_ids = list(user_warehouses.values_list('id', flat=True))
 
-    # Базовый запрос - все остатки на местах хранения этой должности
+    # Базовый запрос - только склады
     balances = MaterialBalance.objects.filter(
-        storage_location_id__in=user_storage_location_ids
+        storage_location_id__in=user_warehouse_ids
     ).select_related(
         'storage_location', 'material', 'created_by_position'
-    ).order_by('storage_location__source_type', 'material__material_type', 'material__name')
+    ).order_by('storage_location__source_id', 'material__material_type', 'material__name')
 
     # Фильтрация
     filter_form = MaterialBalanceFilterForm(request.GET or None)

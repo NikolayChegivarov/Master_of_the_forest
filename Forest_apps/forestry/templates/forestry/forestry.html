@@ -7,12 +7,40 @@
 
 {% block content %}
 <div class="forestry-container">
-    <!-- Кнопка создания на всю ширину -->
+    <!-- Кнопка создания -->
     <div class="create-button-container">
         <a href="{% url 'forestry:create_forestry' %}" class="create-button">
             <span class="create-icon">🌲</span>
             <span class="create-text">Создать новое лесничество</span>
         </a>
+    </div>
+
+    <!-- Фильтры и поиск -->
+    <div class="filters-container">
+        <form method="get" class="filters-form">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label for="search">Поиск:</label>
+                    <input type="text" name="search" id="search" value="{{ search_query }}" placeholder="Название лесничества..." class="filter-input">
+                </div>
+                <div class="filter-group">
+                    <label for="status">Статус:</label>
+                    <select name="status" id="status" class="filter-select" onchange="this.form.submit()">
+                        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Все</option>
+                        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Активные</option>
+                        <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Неактивные</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="filter-btn">🔍 Найти</button>
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <a href="{% url 'forestry:forestry' %}" class="filter-clear">✖ Сбросить</a>
+                </div>
+            </div>
+        </form>
     </div>
 
     <!-- Список лесничеств -->
@@ -23,7 +51,7 @@
             <table class="forestries-table">
                 <thead>
                     <tr>
-                        <th>Название</th>
+                        <th>Наименование</th>
                         <th>Статус</th>
                         <th>Должность создателя</th>
                         <th>Дата создания</th>
@@ -51,7 +79,24 @@
                         <td>{{ forestry.created_at|date:"d.m.Y" }}</td>
                         <td class="actions">
                             <a href="{% url 'forestry:edit_forestry' forestry.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
-                            <a href="{% url 'forestry:deactivate_forestry' forestry.id %}" class="btn-action delete-btn" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать лесничество «{{ forestry.name }}»?');">❌</a>
+
+                            {% if forestry.is_active %}
+                                <!-- Если активно - показываем кнопку деактивации -->
+                                <a href="{% url 'forestry:deactivate_forestry' forestry.id %}"
+                                   class="btn-action delete-btn"
+                                   title="Деактивировать"
+                                   onclick="return confirm('Вы уверены, что хотите деактивировать лесничество «{{ forestry.name }}»?');">
+                                    ❌
+                                </a>
+                            {% else %}
+                                <!-- Если неактивно - показываем кнопку активации -->
+                                <a href="{% url 'forestry:activate_forestry' forestry.id %}"
+                                   class="btn-action activate-btn"
+                                   title="Активировать"
+                                   onclick="return confirm('Вы уверены, что хотите активировать лесничество «{{ forestry.name }}»?');">
+                                    ✅
+                                </a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -59,7 +104,13 @@
             </table>
         {% else %}
             <div class="empty-message">
-                <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного лесничества.</p>
+                {% if search_query or status_filter != 'all' %}
+                    <p>По заданным критериям ничего не найдено.</p>
+                    <a href="{% url 'forestry:forestry' %}" class="btn btn-secondary">Сбросить фильтры</a>
+                {% else %}
+                    <p>У {{ position_name|default:"вашей должности" }} пока нет ни одного лесничества.</p>
+                    <p class="text-muted">Создайте первое лесничество, чтобы начать работу.</p>
+                {% endif %}
             </div>
         {% endif %}
     </div>
@@ -70,7 +121,7 @@
         padding: 20px;
     }
 
-    /* Кнопка создания на всю ширину */
+    /* Кнопка создания */
     .create-button-container {
         width: 100%;
         margin-bottom: 30px;
@@ -106,6 +157,86 @@
         font-size: 20px;
         font-weight: 600;
         letter-spacing: 0.5px;
+    }
+
+    /* Фильтры */
+    .filters-container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .filters-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .filter-select,
+    .filter-input {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .filter-select:focus,
+    .filter-input:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .filter-btn {
+        padding: 8px 16px;
+        background: #2c5e2e;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+        white-space: nowrap;
+        width: 100%;
+    }
+
+    .filter-btn:hover {
+        background: #1e4220;
+    }
+
+    .filter-clear {
+        padding: 8px 16px;
+        background: #f8f9fa;
+        color: #666;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: background 0.3s;
+        display: inline-block;
+        white-space: nowrap;
+        width: 100%;
+        text-align: center;
+        border: 1px solid #ddd;
+    }
+
+    .filter-clear:hover {
+        background: #e9ecef;
     }
 
     /* Список лесничеств */
@@ -196,12 +327,29 @@
         transform: scale(1.1);
     }
 
+    /* Стили для кнопок */
     .edit-btn {
         color: #ffc107;
     }
 
+    .edit-btn:hover {
+        color: #e0a800;
+    }
+
     .delete-btn {
         color: #dc3545;
+    }
+
+    .delete-btn:hover {
+        color: #c82333;
+    }
+
+    .activate-btn {
+        color: #28a745;
+    }
+
+    .activate-btn:hover {
+        color: #218838;
     }
 
     .empty-message {
@@ -211,6 +359,11 @@
         font-style: italic;
         background: #f8f9fa;
         border-radius: 12px;
+    }
+
+    .empty-message p {
+        margin-bottom: 20px;
+        font-size: 18px;
     }
 
     .btn {
@@ -236,6 +389,16 @@
         background: #1e4220;
     }
 
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    /* Адаптация для мобильных */
     @media (max-width: 768px) {
         .forestries-table {
             display: block;
@@ -252,6 +415,15 @@
 
         .create-text {
             font-size: 18px;
+        }
+
+        .filters-row {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-group {
+            width: 100%;
         }
     }
 </style>

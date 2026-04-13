@@ -35,6 +35,14 @@
                     <input type="text" name="search" id="search" value="{{ search_query }}" placeholder="Квартал, выдел, лесничество..." class="filter-input">
                 </div>
                 <div class="filter-group">
+                    <label for="status">Статус:</label>
+                    <select name="status" id="status" class="filter-select" onchange="this.form.submit()">
+                        <option value="all" {% if status_filter == "all" %}selected{% endif %}>Все</option>
+                        <option value="active" {% if status_filter == "active" %}selected{% endif %}>Активные</option>
+                        <option value="inactive" {% if status_filter == "inactive" %}selected{% endif %}>Неактивные</option>
+                    </select>
+                </div>
+                <div class="filter-group">
                     <label>&nbsp;</label>
                     <button type="submit" class="filter-btn">🔍 Найти</button>
                 </div>
@@ -87,12 +95,29 @@
                         </td>
                         <td>{{ area.created_at|date:"d.m.Y" }}</td>
                         <td class="actions">
-                            <!-- Кнопка просмотра (новая) -->
-                            <a href="{% url 'forestry:view_logging_site' area.id %}" class="btn-action view-btn" title="Просмотреть содержимое, наполнить лесосеку">👁️</a>
+                            <!-- Кнопка просмотра -->
+                            <a href="{% url 'forestry:view_logging_site' area.id %}" class="btn-action view-btn" title="Просмотреть содержимое">👁️</a>
+
                             <!-- Кнопка редактирования -->
                             <a href="{% url 'forestry:edit_logging_site' area.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
-                            <!-- Кнопка деактивации -->
-                            <a href="{% url 'forestry:deactivate_logging_site' area.id %}" class="btn-action delete-btn" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать лесосеку {{ area.full_address }}?');">❌</a>
+
+                            {% if area.is_active %}
+                                <!-- Если активна - показываем кнопку деактивации -->
+                                <a href="{% url 'forestry:deactivate_logging_site' area.id %}"
+                                   class="btn-action delete-btn"
+                                   title="Деактивировать"
+                                   onclick="return confirm('Вы уверены, что хотите деактивировать лесосеку {{ area.full_address }}?');">
+                                    ❌
+                                </a>
+                            {% else %}
+                                <!-- Если неактивна - показываем кнопку активации -->
+                                <a href="{% url 'forestry:activate_logging_site' area.id %}"
+                                   class="btn-action activate-btn"
+                                   title="Активировать"
+                                   onclick="return confirm('Вы уверены, что хотите активировать лесосеку {{ area.full_address }}?');">
+                                    ✅
+                                </a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -100,7 +125,7 @@
             </table>
         {% else %}
             <div class="empty-message">
-                {% if current_forestry or search_query %}
+                {% if current_forestry or search_query or status_filter != 'all' %}
                     <p>По заданным критериям ничего не найдено.</p>
                     <a href="{% url 'forestry:logging_site' %}" class="btn btn-secondary">Сбросить фильтры</a>
                 {% else %}
@@ -323,9 +348,9 @@
         transform: scale(1.1);
     }
 
-    /* Стили для новой кнопки просмотра */
+    /* Стили для кнопок */
     .view-btn {
-        color: #17a2b8;  /* Голубой цвет */
+        color: #17a2b8;
     }
 
     .view-btn:hover {
@@ -336,8 +361,24 @@
         color: #ffc107;
     }
 
+    .edit-btn:hover {
+        color: #e0a800;
+    }
+
     .delete-btn {
         color: #dc3545;
+    }
+
+    .delete-btn:hover {
+        color: #c82333;
+    }
+
+    .activate-btn {
+        color: #28a745;
+    }
+
+    .activate-btn:hover {
+        color: #218838;
     }
 
     .empty-message {
@@ -347,6 +388,11 @@
         font-style: italic;
         background: #f8f9fa;
         border-radius: 12px;
+    }
+
+    .empty-message p {
+        margin-bottom: 20px;
+        font-size: 18px;
     }
 
     .btn {

@@ -314,3 +314,37 @@ def remove_material_view(request, area_id, material_id):
         messages.error(request, str(e))
 
     return redirect('forestry:view_logging_site', area_id=area_id)
+
+
+@login_required
+def activate_cutting_area_view(request, area_id):
+    """Активация лесосеки (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('forestry:logging_site')
+
+    try:
+        # Проверяем, что лесосека создана этой должностью
+        cutting_area = get_object_or_404(
+            CuttingArea,
+            id=area_id,
+            created_by_position=position
+        )
+
+        # Активируем лесосеку
+        cutting_area.is_active = True
+        cutting_area.save()
+
+        messages.success(
+            request,
+            f'Лесосека {cutting_area.full_address} успешно активирована!'
+        )
+    except Exception as e:
+        messages.error(request, f'Ошибка при активации лесосеки: {str(e)}')
+
+    return redirect('forestry:logging_site')

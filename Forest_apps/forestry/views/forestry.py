@@ -125,6 +125,40 @@ def edit_forestry_view(request, forestry_id):
 
 
 @login_required
+def activate_forestry_view(request, forestry_id):
+    """Активация лесничества (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
+    try:
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('forestry:forestry')
+
+    # Проверяем, что лесничество создано этой должностью
+    try:
+        forestry = get_object_or_404(
+            Forestry,
+            id=forestry_id,
+            created_by_position=position
+        )
+
+        # Активируем лесничество
+        forestry.is_active = True
+        forestry.save()
+
+        messages.success(
+            request,
+            f'Лесничество "{forestry.name}" успешно активировано!'
+        )
+    except Exception as e:
+        messages.error(request, f'Ошибка при активации лесничества: {str(e)}')
+
+    return redirect('forestry:forestry')
+
+
+@login_required
 def deactivate_forestry_view(request, forestry_id):
     """Деактивация лесничества (только для своей должности)"""
 

@@ -604,3 +604,86 @@ def get_materials(request):
         for m in materials
     ]
     return JsonResponse(data, safe=False)
+
+
+@login_required
+def all_material_movements_list_view(request):
+    """Список ВСЕХ движений материалов (без фильтрации по должности)"""
+
+    # Получаем ВСЕ движения без фильтрации по должности
+    movements = MaterialMovement.objects.select_related(
+        'from_location', 'to_location', 'material', 'employee', 'vehicle',
+        'created_by', 'created_by_position'
+    ).order_by('-date_time')
+
+    # Фильтрация
+    filter_form = MaterialMovementFilterForm(request.GET or None)
+
+    if filter_form.is_valid():
+        accounting_type = filter_form.cleaned_data.get('accounting_type')
+        date_from = filter_form.cleaned_data.get('date_from')
+        date_to = filter_form.cleaned_data.get('date_to')
+        from_location = filter_form.cleaned_data.get('from_location')
+        to_location = filter_form.cleaned_data.get('to_location')
+        material = filter_form.cleaned_data.get('material')
+        is_completed = filter_form.cleaned_data.get('is_completed')
+        search = filter_form.cleaned_data.get('search')
+
+        if accounting_type:
+            movements = movements.filter(accounting_type=accounting_type)
+
+        if date_from:
+            movements = movements.filter(date_time__date__gte=date_from)
+
+        if date_to:
+            movements = movements.filter(date_time__date__lte=date_to)
+
+        if from_location:
+            movements = movements.filter(from_location=from_location)
+
+        if to_location:
+            movements = movements.filter(to_location=to_location)
+
+        if material:
+            movements = movements.filter(material=material)
+
+        if is_completed == 'true':
+            movements = movements.filter(is_completed=True)
+        elif is_completed == 'false':
+            movements = movements.filter(is_completed=False)
+
+        if search:
+            movements = movements.filter(
+                Q(material__name__icontains=search) |
+                Q(from_location__source_type__icontains=search) |
+                Q(to_location__source_type__icontains=search)
+            )
+
+    # Подсчет статистики
+    total_count = movements.count()
+    total_amount = movements.filter(accounting_type='Реализация').aggregate(
+        total=Sum('total_amount')
+    )['total'] or 0
+    pending_count = movements.filter(is_completed=False).count()
+
+    # Подсчет сумм по количествам
+    total_pieces = movements.aggregate(total=Sum('quantity_pieces'))['total'] or 0
+    total_meters = movements.aggregate(total=Sum('quantity_meters'))['total'] or 0
+    total_cubic = movements.aggregate(total=Sum('quantity_cubic'))['total'] or 0
+
+    context = {
+        'title': 'Все движения материалов',
+        'employee_name': request.session.get('employee_name'),
+        'position_name': request.session.get('position_name'),
+        'movements': movements,
+        'filter_form': filter_form,
+        'total_count': total_count,
+        'total_amount': total_amount,
+        'pending_count': pending_count,
+        'total_pieces': total_pieces,
+        'total_meters': total_meters,
+        'total_cubic': total_cubic,
+        'is_all_movements': True,
+    }
+
+    return render(request, 'MaterialMovement/all_material_movements_list.html', context)

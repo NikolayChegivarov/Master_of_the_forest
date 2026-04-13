@@ -27,6 +27,7 @@ urlpatterns = [
 
     # Движения материалов
     path('movements/', material_movement.material_movement_list_view, name='material_movement_list'),
+    path('movements/all/', material_movement.all_material_movements_list_view, name='all_material_movements_list'),
     path('movements/create/', material_movement.material_movement_create_view, name='material_movement_create'),
     path('movements/<int:movement_id>/', material_movement.material_movement_detail_view,
          name='material_movement_detail'),

@@ -64,14 +64,14 @@
                     <tbody>
                         {% for conversion in conversions %}
                         <tr class="{% if not conversion.is_completed %}pending-row{% endif %}">
-                            <td><strong>{{ conversion.id }}</strong>2d
-                            <td>{{ conversion.created_at|date:"d.m.Y H:i" }}2d
-                            <td class="location-cell">{{ conversion.storage_location.get_source_name|truncatechars:30 }}2d
-                            <td>{{ conversion.source_material.name }}2d
-                            <td class="quantity-cell">{{ conversion.source_quantity_display }}2d
+                            <td><strong>{{ conversion.id }}</strong>
+                            <td>{{ conversion.created_at|date:"d.m.Y H:i" }}
+                            <td class="location-cell">{{ conversion.storage_location.get_source_name|truncatechars:30 }}
+                            <td>{{ conversion.source_material.name }}
+                            <td class="quantity-cell">{{ conversion.source_quantity_display }}
                             <td class="arrow-cell">→</td>
-                            <td>{{ conversion.target_material.name }}2d
-                            <td class="quantity-cell">{{ conversion.target_quantity_display }}2d
+                            <td>{{ conversion.target_material.name }}
+                            <td class="quantity-cell">{{ conversion.target_quantity_display }}
                             <td>
                                 {% if conversion.is_completed %}
                                     <span class="badge completed">✅ Выполнено</span>

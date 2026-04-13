@@ -24,35 +24,33 @@
     </div>
 
     <!-- Итоги и статистика -->
-    <div class="stats-grid">
-        <div class="stats-cards">
-            <div class="stat-card">
-                <div class="stat-icon">📦</div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ total_pieces|floatformat:1 }}</div>
-                    <div class="stat-label">Всего штук</div>
-                </div>
+    <div class="stats-cards">
+        <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_pieces|floatformat:3 }}</div>
+                <div class="stat-label">Всего штук</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon">📏</div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ total_meters|floatformat:1 }}</div>
-                    <div class="stat-label">Всего п.м.</div>
-                </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📏</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_meters|floatformat:3 }}</div>
+                <div class="stat-label">Всего п.м.</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon">🧊</div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ total_cubic|floatformat:1 }}</div>
-                    <div class="stat-label">Всего м³</div>
-                </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🧊</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ total_cubic|floatformat:3 }}</div>
+                <div class="stat-label">Всего м³</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-icon">📋</div>
-                <div class="stat-content">
-                    <div class="stat-value">{{ balances.count }}</div>
-                    <div class="stat-label">Записей</div>
-                </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📋</div>
+            <div class="stat-content">
+                <div class="stat-value">{{ balances.count }}</div>
+                <div class="stat-label">Записей</div>
             </div>
         </div>
     </div>
@@ -61,6 +59,17 @@
     <div class="filters-container">
         <form method="get" class="filters-form" id="filter-form">
             <div class="filters-row">
+                <div class="filter-group">
+                    <label for="id_storage_location">Склад:</label>
+                    <select name="storage_location" id="id_storage_location" class="filter-select">
+                        <option value="">Все склады</option>
+                        {% for wh in user_warehouses_list %}
+                            <option value="{{ wh.id }}" {% if request.GET.storage_location|stringformat:"s" == wh.id|stringformat:"s" %}selected{% endif %}>
+                                {{ wh.get_source_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="filter-group">
                     {{ filter_form.material_type.label_tag }}
                     {{ filter_form.material_type }}
@@ -128,13 +137,13 @@
                                 </span>
                             </td>
                             <td class="text-right quantity-cell {% if balance.quantity_pieces == 0 %}zero-quantity{% endif %}">
-                                {{ balance.quantity_pieces|floatformat:1|default:"-" }}
+                                {{ balance.quantity_pieces|floatformat:3|default:"0.000" }}
                             </td>
                             <td class="text-right quantity-cell {% if balance.quantity_meters == 0 %}zero-quantity{% endif %}">
-                                {{ balance.quantity_meters|floatformat:1|default:"-" }}
+                                {{ balance.quantity_meters|floatformat:3|default:"0.000" }}
                             </td>
                             <td class="text-right quantity-cell {% if balance.quantity_cubic == 0 %}zero-quantity{% endif %}">
-                                {{ balance.quantity_cubic|floatformat:1|default:"-" }}
+                                {{ balance.quantity_cubic|floatformat:3|default:"0.000" }}
                             </td>
                             <td>
                                 {% if balance.created_by_position %}
@@ -221,15 +230,11 @@
     }
 
     /* Статистика */
-    .stats-grid {
-        margin-bottom: 30px;
-    }
-
     .stats-cards {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 20px;
-        margin-bottom: 15px;
+        margin-bottom: 30px;
     }
 
     .stat-card {
@@ -602,32 +607,41 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('filter-form');
-        const autoSubmitFields = document.querySelectorAll('select[name="material_type"], select[name="material"]');
+        const storageLocationSelect = document.querySelector('select[name="storage_location"]');
+        const materialTypeSelect = document.querySelector('select[name="material_type"]');
+        const materialSelect = document.querySelector('select[name="material"]');
         const searchInput = document.querySelector('input[name="search"]');
         const hideEmptyCheckbox = document.getElementById('hide_empty');
 
+        // Функция отправки формы
+        function submitForm() {
+            form.submit();
+        }
+
         // Автоматическая отправка при изменении select-полей
-        autoSubmitFields.forEach(field => {
-            field.addEventListener('change', function() {
-                form.submit();
-            });
-        });
+        if (storageLocationSelect) {
+            storageLocationSelect.addEventListener('change', submitForm);
+        }
+        if (materialTypeSelect) {
+            materialTypeSelect.addEventListener('change', submitForm);
+        }
+        if (materialSelect) {
+            materialSelect.addEventListener('change', submitForm);
+        }
 
         // Для поиска используем кнопку или Enter
         if (searchInput) {
             searchInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    form.submit();
+                    submitForm();
                 }
             });
         }
 
         // Автоматическая отправка при изменении чекбокса
         if (hideEmptyCheckbox) {
-            hideEmptyCheckbox.addEventListener('change', function() {
-                form.submit();
-            });
+            hideEmptyCheckbox.addEventListener('change', submitForm);
         }
     });
 </script>

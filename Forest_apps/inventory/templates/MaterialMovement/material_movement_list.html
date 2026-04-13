@@ -176,8 +176,8 @@
                                     {{ movement.accounting_type }}
                                 </span>
                             </td>
-                            <td class="location-cell">{{ movement.from_location.get_source_name|truncatechars:35 }}</td>
-                            <td class="location-cell">
+                            <td>{{ movement.from_location.get_source_name|truncatechars:35 }}</td>
+                            <td>
                                 {% if movement.to_location %}
                                     {{ movement.to_location.get_source_name|truncatechars:35 }}
                                 {% else %}
@@ -185,9 +185,9 @@
                                 {% endif %}
                             </td>
                             <td>{{ movement.material.name }}</td>
-                            <td class="text-right quantity-cell">{{ movement.quantity_pieces|default:"0"|floatformat:1 }}</td>
-                            <td class="text-right quantity-cell">{{ movement.quantity_meters|default:"0"|floatformat:1 }}</td>
-                            <td class="text-right quantity-cell">{{ movement.quantity_cubic|default:"0"|floatformat:1 }}</td>
+                            <td class="text-right quantity-cell">{{ movement.quantity_pieces|default:"0"|floatformat:3 }}</td>
+                            <td class="text-right quantity-cell">{{ movement.quantity_meters|default:"0"|floatformat:3 }}</td>
+                            <td class="text-right quantity-cell">{{ movement.quantity_cubic|default:"0"|floatformat:3 }}</td>
                             <td class="text-right amount-cell">
                                 {% if movement.total_amount %}
                                     {{ movement.total_amount|floatformat:2 }} ₽

@@ -78,27 +78,16 @@ def material_balance_list_view(request):
     except Position.DoesNotExist:
         user_position_id = -1
 
-    user_warehouses = Warehouse.objects.filter(created_by_position_id=user_position_id).values_list('id', flat=True)
-    user_brigades = Brigade.objects.filter(created_by_position_id=user_position_id).values_list('id', flat=True)
-    user_vehicles = Vehicle.objects.filter(created_by_position_id=user_position_id).values_list('id', flat=True)
+    warehouses_for_rights = Warehouse.objects.filter(created_by_position_id=user_position_id).values_list('id', flat=True)
+    user_warehouses_for_rights = list(warehouses_for_rights)
 
-    # Преобразуем в списки для удобства проверки в шаблоне
-    user_warehouses = list(user_warehouses)
-    user_brigades = list(user_brigades)
-    user_vehicles = list(user_vehicles)
+    # Для фильтра складов в шаблоне - список всех складов пользователя
+    user_warehouses_list = user_warehouses
 
     # Подсчет итогов
     total_pieces = balances.aggregate(total=Sum('quantity_pieces'))['total'] or 0
     total_meters = balances.aggregate(total=Sum('quantity_meters'))['total'] or 0
     total_cubic = balances.aggregate(total=Sum('quantity_cubic'))['total'] or 0
-
-    # Статистика по типам мест хранения
-    stats_by_type = {
-        'склад': balances.filter(storage_location__source_type='склад').count(),
-        'автомобиль': balances.filter(storage_location__source_type='автомобиль').count(),
-        'контрагент': balances.filter(storage_location__source_type='контрагент').count(),
-        'бригады': balances.filter(storage_location__source_type='бригады').count(),
-    }
 
     context = {
         'title': 'Остатки материалов',
@@ -109,14 +98,11 @@ def material_balance_list_view(request):
         'total_pieces': total_pieces,
         'total_meters': total_meters,
         'total_cubic': total_cubic,
-        'stats_by_type': stats_by_type,
-        'user_warehouses': user_warehouses,
-        'user_brigades': user_brigades,
-        'user_vehicles': user_vehicles,
+        'user_warehouses_for_rights': user_warehouses_for_rights,
+        'user_warehouses_list': user_warehouses_list,
     }
 
     return render(request, 'MaterialBalance/material_balance_list.html', context)
-
 
 @login_required
 def material_balance_create_view(request):

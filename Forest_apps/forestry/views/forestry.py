@@ -9,7 +9,7 @@ from Forest_apps.forestry.forms.edit_forestry import ForestryEditForm  # 👈 И
 
 @login_required
 def forestry_view(request):
-    """Страница управления лесничествами (только для должности пользователя)"""
+    """Страница со списком лесничеств (только для должности пользователя)"""
 
     # Получаем должность текущего пользователя из сессии
     user_position_name = request.session.get('position_name')
@@ -20,19 +20,33 @@ def forestry_view(request):
         position = Position.objects.get(name__iexact=user_position_name)
         user_position_id = position.id
     except Position.DoesNotExist:
-        # Если должность не найдена, показываем пустой список
         user_position_id = -1
 
     # Получаем лесничества, созданные этой должностью
+    # 👇 ВАЖНО: сортировка - активные сверху, потом по названию
     forestries = Forestry.objects.filter(
         created_by_position_id=user_position_id
-    ).order_by('-created_at')
+    ).order_by('-is_active', 'name')  # 👈 ИЗМЕНЕНО
+
+    # Фильтрация по поиску
+    search_query = request.GET.get('search', '')
+    if search_query:
+        forestries = forestries.filter(name__icontains=search_query)
+
+    # Фильтрация по статусу
+    status_filter = request.GET.get('status', 'all')
+    if status_filter == 'active':
+        forestries = forestries.filter(is_active=True)
+    elif status_filter == 'inactive':
+        forestries = forestries.filter(is_active=False)
 
     context = {
         'title': 'Лесничества',
         'employee_name': request.session.get('employee_name'),
         'position_name': user_position_name,
         'forestries': forestries,
+        'search_query': search_query,
+        'status_filter': status_filter,
     }
     return render(request, 'forestry/forestry.html', context)
 

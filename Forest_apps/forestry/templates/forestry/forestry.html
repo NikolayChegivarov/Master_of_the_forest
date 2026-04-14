@@ -59,8 +59,8 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for forestry in forestries %}
-                    <tr>
+                     {% for forestry in forestries %}
+                    <tr class="{% if not forestry.is_active %}inactive-row{% endif %}">
                         <td><strong>{{ forestry.name }}</strong></td>
                         <td>
                             {% if forestry.is_active %}
@@ -81,7 +81,6 @@
                             <a href="{% url 'forestry:edit_forestry' forestry.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
 
                             {% if forestry.is_active %}
-                                <!-- Если активно - показываем кнопку деактивации -->
                                 <a href="{% url 'forestry:deactivate_forestry' forestry.id %}"
                                    class="btn-action delete-btn"
                                    title="Деактивировать"
@@ -89,7 +88,6 @@
                                     ❌
                                 </a>
                             {% else %}
-                                <!-- Если неактивно - показываем кнопку активации -->
                                 <a href="{% url 'forestry:activate_forestry' forestry.id %}"
                                    class="btn-action activate-btn"
                                    title="Активировать"
@@ -117,6 +115,11 @@
 </div>
 
 <style>
+    /* Стиль для неактивных строк */
+    .inactive-row {
+        opacity: 0.7;
+        background: #f8f9fa !important;
+    }
     .forestry-container {
         padding: 20px;
     }

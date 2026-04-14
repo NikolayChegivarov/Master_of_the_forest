@@ -74,7 +74,7 @@
                 </thead>
                 <tbody>
                     {% for area in cutting_areas %}
-                    <tr>
+                    <tr class="{% if not area.is_active %}inactive-row{% endif %}">
                         <td>{{ area.forestry.name }}</td>
                         <td><strong>{{ area.quarter_number }}</strong></td>
                         <td><strong>{{ area.division_number }}</strong></td>
@@ -95,14 +95,10 @@
                         </td>
                         <td>{{ area.created_at|date:"d.m.Y" }}</td>
                         <td class="actions">
-                            <!-- Кнопка просмотра -->
                             <a href="{% url 'forestry:view_logging_site' area.id %}" class="btn-action view-btn" title="Просмотреть содержимое">👁️</a>
-
-                            <!-- Кнопка редактирования -->
                             <a href="{% url 'forestry:edit_logging_site' area.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
 
                             {% if area.is_active %}
-                                <!-- Если активна - показываем кнопку деактивации -->
                                 <a href="{% url 'forestry:deactivate_logging_site' area.id %}"
                                    class="btn-action delete-btn"
                                    title="Деактивировать"
@@ -110,7 +106,6 @@
                                     ❌
                                 </a>
                             {% else %}
-                                <!-- Если неактивна - показываем кнопку активации -->
                                 <a href="{% url 'forestry:activate_logging_site' area.id %}"
                                    class="btn-action activate-btn"
                                    title="Активировать"
@@ -138,6 +133,11 @@
 </div>
 
 <style>
+    /* Стиль для неактивных строк */
+    .inactive-row {
+        opacity: 0.7;
+        background: #f8f9fa !important;
+    }
     .logging-site-container {
         padding: 20px;
     }

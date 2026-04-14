@@ -21,18 +21,25 @@ def logging_site_view(request):
         position = Position.objects.get(name__iexact=user_position_name)
         user_position_id = position.id
     except Position.DoesNotExist:
-        # Если должность не найдена, показываем пустой список
         user_position_id = -1
 
     # Получаем лесосеки, созданные этой должностью
+    # 👇 ВАЖНО: сортировка - активные сверху, потом по дате создания (новые сверху)
     cutting_areas = CuttingArea.objects.filter(
         created_by_position_id=user_position_id
-    ).select_related('forestry', 'created_by_position').order_by('-created_at')
+    ).select_related('forestry', 'created_by_position').order_by('-is_active', '-created_at')  # 👈 ИЗМЕНЕНО
 
     # Фильтрация по лесничеству (если есть)
     forestry_id = request.GET.get('forestry', '')
     if forestry_id:
         cutting_areas = cutting_areas.filter(forestry_id=forestry_id)
+
+    # Фильтрация по статусу
+    status_filter = request.GET.get('status', 'all')
+    if status_filter == 'active':
+        cutting_areas = cutting_areas.filter(is_active=True)
+    elif status_filter == 'inactive':
+        cutting_areas = cutting_areas.filter(is_active=False)
 
     # Поиск по номеру квартала или выдела
     search_query = request.GET.get('search', '')
@@ -54,6 +61,7 @@ def logging_site_view(request):
         'forestries': forestries,
         'current_forestry': forestry_id,
         'search_query': search_query,
+        'status_filter': status_filter,
     }
     return render(request, 'logging_site/logging_site.html', context)
 

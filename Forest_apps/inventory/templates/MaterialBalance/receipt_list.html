@@ -88,21 +88,21 @@
         <div class="stat-card">
             <div class="stat-icon">📦</div>
             <div class="stat-content">
-                <div class="stat-value">{{ total_pieces|floatformat:1 }}</div>
+                <div class="stat-value">{{ total_pieces|floatformat:3 }}</div>
                 <div class="stat-label">Всего штук</div>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-icon">📏</div>
             <div class="stat-content">
-                <div class="stat-value">{{ total_meters|floatformat:1 }}</div>
+                <div class="stat-value">{{ total_meters|floatformat:3 }}</div>
                 <div class="stat-label">Всего м.п.</div>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-icon">🧊</div>
             <div class="stat-content">
-                <div class="stat-value">{{ total_cubic|floatformat:1 }}</div>
+                <div class="stat-value">{{ total_cubic|floatformat:3 }}</div>
                 <div class="stat-label">Всего м³</div>
             </div>
         </div>
@@ -140,32 +140,29 @@
                     <tbody>
                         {% for receipt in receipts %}
                         <tr>
-                            <td><strong>{{ receipt.id }}</strong>2d
-                            <td>{{ receipt.receipt_date|date:"d.m.Y H:i" }}2d
-                            <td class="location-cell">{{ receipt.storage_location.get_source_name }}2d
+                            <td><strong>{{ receipt.id }}</strong></td>
+                            <td>{{ receipt.receipt_date|date:"d.m.Y H:i" }}</td>
+                            <td class="location-cell">{{ receipt.storage_location.get_source_name }}
                             <td class="location-cell">
                                 {% if receipt.source_location %}
                                     {{ receipt.source_location.get_source_name }}
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            2d
-                            <td>{{ receipt.material.name }}2d
-                            <td class="text-right quantity-cell">{{ receipt.quantity_pieces|floatformat:1|default:"-" }}2d
-                            <td class="text-right quantity-cell">{{ receipt.quantity_meters|floatformat:1|default:"-" }}2d
-                            <td class="text-right quantity-cell">{{ receipt.quantity_cubic|floatformat:1|default:"-" }}2d
-                            <td class="text-right amount-cell">{{ receipt.total_amount|floatformat:2|default:"-" }} ₽</td>
+                            <td>{{ receipt.material.name }}
+                            <td class="text-right quantity-cell">{{ receipt.quantity_pieces|floatformat:3|default:"0.000" }}
+                            <td class="text-right quantity-cell">{{ receipt.quantity_meters|floatformat:3|default:"0.000" }}
+                            <td class="text-right quantity-cell">{{ receipt.quantity_cubic|floatformat:3|default:"0.000" }}
+                            <td class="text-right amount-cell">{{ receipt.total_amount|floatformat:2|default:"0.00" }} ₽</td>
                             <td>
                                 {% if receipt.created_by_position %}
                                     <span class="position-badge">{{ receipt.created_by_position.name }}</span>
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            2d
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
                                     <a href="{% url 'inventory:receipt_detail' receipt.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
-
                                     {% if receipt.can_edit %}
                                         <a href="{% url 'inventory:receipt_edit' receipt.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                         <a href="{% url 'inventory:receipt_delete' receipt.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это поступление?');">🗑️</a>
@@ -173,7 +170,7 @@
                                         <span class="no-action" title="Поступление старше 5 дней, редактирование невозможно">🔒</span>
                                     {% endif %}
                                 </div>
-                            2d
+
                         </tr>
                         {% endfor %}
                     </tbody>

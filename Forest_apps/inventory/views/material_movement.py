@@ -687,3 +687,70 @@ def all_material_movements_list_view(request):
     }
 
     return render(request, 'MaterialMovement/all_material_movements_list.html', context)
+
+# ФУНКЦИИ БЕЗ ОГРАНИЧЕНИЯ ПО ВРЕМЕНИ
+@login_required
+def all_material_movements_edit_view(request, movement_id):
+    """Редактирование движения без ограничений (для страницы всех движений)"""
+
+    movement = get_object_or_404(
+        MaterialMovement.objects.select_related(
+            'from_location', 'to_location', 'material', 'employee', 'vehicle',
+            'created_by', 'created_by_position'
+        ),
+        id=movement_id
+    )
+
+    if request.method == 'POST':
+        form = MaterialMovementCreateForm(request.POST, instance=movement, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'✅ Движение №{movement.id} успешно обновлено!')
+            return redirect('inventory:all_material_movements_list')
+        else:
+            context = {
+                'title': f'Редактирование движения №{movement.id}',
+                'form': form,
+                'movement': movement,
+                'employee_name': request.session.get('employee_name'),
+                'is_all_movements': True,
+            }
+            return render(request, 'MaterialMovement/material_movement_edit.html', context)
+    else:
+        form = MaterialMovementCreateForm(instance=movement, user=request.user)
+
+    context = {
+        'title': f'Редактирование движения №{movement.id}',
+        'form': form,
+        'movement': movement,
+        'employee_name': request.session.get('employee_name'),
+        'is_all_movements': True,
+    }
+
+    return render(request, 'MaterialMovement/material_movement_edit.html', context)
+
+
+@login_required
+def all_material_movements_delete_view(request, movement_id):
+    """Удаление движения без ограничений (для страницы всех движений)"""
+
+    try:
+        movement = get_object_or_404(MaterialMovement, id=movement_id)
+
+        # Проверяем, выполнено ли движение
+        if movement.is_completed:
+            # Для выполненных движений нужно откатить остатки
+            try:
+                from Forest_apps.inventory.models import MaterialBalance
+                MaterialBalance.cancel_movement(movement)
+                messages.info(request, f'Остатки материалов восстановлены для движения №{movement.id}')
+            except Exception as e:
+                messages.warning(request, f'Ошибка при восстановлении остатков: {str(e)}')
+
+        movement.delete()
+        messages.success(request, f'✅ Движение №{movement.id} успешно удалено!')
+
+    except Exception as e:
+        messages.error(request, f'Ошибка при удалении: {str(e)}')
+
+    return redirect('inventory:all_material_movements_list')

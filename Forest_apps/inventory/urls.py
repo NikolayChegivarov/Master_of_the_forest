@@ -7,7 +7,7 @@ from Forest_apps.inventory.views import conversion
 app_name = 'inventory'
 
 urlpatterns = [
-    # Места хранения
+
     # Места хранения
     path('storage-locations/', storage_location.storage_location_list_view, name='storage_location_list'),
     path('storage-locations/my/', storage_location.my_storage_location_list_view, name='my_storage_location_list'),
@@ -28,6 +28,8 @@ urlpatterns = [
     # Движения материалов
     path('movements/', material_movement.material_movement_list_view, name='material_movement_list'),
     path('movements/all/', material_movement.all_material_movements_list_view, name='all_material_movements_list'),
+    path('movements/all/<int:movement_id>/edit/', material_movement.all_material_movements_edit_view, name='all_material_movements_edit'),
+    path('movements/all/<int:movement_id>/delete/', material_movement.all_material_movements_delete_view, name='all_material_movements_delete'),
     path('movements/create/', material_movement.material_movement_create_view, name='material_movement_create'),
     path('movements/<int:movement_id>/', material_movement.material_movement_detail_view,
          name='material_movement_detail'),

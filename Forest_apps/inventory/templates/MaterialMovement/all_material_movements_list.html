@@ -3,17 +3,10 @@
 
 {% block title %}Все движения материалов{% endblock %}
 
-{% block header %}Все движения материалов (для руководителя){% endblock %}
+{% block header %}Все движения материалов{% endblock %}
 
 {% block content %}
 <div class="movement-container">
-    <!-- Кнопка возврата -->
-    <div class="back-link">
-        <a href="{% url 'inventory:material_movement_list' %}" class="back-button">
-            ← Мои движения
-        </a>
-    </div>
-
     <!-- Статистика -->
     <div class="stats-grid">
         <div class="stats-cards">
@@ -202,6 +195,8 @@
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
                                     <a href="{% url 'inventory:material_movement_detail' movement.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
+                                    <a href="{% url 'inventory:all_material_movements_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                                    <a href="{% url 'inventory:all_material_movements_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить движение №{{ movement.id }}?');">🗑️</a>
                                 </div>
                             </td>
                         </tr>
@@ -225,32 +220,6 @@
 <style>
     .movement-container {
         padding: 20px;
-    }
-
-    .back-link {
-        margin-bottom: 20px;
-    }
-
-    .back-button {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        padding: 8px 15px;
-        background: #f8f9fa;
-        color: #2c5e2e;
-        text-decoration: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        transition: all 0.2s;
-        border: 1px solid #e0e0e0;
-    }
-
-    .back-button:hover {
-        background: #2c5e2e;
-        color: white;
-        border-color: #2c5e2e;
-        transform: translateX(-3px);
     }
 
     .stats-grid {
@@ -569,26 +538,26 @@
     }
 
     .actions-cell {
-        min-width: 50px;
+        min-width: 110px;
         text-align: center;
     }
 
     .action-buttons-group {
         display: flex;
-        gap: 3px;
+        gap: 5px;
         flex-wrap: wrap;
         justify-content: center;
     }
 
     .btn-action {
         text-decoration: none;
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        border-radius: 4px;
-        font-size: 14px;
+        border-radius: 6px;
+        font-size: 16px;
         transition: all 0.2s;
         background: #f8f9fa;
         border: 1px solid #dee2e6;
@@ -607,6 +576,26 @@
         background: #2c5e2e;
         color: white;
         border-color: #2c5e2e;
+    }
+
+    .edit-btn {
+        color: #ffc107;
+    }
+
+    .edit-btn:hover {
+        background: #ffc107;
+        color: white;
+        border-color: #ffc107;
+    }
+
+    .delete-btn {
+        color: #dc3545;
+    }
+
+    .delete-btn:hover {
+        background: #dc3545;
+        color: white;
+        border-color: #dc3545;
     }
 
     .empty-message {

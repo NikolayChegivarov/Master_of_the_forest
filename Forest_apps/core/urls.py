@@ -3,7 +3,7 @@ from Forest_apps.core.views.Warehouse import (
     warehouse_list_view,
     warehouse_create_view,
     warehouse_edit_view,
-    warehouse_deactivate_view,
+    warehouse_deactivate_view, warehouse_activate_view,
 )
 from Forest_apps.core.views.Position import (
     position_list_view,
@@ -38,6 +38,7 @@ urlpatterns = [
     path('warehouses/create/', warehouse_create_view, name='warehouse_create'),
     path('warehouses/<int:warehouse_id>/edit/', warehouse_edit_view, name='warehouse_edit'),
     path('warehouses/<int:warehouse_id>/deactivate/', warehouse_deactivate_view, name='warehouse_deactivate'),
+    path('warehouse/<int:warehouse_id>/activate/', warehouse_activate_view, name='warehouse_activate'),
 
     # Должности
     path('positions/', position_list_view, name='position_list'),

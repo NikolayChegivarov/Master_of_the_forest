@@ -7,7 +7,7 @@
 
 {% block content %}
 <div class="warehouse-container">
-    <!-- Кнопка создания на всю ширину (ОСТАВЛЯЕМ) -->
+    <!-- Кнопка создания на всю ширину -->
     <div class="create-button-container">
         <a href="{% url 'core:warehouse_create' %}" class="create-button">
             <span class="create-icon">🏭</span>
@@ -31,7 +31,7 @@
                 </thead>
                 <tbody>
                     {% for warehouse in warehouses %}
-                    <tr>
+                    <tr class="{% if not warehouse.is_active %}inactive-row{% endif %}">
                         <td><strong>{{ warehouse.name }}</strong></td>
                         <td>
                             {% if warehouse.is_active %}
@@ -49,7 +49,20 @@
                         </td>
                         <td class="actions">
                             <a href="{% url 'core:warehouse_edit' warehouse.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
-                            <a href="{% url 'core:warehouse_deactivate' warehouse.id %}" class="btn-action delete-btn" title="Деактивировать" onclick="return confirm('Вы уверены, что хотите деактивировать склад «{{ warehouse.name }}»?');">❌</a>
+
+                            {% if warehouse.is_active %}
+                                <!-- Кнопка деактивации для активного склада -->
+                                <a href="{% url 'core:warehouse_deactivate' warehouse.id %}"
+                                   class="btn-action deactivate-btn"
+                                   title="Деактивировать"
+                                   onclick="return confirm('Вы уверены, что хотите деактивировать склад «{{ warehouse.name }}»?');">❌</a>
+                            {% else %}
+                                <!-- Кнопка активации для неактивного склада -->
+                                <a href="{% url 'core:warehouse_activate' warehouse.id %}"
+                                   class="btn-action activate-btn"
+                                   title="Активировать"
+                                   onclick="return confirm('Вы уверены, что хотите активировать склад «{{ warehouse.name }}»?');">✅</a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -144,6 +157,12 @@
         background: #f5f5f5;
     }
 
+    /* Стиль для неактивных строк */
+    .inactive-row {
+        opacity: 0.7;
+        background: #f8f9fa;
+    }
+
     .badge {
         display: inline-block;
         padding: 4px 8px;
@@ -199,8 +218,12 @@
         color: #ffc107;
     }
 
-    .delete-btn {
+    .deactivate-btn {
         color: #dc3545;
+    }
+
+    .activate-btn {
+        color: #28a745;
     }
 
     .empty-message {

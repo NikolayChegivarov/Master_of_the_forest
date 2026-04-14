@@ -107,39 +107,39 @@ class Warehouse(models.Model):
             defaults={'source_type': 'склад', 'source_id': self.id}
         )
 
-    @classmethod
-    def create_warehouse(cls, name, created_by=None, is_active=True):
-        """
-        Создание нового склада
-        """
-        warehouse = cls.objects.create(
-            name=name,
-            is_active=is_active,
-            created_by=created_by
-        )
-        # Место хранения создается автоматически через save()
-        return warehouse
-
-    @classmethod
-    def deactivate_warehouse(cls, warehouse_id):
-        """
-        Деактивация конкретного склада по ID
-        """
-        try:
-            warehouse = cls.objects.get(id=warehouse_id)
-            warehouse.is_active = False
-            warehouse.save()
-            # Место хранения остается, но склад деактивирован
-            return warehouse
-        except cls.DoesNotExist:
-            raise ValueError(f"Склад с ID {warehouse_id} не найден")
-
-    @classmethod
-    def get_active_warehouses(cls):
-        """
-        Получение всех активных складов
-        """
-        return cls.objects.filter(is_active=True).order_by('name')
+    # @classmethod
+    # def create_warehouse(cls, name, created_by=None, is_active=True):
+    #     """
+    #     Создание нового склада
+    #     """
+    #     warehouse = cls.objects.create(
+    #         name=name,
+    #         is_active=is_active,
+    #         created_by=created_by
+    #     )
+    #     # Место хранения создается автоматически через save()
+    #     return warehouse
+    #
+    # @classmethod
+    # def deactivate_warehouse(cls, warehouse_id):
+    #     """
+    #     Деактивация конкретного склада по ID
+    #     """
+    #     try:
+    #         warehouse = cls.objects.get(id=warehouse_id)
+    #         warehouse.is_active = False
+    #         warehouse.save()
+    #         # Место хранения остается, но склад деактивирован
+    #         return warehouse
+    #     except cls.DoesNotExist:
+    #         raise ValueError(f"Склад с ID {warehouse_id} не найден")
+    #
+    # @classmethod
+    # def get_active_warehouses(cls):
+    #     """
+    #     Получение всех активных складов
+    #     """
+    #     return cls.objects.filter(is_active=True).order_by('name')
 
 
 class Vehicle(models.Model):

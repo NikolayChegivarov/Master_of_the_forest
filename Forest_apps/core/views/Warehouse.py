@@ -1,3 +1,4 @@
+# core/views/Warehouse.py
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -5,7 +6,7 @@ from Forest_apps.core.models import Warehouse, Position
 from Forest_apps.core.forms.warehouse import WarehouseCreateForm, WarehouseEditForm
 
 
-#----------------------ДЛЯ КОНКРЕТНОЙ ДОЛЖНОСТИ (ПРАВИЛЬНАЯ ВЕРСИЯ)-------------------
+# ----------------------ДЛЯ КОНКРЕТНОЙ ДОЛЖНОСТИ -------------------
 @login_required
 def warehouse_list_view(request):
     """Страница со списком складов (только для должности пользователя)"""
@@ -21,10 +22,10 @@ def warehouse_list_view(request):
     except Position.DoesNotExist:
         user_position_id = -1
 
-    # Получаем склады, созданные этой должностью
+    # Получаем ВСЕ склады, созданные этой должностью (включая неактивные)
     warehouses = Warehouse.objects.filter(
         created_by_position_id=user_position_id
-    ).order_by('-id')
+    ).order_by('-is_active', '-id')  # Активные сначала
 
     context = {
         'title': 'Склады',
@@ -134,19 +135,51 @@ def warehouse_deactivate_view(request, warehouse_id):
         messages.error(request, 'Ошибка определения должности')
         return redirect('core:warehouse_list')
 
+    # Проверяем, что склад создан этой должностью
+    warehouse = get_object_or_404(
+        Warehouse,
+        id=warehouse_id,
+        created_by_position=position
+    )
+
+    # Деактивируем склад
+    warehouse.is_active = False
+    warehouse.save()
+
+    messages.success(
+        request,
+        f'Склад "{warehouse.name}" успешно деактивирован!'
+    )
+
+    return redirect('core:warehouse_list')
+
+
+@login_required
+def warehouse_activate_view(request, warehouse_id):
+    """Активация склада (только для своей должности)"""
+
+    # Получаем должность текущего пользователя
+    position_name = request.session.get('position_name')
     try:
-        # Проверяем, что склад создан этой должностью
-        warehouse = get_object_or_404(
-            Warehouse,
-            id=warehouse_id,
-            created_by_position=position
-        )
-        warehouse = Warehouse.deactivate_warehouse(warehouse_id)
-        messages.success(
-            request,
-            f'Склад "{warehouse.name}" успешно деактивирован!'
-        )
-    except ValueError as e:
-        messages.error(request, str(e))
+        position = Position.objects.get(name__iexact=position_name)
+    except Position.DoesNotExist:
+        messages.error(request, 'Ошибка определения должности')
+        return redirect('core:warehouse_list')
+
+    # Проверяем, что склад создан этой должностью
+    warehouse = get_object_or_404(
+        Warehouse,
+        id=warehouse_id,
+        created_by_position=position
+    )
+
+    # Активируем склад
+    warehouse.is_active = True
+    warehouse.save()
+
+    messages.success(
+        request,
+        f'Склад "{warehouse.name}" успешно активирован!'
+    )
 
     return redirect('core:warehouse_list')

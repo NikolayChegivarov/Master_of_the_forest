@@ -280,7 +280,7 @@ class WorkTimeRecordFilterForm(forms.Form):
     warehouse = forms.ModelChoiceField(
         label='Склад',
         required=False,
-        queryset=Warehouse.get_active_warehouses(),
+        queryset=Warehouse.objects.filter(is_active=True).order_by('name'),
         widget=forms.Select(attrs={
             'class': 'form-control auto-submit'
         })

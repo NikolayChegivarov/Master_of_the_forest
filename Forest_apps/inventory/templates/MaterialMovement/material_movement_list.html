@@ -77,8 +77,6 @@
         </div>
     </div>
 
-
-
     <!-- Фильтры -->
     <div class="filters-container">
         <form method="get" class="filters-form" id="filter-form">
@@ -138,8 +136,6 @@
         </form>
     </div>
 
-    <!-- Сообщения удалены - они в base.html -->
-
     <!-- Таблица движений -->
     <div class="movements-list">
         <h3>Движения материалов ({{ position_name|default:"наша должность" }})</h3>
@@ -170,77 +166,77 @@
                         {% for movement in movements %}
                         <tr class="{% if not movement.is_completed %}pending-row{% endif %}">
                             <td><strong>{{ movement.id }}</strong></td>
-                            <td>{{ movement.date_time|date:"d.m.Y H:i" }}</td>
+                            <td>{{ movement.date_time|date:"d.m.Y H:i" }}
                             <td>
                                 <span class="badge type-{{ movement.accounting_type }}">
                                     {{ movement.accounting_type }}
                                 </span>
-                            </td>
-                            <td>{{ movement.from_location.get_source_name|truncatechars:35 }}</td>
+                            <td>{{ movement.from_location.get_source_name|truncatechars:35 }}
                             <td>
                                 {% if movement.to_location %}
                                     {{ movement.to_location.get_source_name|truncatechars:35 }}
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            </td>
-                            <td>{{ movement.material.name }}</td>
-                            <td class="text-right quantity-cell">{{ movement.quantity_pieces|default:"0"|floatformat:3 }}</td>
-                            <td class="text-right quantity-cell">{{ movement.quantity_meters|default:"0"|floatformat:3 }}</td>
-                            <td class="text-right quantity-cell">{{ movement.quantity_cubic|default:"0"|floatformat:3 }}</td>
+
+                            <td>{{ movement.material.name }}
+                            <td class="text-right quantity-cell">{{ movement.quantity_pieces|default:"0"|floatformat:3 }}
+                            <td class="text-right quantity-cell">{{ movement.quantity_meters|default:"0"|floatformat:3 }}
+                            <td class="text-right quantity-cell">{{ movement.quantity_cubic|default:"0"|floatformat:3 }}
                             <td class="text-right amount-cell">
                                 {% if movement.total_amount %}
                                     {{ movement.total_amount|floatformat:2 }} ₽
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            </td>
                             <td>
                                 {% if movement.is_completed %}
                                     <span class="badge completed">✅ Выполнено</span>
                                 {% else %}
                                     <span class="badge pending">⏳ Ожидает</span>
                                 {% endif %}
-                            </td>
                             <td class="employee-cell">
                                 {% if movement.employee %}
                                     {{ movement.employee.last_name }} {{ movement.employee.first_name|first }}.
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            </td>
                             <td class="vehicle-cell">
                                 {% if movement.vehicle %}
                                     {{ movement.vehicle.brand }} {{ movement.vehicle.model }}
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            </td>
                             <td>
                                 {% if movement.created_by_position %}
                                     <span class="position-badge">{{ movement.created_by_position.name }}</span>
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            </td>
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
                                     <a href="{% url 'inventory:material_movement_detail' movement.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
 
-                                    {% if movement.accounting_type == 'Отправление' and not movement.is_completed %}
-                                        {% if movement.to_location.id in user_locations %}
-                                            <a href="{% url 'inventory:material_movement_confirm' movement.id %}" class="btn-action confirm-btn" title="Подтвердить получение" onclick="return confirm('Подтвердить получение этих материалов?');">✅</a>
+                                    {% if is_manager %}
+                                        <!-- Для руководителя - кнопки без ограничений -->
+                                        <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                                        <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
+                                    {% else %}
+                                        <!-- Для обычных пользователей - кнопки с ограничениями -->
+                                        {% if movement.accounting_type == 'Отправление' and not movement.is_completed %}
+                                            {% if movement.to_location.id in user_locations %}
+                                                <a href="{% url 'inventory:material_movement_confirm' movement.id %}" class="btn-action confirm-btn" title="Подтвердить получение" onclick="return confirm('Подтвердить получение этих материалов?');">✅</a>
+                                            {% endif %}
                                         {% endif %}
-                                    {% endif %}
 
-                                    {% if not movement.is_completed %}
-                                        {% if movement.accounting_type != 'Отправление' or movement.author == request.user %}
-                                            <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
-                                            <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
+                                        {% if not movement.is_completed %}
+                                            {% if movement.accounting_type != 'Отправление' or movement.author == request.user %}
+                                                <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                                                <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
+                                            {% endif %}
                                         {% endif %}
                                     {% endif %}
                                 </div>
-                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -344,10 +340,6 @@
     }
 
     /* Статистика */
-    .stats-grid {
-        margin-bottom: 30px;
-    }
-
     .stats-cards {
         display: flex;
         justify-content: center;
@@ -568,7 +560,7 @@
     .movements-table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 1800px; /* Увеличено для новых колонок */
+        min-width: 1800px;
     }
 
     .movements-table th {

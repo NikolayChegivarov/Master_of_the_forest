@@ -70,15 +70,30 @@ def material_movement_list_view(request):
     if is_manager:
         # Для руководителя - показываем ВСЕ движения
         movements = MaterialMovement.objects.select_related(
-            'from_location', 'to_location', 'material', 'employee', 'vehicle',
-            'created_by', 'created_by_position'
+            'from_location',
+            'to_location',
+            'material',
+            'employee',
+            'vehicle',
+            'created_by',
+            'created_by_position'
         ).order_by('-date_time')
     else:
-        # Для обычных пользователей - фильтрация по местам хранения
+        # Для мастера леса - только движения, где фигурирует его склад, НО исключая Реализации
         movements = MaterialMovement.objects.filter(
             Q(from_location_id__in=user_location_ids) |
             Q(to_location_id__in=user_location_ids)
-        ).select_related(...).order_by('-date_time')
+        ).exclude(
+            accounting_type='Реализация'  # Исключаем реализации
+        ).select_related(
+            'from_location',
+            'to_location',
+            'material',
+            'employee',
+            'vehicle',
+            'created_by',
+            'created_by_position'
+        ).order_by('-date_time')
 
     # Фильтрация
     filter_form = MaterialMovementFilterForm(request.GET or None)
@@ -155,7 +170,7 @@ def material_movement_list_view(request):
         'total_cubic': total_cubic,
         'pending_shipments_count': pending_shipments_count,
         'user_locations': user_locations,
-        'is_manager': is_manager,  # Добавляем флаг для шаблона
+        'is_manager': is_manager,
     }
 
     return render(request, 'MaterialMovement/material_movement_list.html', context)
@@ -615,151 +630,151 @@ def get_materials(request):
     return JsonResponse(data, safe=False)
 
 
-@login_required
-def all_material_movements_list_view(request):
-    """Список ВСЕХ движений материалов (без фильтрации по должности)"""
-
-    # Получаем ВСЕ движения без фильтрации по должности
-    movements = MaterialMovement.objects.select_related(
-        'from_location', 'to_location', 'material', 'employee', 'vehicle',
-        'created_by', 'created_by_position'
-    ).order_by('-date_time')
-
-    # Фильтрация
-    filter_form = MaterialMovementFilterForm(request.GET or None)
-
-    if filter_form.is_valid():
-        accounting_type = filter_form.cleaned_data.get('accounting_type')
-        date_from = filter_form.cleaned_data.get('date_from')
-        date_to = filter_form.cleaned_data.get('date_to')
-        from_location = filter_form.cleaned_data.get('from_location')
-        to_location = filter_form.cleaned_data.get('to_location')
-        material = filter_form.cleaned_data.get('material')
-        is_completed = filter_form.cleaned_data.get('is_completed')
-        search = filter_form.cleaned_data.get('search')
-
-        if accounting_type:
-            movements = movements.filter(accounting_type=accounting_type)
-
-        if date_from:
-            movements = movements.filter(date_time__date__gte=date_from)
-
-        if date_to:
-            movements = movements.filter(date_time__date__lte=date_to)
-
-        if from_location:
-            movements = movements.filter(from_location=from_location)
-
-        if to_location:
-            movements = movements.filter(to_location=to_location)
-
-        if material:
-            movements = movements.filter(material=material)
-
-        if is_completed == 'true':
-            movements = movements.filter(is_completed=True)
-        elif is_completed == 'false':
-            movements = movements.filter(is_completed=False)
-
-        if search:
-            movements = movements.filter(
-                Q(material__name__icontains=search) |
-                Q(from_location__source_type__icontains=search) |
-                Q(to_location__source_type__icontains=search)
-            )
-
-    # Подсчет статистики
-    total_count = movements.count()
-    total_amount = movements.filter(accounting_type='Реализация').aggregate(
-        total=Sum('total_amount')
-    )['total'] or 0
-    pending_count = movements.filter(is_completed=False).count()
-
-    # Подсчет сумм по количествам
-    total_pieces = movements.aggregate(total=Sum('quantity_pieces'))['total'] or 0
-    total_meters = movements.aggregate(total=Sum('quantity_meters'))['total'] or 0
-    total_cubic = movements.aggregate(total=Sum('quantity_cubic'))['total'] or 0
-
-    context = {
-        'title': 'Все движения материалов',
-        'employee_name': request.session.get('employee_name'),
-        'position_name': request.session.get('position_name'),
-        'movements': movements,
-        'filter_form': filter_form,
-        'total_count': total_count,
-        'total_amount': total_amount,
-        'pending_count': pending_count,
-        'total_pieces': total_pieces,
-        'total_meters': total_meters,
-        'total_cubic': total_cubic,
-        'is_all_movements': True,
-    }
-
-    return render(request, 'MaterialMovement/all_material_movements_list.html', context)
-
-# ФУНКЦИИ БЕЗ ОГРАНИЧЕНИЯ ПО ВРЕМЕНИ
-@login_required
-def all_material_movements_edit_view(request, movement_id):
-    """Редактирование движения без ограничений (для страницы всех движений)"""
-
-    movement = get_object_or_404(
-        MaterialMovement.objects.select_related(
-            'from_location', 'to_location', 'material', 'employee', 'vehicle',
-            'created_by', 'created_by_position'
-        ),
-        id=movement_id
-    )
-
-    if request.method == 'POST':
-        form = MaterialMovementCreateForm(request.POST, instance=movement, user=request.user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f'✅ Движение №{movement.id} успешно обновлено!')
-            return redirect('inventory:all_material_movements_list')
-        else:
-            context = {
-                'title': f'Редактирование движения №{movement.id}',
-                'form': form,
-                'movement': movement,
-                'employee_name': request.session.get('employee_name'),
-                'is_all_movements': True,
-            }
-            return render(request, 'MaterialMovement/material_movement_edit.html', context)
-    else:
-        form = MaterialMovementCreateForm(instance=movement, user=request.user)
-
-    context = {
-        'title': f'Редактирование движения №{movement.id}',
-        'form': form,
-        'movement': movement,
-        'employee_name': request.session.get('employee_name'),
-        'is_all_movements': True,
-    }
-
-    return render(request, 'MaterialMovement/material_movement_edit.html', context)
-
-
-@login_required
-def all_material_movements_delete_view(request, movement_id):
-    """Удаление движения без ограничений (для страницы всех движений)"""
-
-    try:
-        movement = get_object_or_404(MaterialMovement, id=movement_id)
-
-        # Проверяем, выполнено ли движение
-        if movement.is_completed:
-            # Для выполненных движений нужно откатить остатки
-            try:
-                from Forest_apps.inventory.models import MaterialBalance
-                MaterialBalance.cancel_movement(movement)
-                messages.info(request, f'Остатки материалов восстановлены для движения №{movement.id}')
-            except Exception as e:
-                messages.warning(request, f'Ошибка при восстановлении остатков: {str(e)}')
-
-        movement.delete()
-        messages.success(request, f'✅ Движение №{movement.id} успешно удалено!')
-
-    except Exception as e:
-        messages.error(request, f'Ошибка при удалении: {str(e)}')
-
-    return redirect('inventory:all_material_movements_list')
+# @login_required
+# def all_material_movements_list_view(request):
+#     """Список ВСЕХ движений материалов (без фильтрации по должности)"""
+#
+#     # Получаем ВСЕ движения без фильтрации по должности
+#     movements = MaterialMovement.objects.select_related(
+#         'from_location', 'to_location', 'material', 'employee', 'vehicle',
+#         'created_by', 'created_by_position'
+#     ).order_by('-date_time')
+#
+#     # Фильтрация
+#     filter_form = MaterialMovementFilterForm(request.GET or None)
+#
+#     if filter_form.is_valid():
+#         accounting_type = filter_form.cleaned_data.get('accounting_type')
+#         date_from = filter_form.cleaned_data.get('date_from')
+#         date_to = filter_form.cleaned_data.get('date_to')
+#         from_location = filter_form.cleaned_data.get('from_location')
+#         to_location = filter_form.cleaned_data.get('to_location')
+#         material = filter_form.cleaned_data.get('material')
+#         is_completed = filter_form.cleaned_data.get('is_completed')
+#         search = filter_form.cleaned_data.get('search')
+#
+#         if accounting_type:
+#             movements = movements.filter(accounting_type=accounting_type)
+#
+#         if date_from:
+#             movements = movements.filter(date_time__date__gte=date_from)
+#
+#         if date_to:
+#             movements = movements.filter(date_time__date__lte=date_to)
+#
+#         if from_location:
+#             movements = movements.filter(from_location=from_location)
+#
+#         if to_location:
+#             movements = movements.filter(to_location=to_location)
+#
+#         if material:
+#             movements = movements.filter(material=material)
+#
+#         if is_completed == 'true':
+#             movements = movements.filter(is_completed=True)
+#         elif is_completed == 'false':
+#             movements = movements.filter(is_completed=False)
+#
+#         if search:
+#             movements = movements.filter(
+#                 Q(material__name__icontains=search) |
+#                 Q(from_location__source_type__icontains=search) |
+#                 Q(to_location__source_type__icontains=search)
+#             )
+#
+#     # Подсчет статистики
+#     total_count = movements.count()
+#     total_amount = movements.filter(accounting_type='Реализация').aggregate(
+#         total=Sum('total_amount')
+#     )['total'] or 0
+#     pending_count = movements.filter(is_completed=False).count()
+#
+#     # Подсчет сумм по количествам
+#     total_pieces = movements.aggregate(total=Sum('quantity_pieces'))['total'] or 0
+#     total_meters = movements.aggregate(total=Sum('quantity_meters'))['total'] or 0
+#     total_cubic = movements.aggregate(total=Sum('quantity_cubic'))['total'] or 0
+#
+#     context = {
+#         'title': 'Все движения материалов',
+#         'employee_name': request.session.get('employee_name'),
+#         'position_name': request.session.get('position_name'),
+#         'movements': movements,
+#         'filter_form': filter_form,
+#         'total_count': total_count,
+#         'total_amount': total_amount,
+#         'pending_count': pending_count,
+#         'total_pieces': total_pieces,
+#         'total_meters': total_meters,
+#         'total_cubic': total_cubic,
+#         'is_all_movements': True,
+#     }
+#
+#     return render(request, 'MaterialMovement/all_material_movements_list.html', context)
+#
+# # ФУНКЦИИ БЕЗ ОГРАНИЧЕНИЯ ПО ВРЕМЕНИ
+# @login_required
+# def all_material_movements_edit_view(request, movement_id):
+#     """Редактирование движения без ограничений (для страницы всех движений)"""
+#
+#     movement = get_object_or_404(
+#         MaterialMovement.objects.select_related(
+#             'from_location', 'to_location', 'material', 'employee', 'vehicle',
+#             'created_by', 'created_by_position'
+#         ),
+#         id=movement_id
+#     )
+#
+#     if request.method == 'POST':
+#         form = MaterialMovementCreateForm(request.POST, instance=movement, user=request.user)
+#         if form.is_valid():
+#             form.save()
+#             messages.success(request, f'✅ Движение №{movement.id} успешно обновлено!')
+#             return redirect('inventory:all_material_movements_list')
+#         else:
+#             context = {
+#                 'title': f'Редактирование движения №{movement.id}',
+#                 'form': form,
+#                 'movement': movement,
+#                 'employee_name': request.session.get('employee_name'),
+#                 'is_all_movements': True,
+#             }
+#             return render(request, 'MaterialMovement/material_movement_edit.html', context)
+#     else:
+#         form = MaterialMovementCreateForm(instance=movement, user=request.user)
+#
+#     context = {
+#         'title': f'Редактирование движения №{movement.id}',
+#         'form': form,
+#         'movement': movement,
+#         'employee_name': request.session.get('employee_name'),
+#         'is_all_movements': True,
+#     }
+#
+#     return render(request, 'MaterialMovement/material_movement_edit.html', context)
+#
+#
+# @login_required
+# def all_material_movements_delete_view(request, movement_id):
+#     """Удаление движения без ограничений (для страницы всех движений)"""
+#
+#     try:
+#         movement = get_object_or_404(MaterialMovement, id=movement_id)
+#
+#         # Проверяем, выполнено ли движение
+#         if movement.is_completed:
+#             # Для выполненных движений нужно откатить остатки
+#             try:
+#                 from Forest_apps.inventory.models import MaterialBalance
+#                 MaterialBalance.cancel_movement(movement)
+#                 messages.info(request, f'Остатки материалов восстановлены для движения №{movement.id}')
+#             except Exception as e:
+#                 messages.warning(request, f'Ошибка при восстановлении остатков: {str(e)}')
+#
+#         movement.delete()
+#         messages.success(request, f'✅ Движение №{movement.id} успешно удалено!')
+#
+#     except Exception as e:
+#         messages.error(request, f'Ошибка при удалении: {str(e)}')
+#
+#     return redirect('inventory:all_material_movements_list')

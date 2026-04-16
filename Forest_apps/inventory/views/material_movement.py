@@ -23,6 +23,9 @@ def material_movement_list_view(request):
     user_position_name = request.session.get('position_name')
     user_position_id = None
 
+    # Проверяем, является ли пользователь руководителем
+    is_manager = (user_position_name and user_position_name.lower() == 'руководитель')
+
     # Находим ID должности по названию
     try:
         position = Position.objects.get(name__iexact=user_position_name)
@@ -63,14 +66,19 @@ def material_movement_list_view(request):
         except StorageLocation.DoesNotExist:
             pass
 
-    # Базовый запрос - движения, где должность является отправителем ИЛИ получателем
-    movements = MaterialMovement.objects.filter(
-        Q(from_location_id__in=user_location_ids) |  # должность - отправитель
-        Q(to_location_id__in=user_location_ids)  # должность - получатель
-    ).select_related(
-        'from_location', 'to_location', 'material', 'employee', 'vehicle',
-        'created_by', 'created_by_position'
-    ).order_by('-date_time')
+    # Базовый запрос
+    if is_manager:
+        # Для руководителя - показываем ВСЕ движения
+        movements = MaterialMovement.objects.select_related(
+            'from_location', 'to_location', 'material', 'employee', 'vehicle',
+            'created_by', 'created_by_position'
+        ).order_by('-date_time')
+    else:
+        # Для обычных пользователей - фильтрация по местам хранения
+        movements = MaterialMovement.objects.filter(
+            Q(from_location_id__in=user_location_ids) |
+            Q(to_location_id__in=user_location_ids)
+        ).select_related(...).order_by('-date_time')
 
     # Фильтрация
     filter_form = MaterialMovementFilterForm(request.GET or None)
@@ -116,7 +124,7 @@ def material_movement_list_view(request):
             )
 
     # Получаем ID мест хранения текущего пользователя для проверки прав на подтверждение
-    user_locations = user_location_ids  # используем тот же список
+    user_locations = user_location_ids
 
     # Подсчет ожидающих отправлений для текущего пользователя
     pending_shipments_count = MaterialMovement.get_pending_shipments_for_user(request.user).count()
@@ -147,6 +155,7 @@ def material_movement_list_view(request):
         'total_cubic': total_cubic,
         'pending_shipments_count': pending_shipments_count,
         'user_locations': user_locations,
+        'is_manager': is_manager,  # Добавляем флаг для шаблона
     }
 
     return render(request, 'MaterialMovement/material_movement_list.html', context)

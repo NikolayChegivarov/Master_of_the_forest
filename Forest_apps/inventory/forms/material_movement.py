@@ -209,13 +209,47 @@ class MaterialMovementCreateForm(forms.ModelForm):
         price = cleaned_data.get('price')
         material = cleaned_data.get('material')
 
-        quantity_pieces = cleaned_data.get('quantity_pieces')
-        quantity_meters = cleaned_data.get('quantity_meters')
-        quantity_cubic = cleaned_data.get('quantity_cubic')
+        quantity_pieces = cleaned_data.get('quantity_pieces') or 0
+        quantity_meters = cleaned_data.get('quantity_meters') or 0
+        quantity_cubic = cleaned_data.get('quantity_cubic') or 0
 
         # Проверка - хотя бы одно количество должно быть указано
         if not quantity_pieces and not quantity_meters and not quantity_cubic:
             raise forms.ValidationError('Необходимо указать хотя бы одно количество')
+
+        # ========== ПРОВЕРКА ОСТАТКОВ (для всех типов, где списывается материал) ==========
+        if accounting_type in ['Перемещение', 'Отправление', 'Реализация', 'Списание']:
+            if from_location and material:
+                from Forest_apps.inventory.models import MaterialBalance
+
+                try:
+                    balance = MaterialBalance.objects.get(
+                        storage_location=from_location,
+                        material=material
+                    )
+
+                    if quantity_pieces > 0 and (balance.quantity_pieces or 0) < quantity_pieces:
+                        raise forms.ValidationError(
+                            f'Недостаточно материала "{material.name}" на складе "{from_location.get_source_name()}". '
+                            f'В наличии: {balance.quantity_pieces or 0} шт, требуется: {quantity_pieces} шт'
+                        )
+
+                    if quantity_meters > 0 and (balance.quantity_meters or 0) < quantity_meters:
+                        raise forms.ValidationError(
+                            f'Недостаточно материала "{material.name}" на складе "{from_location.get_source_name()}". '
+                            f'В наличии: {balance.quantity_meters or 0} м.п., требуется: {quantity_meters} м.п.'
+                        )
+
+                    if quantity_cubic > 0 and (balance.quantity_cubic or 0) < quantity_cubic:
+                        raise forms.ValidationError(
+                            f'Недостаточно материала "{material.name}" на складе "{from_location.get_source_name()}". '
+                            f'В наличии: {balance.quantity_cubic or 0} м³, требуется: {quantity_cubic} м³'
+                        )
+
+                except MaterialBalance.DoesNotExist:
+                    raise forms.ValidationError(
+                        f'Материал "{material.name}" отсутствует на складе "{from_location.get_source_name()}"'
+                    )
 
         # Валидация в зависимости от типа движения
         if accounting_type == 'Перемещение':

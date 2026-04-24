@@ -516,13 +516,16 @@ def material_movement_pending_shipments_view(request):
 def get_locations_by_type(request):
     """API для получения списка мест хранения в зависимости от типа движения"""
     movement_type = request.GET.get('type')
-    user = request.user
+    position_name = request.session.get('position_name')
 
     if not movement_type:
         return JsonResponse({'from_locations': [], 'to_locations': []})
 
-    # Получаем ID мест пользователя
-    user_location_ids = _get_user_location_ids(user)
+    # Получаем ID мест пользователя по должности (без лишнего None)
+    user_location_ids = _get_user_location_ids_by_position(position_name)
+
+    all_location_ids = list(StorageLocation.objects.all().values_list('id', flat=True))
+    foreign_location_ids = [loc_id for loc_id in all_location_ids if loc_id not in user_location_ids]
 
     # Базовый queryset
     from_locations = StorageLocation.objects.none()
@@ -574,18 +577,23 @@ def get_locations_by_type(request):
     return JsonResponse(data)
 
 
-def _get_user_location_ids(user):
-    """Вспомогательная функция для получения ID мест хранения пользователя"""
-    if not user or not user.is_authenticated:
+def _get_user_location_ids_by_position(position_name):
+    """Получает ID мест хранения по должности (created_by_position)"""
+    from Forest_apps.inventory.models import StorageLocation
+    from Forest_apps.core.models import Warehouse, Brigade, Vehicle, Position
+
+    if not position_name:
         return []
 
-    from Forest_apps.inventory.models import StorageLocation
-    from Forest_apps.core.models import Warehouse, Brigade, Vehicle
+    # Находим должность по названию
+    position = Position.objects.filter(name__iexact=position_name).first()
+    if not position:
+        return []
 
     user_location_ids = []
 
-    # Склады, созданные пользователем
-    warehouses = Warehouse.objects.filter(created_by=user)
+    # Склады, созданные должностью
+    warehouses = Warehouse.objects.filter(created_by_position=position)
     for wh in warehouses:
         try:
             location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
@@ -593,8 +601,8 @@ def _get_user_location_ids(user):
         except StorageLocation.DoesNotExist:
             pass
 
-    # Бригады, созданные пользователем
-    brigades = Brigade.objects.filter(created_by=user)
+    # Бригады, созданные должностью
+    brigades = Brigade.objects.filter(created_by_position=position)
     for br in brigades:
         try:
             location = StorageLocation.objects.get(source_type='бригады', source_id=br.id)
@@ -602,8 +610,8 @@ def _get_user_location_ids(user):
         except StorageLocation.DoesNotExist:
             pass
 
-    # Транспорт, созданный пользователем
-    vehicles = Vehicle.objects.filter(created_by=user)
+    # Транспорт, созданный должностью
+    vehicles = Vehicle.objects.filter(created_by_position=position)
     for vh in vehicles:
         try:
             location = StorageLocation.objects.get(source_type='автомобиль', source_id=vh.id)

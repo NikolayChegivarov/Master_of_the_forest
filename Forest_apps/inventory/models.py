@@ -816,13 +816,14 @@ class MaterialBalance(models.Model):
             balance.save()
 
         except cls.DoesNotExist:
+            # ✅ ИСПРАВЛЕНИЕ: заменяем None на 0
             balance = cls.objects.create(
                 storage_location=storage_location,
                 material=material,
-                quantity_pieces=quantity_pieces,
-                quantity_meters=quantity_meters,
-                quantity_cubic=quantity_cubic,
-                created_by_position=created_by_position  # Добавляем должность создателя
+                quantity_pieces=quantity_pieces or 0,
+                quantity_meters=quantity_meters or 0,
+                quantity_cubic=quantity_cubic or 0,
+                created_by_position=created_by_position
             )
             created = True
 

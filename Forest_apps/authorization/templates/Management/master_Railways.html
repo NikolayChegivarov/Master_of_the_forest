@@ -64,6 +64,17 @@
             </div>
         </a>
     </div>
+
+    <!-- Третий ряд: Конвертация древесины -->
+    <div class="dashboard-row">
+        <a href="{% url 'inventory:conversion_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🔄</div>
+                <div class="card-title">Конвертация древесины</div>
+                <div class="card-description">Переработка бревен в доски, брус и т.д.</div>
+            </div>
+        </a>
+    </div>
 </div>
 
 <style>
@@ -207,13 +218,6 @@
             margin-right: 20px;
             width: 60px;
             text-align: center;
-        }
-
-        .card-text {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            flex: 1;
         }
 
         .card-title {

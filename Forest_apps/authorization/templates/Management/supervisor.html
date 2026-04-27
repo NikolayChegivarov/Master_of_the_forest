@@ -40,12 +40,30 @@
             </div>
         </a>
 
-        <!-- Кнопка Склады (добавлена) -->
+        <!-- Кнопка Остатки в месте хранения -->
+        <a href="{% url 'inventory:material_balance_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">📊</div>
+                <div class="card-title">Остатки</div>
+                <div class="card-description">Материалы на складах</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Склады -->
         <a href="{% url 'core:warehouse_list' %}" class="dashboard-card">
             <div class="card-content">
                 <div class="card-icon">🏭</div>
                 <div class="card-title">Склады</div>
                 <div class="card-description">Управление складами</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Движение материалов -->
+        <a href="{% url 'inventory:material_movement_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">📤</div>
+                <div class="card-title">Движение материалов</div>
+                <div class="card-description">Перемещения, реализация, списание</div>
             </div>
         </a>
     </div>
@@ -58,15 +76,6 @@
                 <div class="card-icon">🔄</div>
                 <div class="card-title">Сторонние интерфейсы</div>
                 <div class="card-description">Интеграции и внешние системы</div>
-            </div>
-        </a>
-
-        <!-- Кнопка Движение материалов (для текущего пользователя) -->
-        <a href="{% url 'inventory:material_movement_list' %}" class="dashboard-card">
-            <div class="card-content">
-                <div class="card-icon">📤</div>
-                <div class="card-title">Движение материалов</div>
-                <div class="card-description">Перемещения, реализация, списание</div>
             </div>
         </a>
 

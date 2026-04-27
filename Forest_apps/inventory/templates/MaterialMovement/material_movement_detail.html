@@ -63,13 +63,13 @@
                     <th>Количество:</th>
                     <td>
                         {% if movement.quantity_pieces %}
-                            {{ movement.quantity_pieces|floatformat:1 }} шт<br>
+                            {{ movement.quantity_pieces|floatformat:3 }} шт<br>
                         {% endif %}
                         {% if movement.quantity_meters %}
-                            {{ movement.quantity_meters|floatformat:1 }} м.п.<br>
+                            {{ movement.quantity_meters|floatformat:3 }} м.п.<br>
                         {% endif %}
                         {% if movement.quantity_cubic %}
-                            {{ movement.quantity_cubic|floatformat:1 }} м³
+                            {{ movement.quantity_cubic|floatformat:3 }} м³
                         {% endif %}
                         {% if not movement.quantity_pieces and not movement.quantity_meters and not movement.quantity_cubic %}
                             <span class="text-muted">—</span>
@@ -130,29 +130,38 @@
         <div class="detail-actions">
             <a href="{% url 'inventory:material_movement_list' %}" class="btn btn-secondary">← К списку</a>
 
-            {% if movement.accounting_type == 'Отправление' %}
-                {% if user_role == 'receiver' and not movement.is_completed %}
-                    <!-- Получатель может только подтвердить -->
-                    <a href="{% url 'inventory:material_movement_confirm' movement.id %}" class="btn btn-success" onclick="return confirm('Подтвердить получение этих материалов? Материалы будут перемещены на ваш склад.');">✅ Подтвердить получение</a>
-                {% elif user_role == 'sender' %}
-                    {% if not movement.is_completed %}
-                        <!-- Отправитель может редактировать и удалять только невыполненные -->
-                        <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn btn-primary">✏️ Редактировать</a>
-                        <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn btn-danger" onclick="return confirm('Удалить это движение?')">🗑️ Удалить</a>
-                    {% else %}
-                        <!-- Отправитель не может редактировать/удалять выполненные -->
-                        <span class="btn-disabled" title="Нельзя редактировать выполненное движение">✏️ Редактировать (недоступно)</span>
-                        <span class="btn-disabled" title="Нельзя удалить выполненное движение">🗑️ Удалить (недоступно)</span>
-                    {% endif %}
+            {% if is_manager %}
+                {# Руководитель - может всё #}
+                <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn btn-primary">✏️ Редактировать</a>
+                <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn btn-danger" onclick="return confirm('Удалить это движение?')">🗑️ Удалить</a>
+                {% if not movement.is_completed and movement.accounting_type != 'Отправление' %}
+                    <a href="{% url 'inventory:material_movement_execute' movement.id %}" class="btn btn-success" onclick="return confirm('Выполнить это движение?')">✅ Выполнить</a>
+                {% endif %}
+                {% if movement.is_completed and movement.accounting_type != 'Отправление' %}
+                    <a href="{% url 'inventory:material_movement_cancel' movement.id %}" class="btn btn-warning" onclick="return confirm('Отменить выполнение движения? Это вернет материалы на склад отправителя.')">↩️ Отменить выполнение</a>
                 {% endif %}
             {% else %}
-                <!-- Для других типов движений (Перемещение, Реализация, Списание) -->
-                {% if not movement.is_completed %}
-                    <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn btn-primary">✏️ Редактировать</a>
-                    <a href="{% url 'inventory:material_movement_execute' movement.id %}" class="btn btn-success" onclick="return confirm('Выполнить это движение?')">✅ Выполнить</a>
-                    <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn btn-danger" onclick="return confirm('Удалить это движение?')">🗑️ Удалить</a>
+                {# Обычные пользователи #}
+                {% if movement.accounting_type == 'Отправление' %}
+                    {% if user_role == 'receiver' and not movement.is_completed %}
+                        <a href="{% url 'inventory:material_movement_confirm' movement.id %}" class="btn btn-success" onclick="return confirm('Подтвердить получение этих материалов? Материалы будут перемещены на ваш склад.');">✅ Подтвердить получение</a>
+                    {% elif user_role == 'sender' %}
+                        {% if not movement.is_completed %}
+                            <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn btn-primary">✏️ Редактировать</a>
+                            <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn btn-danger" onclick="return confirm('Удалить это движение?')">🗑️ Удалить</a>
+                        {% else %}
+                            <span class="btn-disabled" title="Нельзя редактировать выполненное движение">✏️ Редактировать (недоступно)</span>
+                            <span class="btn-disabled" title="Нельзя удалить выполненное движение">🗑️ Удалить (недоступно)</span>
+                        {% endif %}
+                    {% endif %}
                 {% else %}
-                    <a href="{% url 'inventory:material_movement_cancel' movement.id %}" class="btn btn-warning" onclick="return confirm('Отменить выполнение движения? Это вернет материалы на склад отправителя.')">↩️ Отменить выполнение</a>
+                    {% if not movement.is_completed %}
+                        <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn btn-primary">✏️ Редактировать</a>
+                        <a href="{% url 'inventory:material_movement_execute' movement.id %}" class="btn btn-success" onclick="return confirm('Выполнить это движение?')">✅ Выполнить</a>
+                        <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn btn-danger" onclick="return confirm('Удалить это движение?')">🗑️ Удалить</a>
+                    {% else %}
+                        <a href="{% url 'inventory:material_movement_cancel' movement.id %}" class="btn btn-warning" onclick="return confirm('Отменить выполнение движения? Это вернет материалы на склад отправителя.')">↩️ Отменить выполнение</a>
+                    {% endif %}
                 {% endif %}
             {% endif %}
         </div>

@@ -269,11 +269,16 @@ def material_movement_detail_view(request, movement_id):
     # Определяем роль текущего пользователя
     user_role = movement.get_user_role(request.user)
 
+    # Проверяем, является ли пользователь руководителем
+    position_name = request.session.get('position_name')
+    is_manager = (position_name and position_name.lower() == 'руководитель')
+
     context = {
         'title': f'Движение №{movement.id}',
         'employee_name': request.session.get('employee_name'),
         'movement': movement,
-        'user_role': user_role,  # 'sender', 'receiver', или 'none'
+        'user_role': user_role,
+        'is_manager': is_manager,
     }
 
     return render(request, 'MaterialMovement/material_movement_detail.html', context)
@@ -281,38 +286,39 @@ def material_movement_detail_view(request, movement_id):
 
 @login_required
 def material_movement_edit_view(request, movement_id):
-    """Редактирование движения (только для своей должности и только невыполненных)"""
+    """Редактирование движения (только для своей должности, невыполненных, в течение 5 дней)"""
 
-    # Получаем должность текущего пользователя из сессии
+    # Получаем должность текущего пользователя
     user_position = request.session.get('position_name')
-    user_position_name = user_position
+    is_manager = (user_position and user_position.lower() == 'руководитель')
 
-    # Логируем для отладки (можно удалить после проверки)
-    print(f"Редактирование движения #{movement_id}. Пользователь: {request.user}, Должность: {user_position}")
+    if is_manager:
+        # Руководитель - проверяем только существование движения
+        movement = get_object_or_404(MaterialMovement, id=movement_id)
+    else:
+        # Обычные пользователи - проверяем должность
+        try:
+            position = Position.objects.get(name__iexact=user_position)
+            movement = get_object_or_404(
+                MaterialMovement,
+                id=movement_id,
+                created_by_position=position
+            )
+        except Position.DoesNotExist:
+            messages.error(request, 'Ошибка определения должности')
+            return redirect('inventory:material_movement_list')
 
-    # Находим должность по названию
-    try:
-        position = Position.objects.get(name__iexact=user_position)
-        user_position_id = position.id
-    except Position.DoesNotExist:
-        messages.error(request, 'Ошибка определения должности')
-        return redirect('inventory:material_movement_list')
+        # Проверка на выполненное движение
+        if movement.is_completed:
+            messages.error(request, 'Нельзя редактировать выполненное движение')
+            return redirect('inventory:material_movement_list')
 
-    # Получаем движение по ID и проверяем, что оно создано этой должностью
-    try:
-        movement = get_object_or_404(
-            MaterialMovement,
-            id=movement_id,
-            created_by_position=position
-        )
-    except:
-        messages.error(request, 'Движение не найдено или у вас нет прав для его редактирования')
-        return redirect('inventory:material_movement_list')
-
-    # Проверка на выполненное движение
-    if movement.is_completed:
-        messages.error(request, 'Нельзя редактировать выполненное движение')
-        return redirect('inventory:material_movement_detail', movement_id=movement.id)
+        # ✅ НОВАЯ ПРОВЕРКА: 5 дней для редактирования (только для НЕ руководителя)
+        time_diff = timezone.now() - movement.created_at
+        if time_diff.days >= 5:
+            messages.error(request,
+                           f'Движение старше 5 дней (создано {movement.created_at.date()}), редактирование невозможно')
+            return redirect('inventory:material_movement_list')
 
     # Для отправлений проверяем, что пользователь - отправитель
     if movement.accounting_type == 'Отправление':
@@ -362,7 +368,7 @@ def material_movement_edit_view(request, movement_id):
 
 @login_required
 def material_movement_delete_view(request, movement_id):
-    """Удаление движения (для руководителя - любые, для остальных - только свои)"""
+    """Удаление движения (для руководителя - любые, для остальных - только свои в течение 5 дней)"""
 
     # Получаем должность текущего пользователя
     position_name = request.session.get('position_name')
@@ -386,19 +392,29 @@ def material_movement_delete_view(request, movement_id):
                 created_by_position=position
             )
 
-            # Проверка на выполненное движение для обычных пользователей
+            # Проверка на выполненное движение
             if movement.is_completed:
                 messages.error(request, 'Нельзя удалить выполненное движение')
                 return redirect('inventory:material_movement_list')
+
+            # ✅ НОВАЯ ПРОВЕРКА: 5 дней для удаления (только для НЕ руководителя)
+            time_diff = timezone.now() - movement.created_at
+            if time_diff.days >= 5:
+                messages.error(request,
+                               f'Движение старше 5 дней (создано {movement.created_at.date()}), удаление невозможно')
+                return redirect('inventory:material_movement_list')
+
+        # Сохраняем ID ДО удаления
+        movement_id_for_message = movement.id
 
         # Для руководителя: если движение выполнено, восстанавливаем остатки
         if is_manager and movement.is_completed:
             from Forest_apps.inventory.models import MaterialBalance
             MaterialBalance.cancel_movement(movement)
-            messages.info(request, f'Остатки материалов восстановлены для движения №{movement.id}')
+            messages.info(request, f'Остатки материалов восстановлены для движения №{movement_id_for_message}')
 
         movement.delete()
-        messages.success(request, f'✅ Движение успешно удалено!')
+        messages.success(request, f'✅ Движение №{movement_id_for_message} успешно удалено!')
 
     except Exception as e:
         messages.error(request, str(e))

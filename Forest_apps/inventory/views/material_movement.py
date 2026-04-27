@@ -398,7 +398,7 @@ def material_movement_delete_view(request, movement_id):
             messages.info(request, f'Остатки материалов восстановлены для движения №{movement.id}')
 
         movement.delete()
-        messages.success(request, f'✅ Движение №{movement.id} успешно удалено!')
+        messages.success(request, f'✅ Движение успешно удалено!')
 
     except Exception as e:
         messages.error(request, str(e))

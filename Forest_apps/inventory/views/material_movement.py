@@ -362,28 +362,44 @@ def material_movement_edit_view(request, movement_id):
 
 @login_required
 def material_movement_delete_view(request, movement_id):
-    """Удаление движения (только для своей должности)"""
+    """Удаление движения (для руководителя - любые, для остальных - только свои)"""
 
     # Получаем должность текущего пользователя
     position_name = request.session.get('position_name')
-    try:
-        position = Position.objects.get(name__iexact=position_name)
-    except Position.DoesNotExist:
-        messages.error(request, 'Ошибка определения должности')
-        return redirect('inventory:material_movement_list')
+    is_manager = (position_name and position_name.lower() == 'руководитель')
 
     try:
-        movement = get_object_or_404(
-            MaterialMovement,
-            id=movement_id,
-            created_by_position=position
-        )
-
-        if movement.is_completed:
-            messages.error(request, 'Нельзя удалить выполненное движение')
+        if is_manager:
+            # Руководитель может удалить ЛЮБОЕ движение
+            movement = get_object_or_404(MaterialMovement, id=movement_id)
         else:
-            movement.delete()
-            messages.success(request, 'Движение успешно удалено!')
+            # Обычные пользователи - только свои движения
+            try:
+                position = Position.objects.get(name__iexact=position_name)
+            except Position.DoesNotExist:
+                messages.error(request, 'Ошибка определения должности')
+                return redirect('inventory:material_movement_list')
+
+            movement = get_object_or_404(
+                MaterialMovement,
+                id=movement_id,
+                created_by_position=position
+            )
+
+            # Проверка на выполненное движение для обычных пользователей
+            if movement.is_completed:
+                messages.error(request, 'Нельзя удалить выполненное движение')
+                return redirect('inventory:material_movement_list')
+
+        # Для руководителя: если движение выполнено, восстанавливаем остатки
+        if is_manager and movement.is_completed:
+            from Forest_apps.inventory.models import MaterialBalance
+            MaterialBalance.cancel_movement(movement)
+            messages.info(request, f'Остатки материалов восстановлены для движения №{movement.id}')
+
+        movement.delete()
+        messages.success(request, f'✅ Движение №{movement.id} успешно удалено!')
+
     except Exception as e:
         messages.error(request, str(e))
 

@@ -314,7 +314,7 @@ def material_movement_edit_view(request, movement_id):
             return redirect('inventory:material_movement_list')
 
         # ✅ НОВАЯ ПРОВЕРКА: 5 дней для редактирования (только для НЕ руководителя)
-        time_diff = timezone.now() - movement.created_at
+        time_diff = timezone.now() - movement.date_time
         if time_diff.days >= 5:
             messages.error(request,
                            f'Движение старше 5 дней (создано {movement.created_at.date()}), редактирование невозможно')
@@ -398,7 +398,7 @@ def material_movement_delete_view(request, movement_id):
                 return redirect('inventory:material_movement_list')
 
             # ✅ НОВАЯ ПРОВЕРКА: 5 дней для удаления (только для НЕ руководителя)
-            time_diff = timezone.now() - movement.created_at
+            time_diff = timezone.now() - movement.date_time
             if time_diff.days >= 5:
                 messages.error(request,
                                f'Движение старше 5 дней (создано {movement.created_at.date()}), удаление невозможно')

@@ -286,75 +286,67 @@ def material_movement_detail_view(request, movement_id):
 
 @login_required
 def material_movement_edit_view(request, movement_id):
-    """Редактирование движения (только для своей должности, невыполненных, в течение 5 дней)"""
+    """Редактирование движения (только для своей должности и только невыполненных)"""
 
-    # Получаем должность текущего пользователя
-    user_position = request.session.get('position_name')
-    is_manager = (user_position and user_position.lower() == 'руководитель')
+    # Получаем должность текущего пользователя из сессии
+    position_name = request.session.get('position_name')  # переименовал для единообразия
+    is_manager = (position_name and position_name.lower() == 'руководитель')
 
-    if is_manager:
-        # Руководитель - проверяем только существование движения
-        movement = get_object_or_404(MaterialMovement, id=movement_id)
-    else:
-        # Обычные пользователи - проверяем должность
-        try:
-            position = Position.objects.get(name__iexact=user_position)
-            movement = get_object_or_404(
-                MaterialMovement,
-                id=movement_id,
-                created_by_position=position
-            )
-        except Position.DoesNotExist:
-            messages.error(request, 'Ошибка определения должности')
-            return redirect('inventory:material_movement_list')
-
-        # Проверка на выполненное движение
-        if movement.is_completed:
-            messages.error(request, 'Нельзя редактировать выполненное движение')
-            return redirect('inventory:material_movement_list')
-
-        # ✅ НОВАЯ ПРОВЕРКА: 5 дней для редактирования (только для НЕ руководителя)
-        time_diff = timezone.now() - movement.date_time
-        if time_diff.days >= 5:
-            messages.error(request,
-                           f'Движение старше 5 дней (создано {movement.created_at.date()}), редактирование невозможно')
-            return redirect('inventory:material_movement_list')
-
-    # Для отправлений проверяем, что пользователь - отправитель
-    if movement.accounting_type == 'Отправление':
-        user_role = movement.get_user_role(request.user)
-        if user_role != 'sender':
-            messages.error(request, 'Только отправитель может редактировать это движение')
-            return redirect('inventory:material_movement_detail', movement_id=movement.id)
-
-    if request.method == 'POST':
-        form = MaterialMovementCreateForm(
-            request.POST,
-            instance=movement,
-            user=request.user,
-            user_position=user_position  # ПЕРЕДАЕМ ДОЛЖНОСТЬ В ФОРМУ
-        )
-
-        if form.is_valid():
-            # Сохраняем изменения
-            updated_movement = form.save()
-
-            messages.success(
-                request,
-                f'Движение №{updated_movement.id} успешно обновлено!'
-            )
-            return redirect('inventory:material_movement_detail', movement_id=updated_movement.id)
+    try:
+        if is_manager:
+            # Руководитель может редактировать ЛЮБОЕ движение
+            movement = get_object_or_404(MaterialMovement, id=movement_id)
         else:
-            # Если форма невалидна, показываем ошибки
-            print(f"Ошибки формы при редактировании: {form.errors}")
+            # Обычные пользователи - только свои движения
+            try:
+                position = Position.objects.get(name__iexact=position_name)
+                movement = get_object_or_404(
+                    MaterialMovement,
+                    id=movement_id,
+                    created_by_position=position
+                )
+            except Position.DoesNotExist:
+                messages.error(request, 'Ошибка определения должности')
+                return redirect('inventory:material_movement_list')
 
-    else:
-        # GET-запрос - создаем форму с данными движения и передачей должности
-        form = MaterialMovementCreateForm(
-            instance=movement,
-            user=request.user,
-            user_position=user_position  # ПЕРЕДАЕМ ДОЛЖНОСТЬ В ФОРМУ
-        )
+            if movement.is_completed:
+                messages.error(request, 'Нельзя редактировать выполненное движение')
+                return redirect('inventory:material_movement_detail', movement_id=movement.id)
+
+            # Проверка на 5 дней
+            time_diff = timezone.now() - movement.date_time
+            if time_diff.days >= 5:
+                messages.error(request,
+                               f'Движение старше 5 дней (создано {movement.date_time.date()}), редактирование невозможно')
+                return redirect('inventory:material_movement_detail', movement_id=movement.id)
+
+            if movement.accounting_type == 'Отправление':
+                user_role = movement.get_user_role(request.user)
+                if user_role != 'sender':
+                    messages.error(request, 'Только отправитель может редактировать это движение')
+                    return redirect('inventory:material_movement_detail', movement_id=movement.id)
+
+        if request.method == 'POST':
+            form = MaterialMovementCreateForm(
+                request.POST,
+                instance=movement,
+                user=request.user,
+                position_name=position_name  # ✅ единый параметр
+            )
+            if form.is_valid():
+                updated_movement = form.save()
+                messages.success(request, f'Движение №{updated_movement.id} успешно обновлено!')
+                return redirect('inventory:material_movement_detail', movement_id=updated_movement.id)
+        else:
+            form = MaterialMovementCreateForm(
+                instance=movement,
+                user=request.user,
+                position_name=position_name  # ✅ единый параметр
+            )
+
+    except Exception as e:
+        messages.error(request, str(e))
+        return redirect('inventory:material_movement_list')
 
     context = {
         'title': f'Редактирование движения №{movement.id}',

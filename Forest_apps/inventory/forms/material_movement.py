@@ -127,10 +127,18 @@ class MaterialMovementCreateForm(forms.ModelForm):
             source_type__in=['бригады', 'автомобиль']
         ).values_list('id', flat=True))
 
-        # Устанавливаем начальные queryset'ы
+        # queryset'ы
         self.fields['from_location'].queryset = StorageLocation.objects.all().order_by('source_type')
         self.fields['to_location'].queryset = StorageLocation.objects.all().order_by('source_type')
         self.fields['material'].queryset = Material.objects.all().order_by('material_type', 'name')
+
+        # ✅ ИЗМЕНЯЕМ ВИДЖЕТ для поля material с Select на TextInput
+        self.fields['material'].widget = forms.TextInput(attrs={
+            'class': 'form-control material-search',
+            'list': 'material-list',
+            'autocomplete': 'off',
+            'placeholder': 'Начните вводить название материала...'
+        })
 
         # Фильтруем сотрудников только с должностью "водитель"
         driver_position = Position.objects.filter(name__iexact='водитель').first()

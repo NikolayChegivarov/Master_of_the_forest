@@ -65,10 +65,20 @@
                 {% endif %}
             </div>
 
-            <!-- Поле Материал -->
-            <div class="form-group">
-                <label for="{{ form.material.id_for_label }}">{{ form.material.label }}:</label>
-                {{ form.material }}
+            <!-- Поле Материал с поиском и выпадающим списком -->
+            <div class="form-group" style="position: relative;">
+                <label for="material-search">{{ form.material.label }}:</label>
+                <div class="material-search-wrapper" style="position: relative;">
+                    <input type="text" id="material-search" class="form-control material-search"
+                           placeholder="Начните вводить название материала..." autocomplete="off">
+                    <div id="material-dropdown" class="material-dropdown" style="display: none;"></div>
+                </div>
+                <select name="material" id="id_material" style="display: none;">
+                    <option value="">---------</option>
+                    {% for material in form.fields.material.queryset %}
+                        <option value="{{ material.id }}">{{ material.name }}</option>
+                    {% endfor %}
+                </select>
                 {% if form.material.errors %}
                     <div class="field-error">
                         {% for error in form.material.errors %}
@@ -236,6 +246,60 @@
         border-color: #2c5e2e;
     }
 
+    /* Стили для поиска материалов */
+    .material-search-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    .material-search {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+        background-color: white;
+        box-sizing: border-box;
+    }
+
+    .material-search:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .material-dropdown {
+        position: absolute;
+        z-index: 1000;
+        max-height: 250px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        background-color: white;
+        width: 100%;
+        top: 100%;
+        left: 0;
+        margin-top: 4px;
+    }
+
+    .material-dropdown-item {
+        padding: 10px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+    }
+
+    .material-dropdown-item:hover {
+        background-color: #2c5e2e;
+        color: white;
+    }
+
+    .material-dropdown-item:last-child {
+        border-bottom: none;
+    }
+
     .form-text {
         margin-top: 10px;
         margin-bottom: 20px;
@@ -303,6 +367,22 @@
         background: #5a6268;
     }
 
+    .disabled-field {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+
+    .disabled-field input,
+    .disabled-field select {
+        background-color: #f5f5f5;
+        cursor: not-allowed;
+    }
+
+    select:disabled {
+        background-color: #f5f5f5;
+        cursor: not-allowed;
+    }
+
     @media (max-width: 768px) {
         .create-form {
             padding: 30px 20px;
@@ -327,14 +407,14 @@
     }
 </style>
 
-<!-- Скрипт для корректировки значений в полях "откуда", "куда" -->
+<!-- Скрипты -->
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ========== ЛОГИКА ДЛЯ ПОЛЕЙ "ОТКУДА" И "КУДА" ==========
     const typeSelect = document.getElementById('id_accounting_type');
     const fromLocationSelect = document.getElementById('id_from_location');
     const toLocationSelect = document.getElementById('id_to_location');
-    const materialSelect = document.getElementById('id_material');
     const priceField = document.querySelector('input[name="price"]');
     const priceGroup = priceField?.closest('.form-group');
 
@@ -343,6 +423,80 @@ document.addEventListener('DOMContentLoaded', function() {
     const vehicleSelect = document.getElementById('id_vehicle');
     const employeeGroup = employeeSelect?.closest('.form-group');
     const vehicleGroup = vehicleSelect?.closest('.form-group');
+
+    // ========== ЛОГИКА ДЛЯ ПОИСКА МАТЕРИАЛОВ С ВЫПАДАЮЩИМ СПИСКОМ ==========
+    const materialSearch = document.getElementById('material-search');
+    const materialHiddenSelect = document.getElementById('id_material');
+    const materialDropdown = document.getElementById('material-dropdown');
+
+    if (materialSearch && materialHiddenSelect) {
+        // Получаем все опции из скрытого select
+        let materialOptions = Array.from(materialHiddenSelect.options).filter(opt => opt.value !== '');
+
+        // Функция обновления опций (при фильтрации по типу движения)
+        window.updateMaterialOptions = function() {
+            materialOptions = Array.from(materialHiddenSelect.options).filter(opt => opt.value !== '');
+        };
+
+        // Функция показа выпадающего списка
+        function showDropdown(filteredOptions) {
+            if (filteredOptions.length === 0) {
+                materialDropdown.style.display = 'none';
+                return;
+            }
+
+            materialDropdown.innerHTML = '';
+            filteredOptions.forEach(opt => {
+                const item = document.createElement('div');
+                item.className = 'material-dropdown-item';
+                item.textContent = opt.textContent;
+                item.setAttribute('data-value', opt.value);
+                item.addEventListener('click', function() {
+                    materialSearch.value = this.textContent;
+                    materialHiddenSelect.value = this.getAttribute('data-value');
+                    materialDropdown.style.display = 'none';
+
+                    // Триггерим событие change для проверки формы
+                    const changeEvent = new Event('change', { bubbles: true });
+                    materialHiddenSelect.dispatchEvent(changeEvent);
+                });
+                materialDropdown.appendChild(item);
+            });
+            materialDropdown.style.display = 'block';
+        }
+
+        // Фильтрация материалов
+        function filterMaterials() {
+            const searchText = materialSearch.value.toLowerCase();
+            const filtered = materialOptions.filter(opt =>
+                opt.textContent.toLowerCase().includes(searchText)
+            );
+            showDropdown(filtered);
+        }
+
+        // Обработчики событий
+        materialSearch.addEventListener('input', filterMaterials);
+        materialSearch.addEventListener('focus', filterMaterials);
+        materialSearch.addEventListener('click', function(e) {
+            e.stopPropagation();
+            filterMaterials();
+        });
+
+        // Закрываем выпадающий список при клике вне
+        document.addEventListener('click', function(e) {
+            if (e.target !== materialSearch && !materialDropdown.contains(e.target)) {
+                materialDropdown.style.display = 'none';
+            }
+        });
+
+        // Инициализация: если есть выбранное значение в select
+        if (materialHiddenSelect.value) {
+            const selected = materialOptions.find(opt => opt.value === materialHiddenSelect.value);
+            if (selected) {
+                materialSearch.value = selected.textContent;
+            }
+        }
+    }
 
     if (!typeSelect) return;
 
@@ -360,7 +514,6 @@ document.addEventListener('DOMContentLoaded', function() {
             allMaterials = data;
             console.log('Все материалы загружены:', allMaterials);
 
-            // Если доступен только один тип, автоматически загружаем данные для него
             if (typeOptions.length === 1) {
                 console.log('Доступен только один тип, автоматически загружаем данные');
                 updateFields();
@@ -371,35 +524,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
     function filterMaterialsByType(materialType) {
+        if (!materialHiddenSelect) return;
+
         if (!materialType || materialType === '') {
-            // Если тип не выбран или не "Списание", показываем все материалы
-            materialSelect.innerHTML = '<option value="">---------</option>';
+            materialHiddenSelect.innerHTML = '<option value="">---------</option>';
             allMaterials.forEach(mat => {
                 const option = document.createElement('option');
                 option.value = mat.id;
                 option.textContent = mat.name;
-                materialSelect.appendChild(option);
+                materialHiddenSelect.appendChild(option);
             });
         } else if (materialType === 'Списание') {
-            // Для списания показываем только ГСМ и запчасти
-            materialSelect.innerHTML = '<option value="">---------</option>';
+            materialHiddenSelect.innerHTML = '<option value="">---------</option>';
             allMaterials.forEach(mat => {
                 if (mat.type === 'ГСМ' || mat.type === 'запчасти') {
                     const option = document.createElement('option');
                     option.value = mat.id;
                     option.textContent = mat.name;
-                    materialSelect.appendChild(option);
+                    materialHiddenSelect.appendChild(option);
                 }
             });
         } else {
-            // Для других типов показываем все материалы
-            materialSelect.innerHTML = '<option value="">---------</option>';
+            materialHiddenSelect.innerHTML = '<option value="">---------</option>';
             allMaterials.forEach(mat => {
                 const option = document.createElement('option');
                 option.value = mat.id;
                 option.textContent = mat.name;
-                materialSelect.appendChild(option);
+                materialHiddenSelect.appendChild(option);
             });
+        }
+
+        // Обновляем опции в переменной для поиска
+        if (window.updateMaterialOptions) {
+            window.updateMaterialOptions();
         }
     }
 
@@ -409,29 +566,36 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Selected type:', selectedType);
 
         // Очищаем и отключаем поля до загрузки данных
-        fromLocationSelect.innerHTML = '<option value="">---------</option>';
-        toLocationSelect.innerHTML = '<option value="">---------</option>';
-        fromLocationSelect.disabled = true;
-        toLocationSelect.disabled = true;
+        if (fromLocationSelect) {
+            fromLocationSelect.innerHTML = '<option value="">---------</option>';
+            fromLocationSelect.disabled = true;
+        }
+        if (toLocationSelect) {
+            toLocationSelect.innerHTML = '<option value="">---------</option>';
+            toLocationSelect.disabled = true;
+        }
 
         // Фильтруем материалы в зависимости от типа
         filterMaterialsByType(selectedType);
 
         // Управление полем цены
         if (selectedType === 'Реализация') {
-            priceField.disabled = false;
-            priceField.required = true;
-            priceGroup?.classList.remove('disabled-field');
+            if (priceField) {
+                priceField.disabled = false;
+                priceField.required = true;
+                priceGroup?.classList.remove('disabled-field');
+            }
         } else {
-            priceField.disabled = true;
-            priceField.required = false;
-            priceField.value = '';
-            priceGroup?.classList.add('disabled-field');
+            if (priceField) {
+                priceField.disabled = true;
+                priceField.required = false;
+                priceField.value = '';
+                priceGroup?.classList.add('disabled-field');
+            }
         }
 
         // Управление полями водителя и транспортного средства
         if (selectedType === 'Списание') {
-            // При списании отключаем поля водителя и ТС
             if (employeeSelect) {
                 employeeSelect.disabled = true;
                 employeeSelect.value = '';
@@ -443,7 +607,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 vehicleGroup?.classList.add('disabled-field');
             }
         } else {
-            // Для остальных типов включаем поля (но они могут быть необязательными)
             if (employeeSelect) {
                 employeeSelect.disabled = false;
                 employeeGroup?.classList.remove('disabled-field');
@@ -470,72 +633,56 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 console.log('Received locations data:', data);
 
-                // Включаем поля
-                fromLocationSelect.disabled = false;
-                toLocationSelect.disabled = false;
-
-                // Заполняем "Откуда"
-                fromLocationSelect.innerHTML = '<option value="">---------</option>';
-                if (data.from_locations && Array.isArray(data.from_locations)) {
-                    data.from_locations.forEach(loc => {
-                        if (loc && loc.id && loc.name) {
-                            const option = document.createElement('option');
-                            option.value = loc.id;
-                            option.textContent = loc.name;
-                            fromLocationSelect.appendChild(option);
-                        }
-                    });
+                if (fromLocationSelect) {
+                    fromLocationSelect.disabled = false;
+                    fromLocationSelect.innerHTML = '<option value="">---------</option>';
+                    if (data.from_locations && Array.isArray(data.from_locations)) {
+                        data.from_locations.forEach(loc => {
+                            if (loc && loc.id && loc.name) {
+                                const option = document.createElement('option');
+                                option.value = loc.id;
+                                option.textContent = loc.name;
+                                fromLocationSelect.appendChild(option);
+                            }
+                        });
+                    }
                 }
 
-                // Заполняем "Куда"
-                toLocationSelect.innerHTML = '<option value="">---------</option>';
-                if (data.to_locations && Array.isArray(data.to_locations)) {
-                    data.to_locations.forEach(loc => {
-                        if (loc && loc.id && loc.name) {
-                            const option = document.createElement('option');
-                            option.value = loc.id;
-                            option.textContent = loc.name;
-                            toLocationSelect.appendChild(option);
-                        }
-                    });
+                if (toLocationSelect) {
+                    toLocationSelect.disabled = false;
+                    toLocationSelect.innerHTML = '<option value="">---------</option>';
+                    if (data.to_locations && Array.isArray(data.to_locations)) {
+                        data.to_locations.forEach(loc => {
+                            if (loc && loc.id && loc.name) {
+                                const option = document.createElement('option');
+                                option.value = loc.id;
+                                option.textContent = loc.name;
+                                toLocationSelect.appendChild(option);
+                            }
+                        });
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error loading locations:', error);
-                fromLocationSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
-                toLocationSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+                if (fromLocationSelect) {
+                    fromLocationSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+                }
+                if (toLocationSelect) {
+                    toLocationSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+                }
             });
     }
 
     typeSelect.addEventListener('change', updateFields);
 
-    // Если тип уже выбран при загрузке страницы, обновляем поля
     if (typeSelect.value) {
-        // Небольшая задержка, чтобы материалы успели загрузиться
         setTimeout(updateFields, 300);
     } else if (typeOptions.length === 1) {
-        // Если доступен только один тип, но он не выбран, выбираем его
         typeSelect.value = typeOptions[0];
         setTimeout(updateFields, 300);
     }
 });
 </script>
-
-<style>
-    .disabled-field {
-        opacity: 0.6;
-        pointer-events: none;
-    }
-    .disabled-field input,
-    .disabled-field select {
-        background-color: #f5f5f5;
-        cursor: not-allowed;
-    }
-    select:disabled {
-        background-color: #f5f5f5;
-        cursor: not-allowed;
-    }
-</style>
 {% endblock %}
 {% endblock %}
-

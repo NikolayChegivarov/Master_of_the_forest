@@ -142,7 +142,7 @@
 
         {% if movements %}
             <div class="table-responsive">
-                <table class="movements-table">
+                <table class="movements-table" id="movements-table">
                     <thead>
                         <tr>
                             <th>№</th>
@@ -164,55 +164,61 @@
                     </thead>
                     <tbody>
                         {% for movement in movements %}
-                        <tr class="{% if not movement.is_completed %}pending-row{% endif %}">
-                            <td><strong>{{ movement.id }}</strong></td>
-                            <td>{{ movement.date_time|date:"d.m.Y H:i" }}
+                        <tr class="movement-row {% if not movement.is_completed %}pending-row{% endif %}" data-movement-id="{{ movement.id }}">
+                            <td><strong>{{ movement.id }}</strong>2d
+                            <td>{{ movement.date_time|date:"d.m.Y H:i" }}2d
                             <td>
                                 <span class="badge type-{{ movement.accounting_type }}">
                                     {{ movement.accounting_type }}
                                 </span>
-                            <td>{{ movement.from_location.get_source_name|truncatechars:35 }}
+                            2d
+                            <td>{{ movement.from_location.get_source_name|truncatechars:35 }}2d
                             <td>
                                 {% if movement.to_location %}
                                     {{ movement.to_location.get_source_name|truncatechars:35 }}
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-
-                            <td>{{ movement.material.name }}
-                            <td class="text-right quantity-cell">{{ movement.quantity_pieces|default:"0"|floatformat:3 }}
-                            <td class="text-right quantity-cell">{{ movement.quantity_meters|default:"0"|floatformat:3 }}
-                            <td class="text-right quantity-cell">{{ movement.quantity_cubic|default:"0"|floatformat:3 }}
+                            2d
+                            <td>{{ movement.material.name }}2d
+                            <td class="text-right quantity-cell">{{ movement.quantity_pieces|default:"0"|floatformat:3 }}2d
+                            <td class="text-right quantity-cell">{{ movement.quantity_meters|default:"0"|floatformat:3 }}2d
+                            <td class="text-right quantity-cell">{{ movement.quantity_cubic|default:"0"|floatformat:3 }}2d
                             <td class="text-right amount-cell">
                                 {% if movement.total_amount %}
                                     {{ movement.total_amount|floatformat:2 }} ₽
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
+                            2d
                             <td>
                                 {% if movement.is_completed %}
                                     <span class="badge completed">✅ Выполнено</span>
                                 {% else %}
                                     <span class="badge pending">⏳ Ожидает</span>
                                 {% endif %}
+                            2d
                             <td class="employee-cell">
                                 {% if movement.employee %}
                                     {{ movement.employee.last_name }} {{ movement.employee.first_name|first }}.
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
+                            2d
                             <td class="vehicle-cell">
                                 {% if movement.vehicle %}
                                     {{ movement.vehicle.brand }} {{ movement.vehicle.model }}
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
+                            2d
                             <td>
                                 {% if movement.created_by_position %}
                                     <span class="position-badge">{{ movement.created_by_position.name }}</span>
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
+                            2d
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
                                     <a href="{% url 'inventory:material_movement_detail' movement.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
@@ -237,6 +243,7 @@
                                         {% endif %}
                                     {% endif %}
                                 </div>
+                            2d
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -555,6 +562,7 @@
     .table-responsive {
         overflow-x: auto;
         border-radius: 12px;
+        position: relative;
     }
 
     .movements-table {
@@ -580,12 +588,31 @@
         font-size: 13px;
     }
 
+    .movements-table tbody tr {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
     .movements-table tbody tr:hover {
-        background: #f5f5f5;
+        background-color: #f5f5f5;
+    }
+
+    /* Выделенная строка */
+    .movements-table tbody tr.selected-row {
+        background-color: #d4edda !important;
+        border-left: 3px solid #2c5e2e;
+    }
+
+    .movements-table tbody tr.selected-row:hover {
+        background-color: #c3e6cb !important;
     }
 
     .pending-row {
         background-color: #fff3cd;
+    }
+
+    .pending-row.selected-row {
+        background-color: #ffe69c !important;
     }
 
     .pending-row:hover {
@@ -706,6 +733,7 @@
         transition: all 0.2s;
         background: #f8f9fa;
         border: 1px solid #dee2e6;
+        cursor: pointer;
     }
 
     .btn-action:hover {
@@ -853,9 +881,56 @@
     }
 </style>
 
-<!-- JavaScript для автоматической отправки -->
+<!-- JavaScript для автоматической отправки и выделения строк -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // ========== ЛОГИКА ДЛЯ ВЫДЕЛЕНИЯ СТРОК ==========
+        const rows = document.querySelectorAll('.movements-table tbody tr');
+
+        // Функция для сохранения выделенной строки в localStorage
+        function saveSelectedRow(rowId) {
+            if (rowId) {
+                localStorage.setItem('selectedMovementRow', rowId);
+            } else {
+                localStorage.removeItem('selectedMovementRow');
+            }
+        }
+
+        // Функция для загрузки выделенной строки из localStorage
+        function loadSelectedRow() {
+            const savedRowId = localStorage.getItem('selectedMovementRow');
+            if (savedRowId) {
+                const savedRow = document.querySelector(`.movements-table tbody tr[data-movement-id="${savedRowId}"]`);
+                if (savedRow) {
+                    savedRow.classList.add('selected-row');
+                }
+            }
+        }
+
+        // Добавляем обработчик клика на каждую строку
+        rows.forEach(row => {
+            row.addEventListener('click', function(e) {
+                // Если кликнули по кнопке действия, не выделяем строку
+                if (e.target.closest('.btn-action')) {
+                    return;
+                }
+
+                // Убираем выделение со всех строк
+                rows.forEach(r => r.classList.remove('selected-row'));
+
+                // Выделяем текущую строку
+                this.classList.add('selected-row');
+
+                // Сохраняем ID выделенной строки
+                const movementId = this.getAttribute('data-movement-id');
+                saveSelectedRow(movementId);
+            });
+        });
+
+        // Загружаем сохраненное выделение при загрузке страницы
+        loadSelectedRow();
+
+        // ========== ЛОГИКА ДЛЯ ФИЛЬТРОВ ==========
         const form = document.getElementById('filter-form');
         const autoSubmitFields = document.querySelectorAll('.auto-submit');
         const searchInput = document.querySelector('input[name="search"]');
@@ -863,12 +938,14 @@
         // Автоматическая отправка при изменении auto-submit полей
         autoSubmitFields.forEach(field => {
             field.addEventListener('change', function() {
+                // При фильтрации очищаем сохраненное выделение
+                localStorage.removeItem('selectedMovementRow');
                 form.submit();
             });
 
-            // Для date полей также отправляем по изменению
             if (field.type === 'date') {
                 field.addEventListener('change', function() {
+                    localStorage.removeItem('selectedMovementRow');
                     form.submit();
                 });
             }
@@ -879,6 +956,7 @@
             searchInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
+                    localStorage.removeItem('selectedMovementRow');
                     form.submit();
                 }
             });

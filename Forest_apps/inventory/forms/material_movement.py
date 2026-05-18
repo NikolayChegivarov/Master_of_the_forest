@@ -93,8 +93,8 @@ class MaterialMovementCreateForm(forms.ModelForm):
         all_choices = MaterialMovement.ACCOUNTING_TYPE_CHOICES
 
         if is_supervisor:
-            # Для руководителя - только Реализация
-            filtered_choices = [choice for choice in all_choices if choice[0] == 'Реализация']
+            # Для руководителя - Реализация и Отправление
+            filtered_choices = [choice for choice in all_choices if choice[0] in ['Реализация', 'Отправление']]
         else:
             # Для всех остальных - все кроме Реализации
             filtered_choices = [choice for choice in all_choices if choice[0] != 'Реализация']

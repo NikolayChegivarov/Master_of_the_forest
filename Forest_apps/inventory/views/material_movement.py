@@ -7,8 +7,9 @@ from django.utils import timezone
 from django.http import JsonResponse
 
 from Forest_apps.forestry.models import Material
-from Forest_apps.inventory.models import MaterialMovement, StorageLocation
+from Forest_apps.inventory.models import MaterialMovement, StorageLocation, MaterialBalance
 from Forest_apps.core.models import Position, Warehouse, Brigade, Vehicle
+from Forest_apps.employees.models import Employee
 from Forest_apps.inventory.forms.material_movement import (
     MaterialMovementCreateForm,
     MaterialMovementFilterForm
@@ -34,9 +35,6 @@ def material_movement_list_view(request):
         user_position_id = -1
 
     # Получаем ID мест хранения, принадлежащих этой должности
-    from Forest_apps.inventory.models import StorageLocation
-    from Forest_apps.core.models import Warehouse, Brigade, Vehicle
-
     user_location_ids = []
 
     # Склады, созданные должностью
@@ -70,13 +68,8 @@ def material_movement_list_view(request):
     if is_manager:
         # Для руководителя - показываем ВСЕ движения
         movements = MaterialMovement.objects.select_related(
-            'from_location',
-            'to_location',
-            'material',
-            'employee',
-            'vehicle',
-            'created_by',
-            'created_by_position'
+            'from_location', 'to_location', 'material', 'employee', 'vehicle',
+            'created_by', 'created_by_position'
         ).order_by('-date_time')
     else:
         # Для мастера леса - только движения, где фигурирует его склад, НО исключая Реализации
@@ -84,16 +77,18 @@ def material_movement_list_view(request):
             Q(from_location_id__in=user_location_ids) |
             Q(to_location_id__in=user_location_ids)
         ).exclude(
-            accounting_type='Реализация'  # Исключаем реализации
+            accounting_type='Реализация'
         ).select_related(
-            'from_location',
-            'to_location',
-            'material',
-            'employee',
-            'vehicle',
-            'created_by',
-            'created_by_position'
+            'from_location', 'to_location', 'material', 'employee', 'vehicle',
+            'created_by', 'created_by_position'
         ).order_by('-date_time')
+
+    # Получаем список всех водителей для фильтра
+    driver_position = Position.objects.filter(name__iexact='водитель').first()
+    if driver_position:
+        drivers = Employee.objects.filter(position=driver_position, is_active=True).order_by('last_name', 'first_name')
+    else:
+        drivers = Employee.objects.none()
 
     # Фильтрация
     filter_form = MaterialMovementFilterForm(request.GET or None)
@@ -138,6 +133,11 @@ def material_movement_list_view(request):
                 Q(to_location__source_type__icontains=search)
             )
 
+    # Фильтр по водителю
+    employee_id = request.GET.get('employee')
+    if employee_id:
+        movements = movements.filter(employee_id=employee_id)
+
     # Получаем ID мест хранения текущего пользователя для проверки прав на подтверждение
     user_locations = user_location_ids
 
@@ -171,10 +171,10 @@ def material_movement_list_view(request):
         'pending_shipments_count': pending_shipments_count,
         'user_locations': user_locations,
         'is_manager': is_manager,
+        'drivers': drivers,
     }
 
     return render(request, 'MaterialMovement/material_movement_list.html', context)
-
 
 
 @login_required
@@ -238,8 +238,6 @@ def material_movement_create_view(request):
 
             return redirect('inventory:material_movement_list')
         else:
-            # Если форма невалидна, показываем ошибки
-            # Можно добавить логирование ошибок для отладки
             print(f"Ошибки формы: {form.errors}")
 
     else:
@@ -289,7 +287,7 @@ def material_movement_edit_view(request, movement_id):
     """Редактирование движения (только для своей должности и только невыполненных)"""
 
     # Получаем должность текущего пользователя из сессии
-    position_name = request.session.get('position_name')  # переименовал для единообразия
+    position_name = request.session.get('position_name')
     is_manager = (position_name and position_name.lower() == 'руководитель')
 
     try:
@@ -331,7 +329,7 @@ def material_movement_edit_view(request, movement_id):
                 request.POST,
                 instance=movement,
                 user=request.user,
-                position_name=position_name  # ✅ единый параметр
+                position_name=position_name
             )
             if form.is_valid():
                 updated_movement = form.save()
@@ -341,7 +339,7 @@ def material_movement_edit_view(request, movement_id):
             form = MaterialMovementCreateForm(
                 instance=movement,
                 user=request.user,
-                position_name=position_name  # ✅ единый параметр
+                position_name=position_name
             )
 
     except Exception as e:
@@ -384,16 +382,14 @@ def material_movement_delete_view(request, movement_id):
                 created_by_position=position
             )
 
-            # Проверка на выполненное движение
             if movement.is_completed:
                 messages.error(request, 'Нельзя удалить выполненное движение')
                 return redirect('inventory:material_movement_list')
 
-            # ✅ НОВАЯ ПРОВЕРКА: 5 дней для удаления (только для НЕ руководителя)
             time_diff = timezone.now() - movement.date_time
             if time_diff.days >= 5:
                 messages.error(request,
-                               f'Движение старше 5 дней (создано {movement.created_at.date()}), удаление невозможно')
+                               f'Движение старше 5 дней (создано {movement.date_time.date()}), удаление невозможно')
                 return redirect('inventory:material_movement_list')
 
         # Сохраняем ID ДО удаления
@@ -401,7 +397,6 @@ def material_movement_delete_view(request, movement_id):
 
         # Для руководителя: если движение выполнено, восстанавливаем остатки
         if is_manager and movement.is_completed:
-            from Forest_apps.inventory.models import MaterialBalance
             MaterialBalance.cancel_movement(movement)
             messages.info(request, f'Остатки материалов восстановлены для движения №{movement_id_for_message}')
 
@@ -471,7 +466,6 @@ def material_movement_cancel_view(request, movement_id):
         if not movement.is_completed:
             messages.error(request, 'Движение еще не выполнено')
         else:
-            from Forest_apps.inventory.models import MaterialBalance
             MaterialBalance.cancel_movement(movement)
             movement.is_completed = False
             movement.completed_at = None
@@ -503,13 +497,11 @@ def material_movement_confirm_shipment_view(request, movement_id):
             messages.error(request, 'Отправление уже подтверждено')
             return redirect('inventory:material_movement_list')
 
-        # Проверяем, что пользователь - получатель
         user_role = movement.get_user_role(request.user)
         if user_role != 'receiver':
             messages.error(request, 'Только получатель может подтвердить это отправление')
             return redirect('inventory:material_movement_list')
 
-        # Подтверждаем получение
         movement.confirm_receipt()
         messages.success(request, f'Отправление №{movement.id} успешно подтверждено!')
 
@@ -545,13 +537,10 @@ def get_locations_by_type(request):
     if not movement_type:
         return JsonResponse({'from_locations': [], 'to_locations': []})
 
-    # Получаем ID мест пользователя по должности (без лишнего None)
     user_location_ids = _get_user_location_ids_by_position(position_name)
-
     all_location_ids = list(StorageLocation.objects.all().values_list('id', flat=True))
     foreign_location_ids = [loc_id for loc_id in all_location_ids if loc_id not in user_location_ids]
 
-    # Базовый queryset
     from_locations = StorageLocation.objects.none()
     to_locations = StorageLocation.objects.none()
 
@@ -564,38 +553,19 @@ def get_locations_by_type(request):
         to_locations = StorageLocation.objects.exclude(id__in=user_location_ids).exclude(source_type='контрагент')
 
     elif movement_type == 'Реализация':
-        # Откуда - только склады (все, не только свои)
         from_locations = StorageLocation.objects.filter(source_type='склад')
-        # Куда - только контрагенты
         to_locations = StorageLocation.objects.filter(source_type='контрагент')
 
     elif movement_type == 'Списание':
-        # Откуда - только свои склады
-        from_locations = StorageLocation.objects.filter(
-            id__in=user_location_ids,
-            source_type='склад'
-        )
-        # Куда - ВСЕ свои места хранения кроме контрагентов (склады, бригады, автомобили)
-        to_locations = StorageLocation.objects.filter(
-            id__in=user_location_ids
-        ).exclude(
-            source_type='контрагент'
-        )
+        from_locations = StorageLocation.objects.filter(id__in=user_location_ids, source_type='склад')
+        to_locations = StorageLocation.objects.filter(id__in=user_location_ids).exclude(source_type='контрагент')
 
-    # Убираем дубликаты и сортируем
     from_locations = from_locations.distinct().order_by('source_type')
     to_locations = to_locations.distinct().order_by('source_type')
 
-    # Форматируем ответ
     data = {
-        'from_locations': [
-            {'id': loc.id, 'name': loc.get_source_name()}
-            for loc in from_locations
-        ],
-        'to_locations': [
-            {'id': loc.id, 'name': loc.get_source_name()}
-            for loc in to_locations
-        ]
+        'from_locations': [{'id': loc.id, 'name': loc.get_source_name()} for loc in from_locations],
+        'to_locations': [{'id': loc.id, 'name': loc.get_source_name()} for loc in to_locations]
     }
 
     return JsonResponse(data)
@@ -609,7 +579,6 @@ def _get_user_location_ids_by_position(position_name):
     if not position_name:
         return []
 
-    # Находим должность по названию
     position = Position.objects.filter(name__iexact=position_name).first()
     if not position:
         return []
@@ -660,153 +629,3 @@ def get_materials(request):
         for m in materials
     ]
     return JsonResponse(data, safe=False)
-
-
-# @login_required
-# def all_material_movements_list_view(request):
-#     """Список ВСЕХ движений материалов (без фильтрации по должности)"""
-#
-#     # Получаем ВСЕ движения без фильтрации по должности
-#     movements = MaterialMovement.objects.select_related(
-#         'from_location', 'to_location', 'material', 'employee', 'vehicle',
-#         'created_by', 'created_by_position'
-#     ).order_by('-date_time')
-#
-#     # Фильтрация
-#     filter_form = MaterialMovementFilterForm(request.GET or None)
-#
-#     if filter_form.is_valid():
-#         accounting_type = filter_form.cleaned_data.get('accounting_type')
-#         date_from = filter_form.cleaned_data.get('date_from')
-#         date_to = filter_form.cleaned_data.get('date_to')
-#         from_location = filter_form.cleaned_data.get('from_location')
-#         to_location = filter_form.cleaned_data.get('to_location')
-#         material = filter_form.cleaned_data.get('material')
-#         is_completed = filter_form.cleaned_data.get('is_completed')
-#         search = filter_form.cleaned_data.get('search')
-#
-#         if accounting_type:
-#             movements = movements.filter(accounting_type=accounting_type)
-#
-#         if date_from:
-#             movements = movements.filter(date_time__date__gte=date_from)
-#
-#         if date_to:
-#             movements = movements.filter(date_time__date__lte=date_to)
-#
-#         if from_location:
-#             movements = movements.filter(from_location=from_location)
-#
-#         if to_location:
-#             movements = movements.filter(to_location=to_location)
-#
-#         if material:
-#             movements = movements.filter(material=material)
-#
-#         if is_completed == 'true':
-#             movements = movements.filter(is_completed=True)
-#         elif is_completed == 'false':
-#             movements = movements.filter(is_completed=False)
-#
-#         if search:
-#             movements = movements.filter(
-#                 Q(material__name__icontains=search) |
-#                 Q(from_location__source_type__icontains=search) |
-#                 Q(to_location__source_type__icontains=search)
-#             )
-#
-#     # Подсчет статистики
-#     total_count = movements.count()
-#     total_amount = movements.filter(accounting_type='Реализация').aggregate(
-#         total=Sum('total_amount')
-#     )['total'] or 0
-#     pending_count = movements.filter(is_completed=False).count()
-#
-#     # Подсчет сумм по количествам
-#     total_pieces = movements.aggregate(total=Sum('quantity_pieces'))['total'] or 0
-#     total_meters = movements.aggregate(total=Sum('quantity_meters'))['total'] or 0
-#     total_cubic = movements.aggregate(total=Sum('quantity_cubic'))['total'] or 0
-#
-#     context = {
-#         'title': 'Все движения материалов',
-#         'employee_name': request.session.get('employee_name'),
-#         'position_name': request.session.get('position_name'),
-#         'movements': movements,
-#         'filter_form': filter_form,
-#         'total_count': total_count,
-#         'total_amount': total_amount,
-#         'pending_count': pending_count,
-#         'total_pieces': total_pieces,
-#         'total_meters': total_meters,
-#         'total_cubic': total_cubic,
-#         'is_all_movements': True,
-#     }
-#
-#     return render(request, 'MaterialMovement/all_material_movements_list.html', context)
-#
-# # ФУНКЦИИ БЕЗ ОГРАНИЧЕНИЯ ПО ВРЕМЕНИ
-# @login_required
-# def all_material_movements_edit_view(request, movement_id):
-#     """Редактирование движения без ограничений (для страницы всех движений)"""
-#
-#     movement = get_object_or_404(
-#         MaterialMovement.objects.select_related(
-#             'from_location', 'to_location', 'material', 'employee', 'vehicle',
-#             'created_by', 'created_by_position'
-#         ),
-#         id=movement_id
-#     )
-#
-#     if request.method == 'POST':
-#         form = MaterialMovementCreateForm(request.POST, instance=movement, user=request.user)
-#         if form.is_valid():
-#             form.save()
-#             messages.success(request, f'✅ Движение №{movement.id} успешно обновлено!')
-#             return redirect('inventory:all_material_movements_list')
-#         else:
-#             context = {
-#                 'title': f'Редактирование движения №{movement.id}',
-#                 'form': form,
-#                 'movement': movement,
-#                 'employee_name': request.session.get('employee_name'),
-#                 'is_all_movements': True,
-#             }
-#             return render(request, 'MaterialMovement/material_movement_edit.html', context)
-#     else:
-#         form = MaterialMovementCreateForm(instance=movement, user=request.user)
-#
-#     context = {
-#         'title': f'Редактирование движения №{movement.id}',
-#         'form': form,
-#         'movement': movement,
-#         'employee_name': request.session.get('employee_name'),
-#         'is_all_movements': True,
-#     }
-#
-#     return render(request, 'MaterialMovement/material_movement_edit.html', context)
-#
-#
-# @login_required
-# def all_material_movements_delete_view(request, movement_id):
-#     """Удаление движения без ограничений (для страницы всех движений)"""
-#
-#     try:
-#         movement = get_object_or_404(MaterialMovement, id=movement_id)
-#
-#         # Проверяем, выполнено ли движение
-#         if movement.is_completed:
-#             # Для выполненных движений нужно откатить остатки
-#             try:
-#                 from Forest_apps.inventory.models import MaterialBalance
-#                 MaterialBalance.cancel_movement(movement)
-#                 messages.info(request, f'Остатки материалов восстановлены для движения №{movement.id}')
-#             except Exception as e:
-#                 messages.warning(request, f'Ошибка при восстановлении остатков: {str(e)}')
-#
-#         movement.delete()
-#         messages.success(request, f'✅ Движение №{movement.id} успешно удалено!')
-#
-#     except Exception as e:
-#         messages.error(request, f'Ошибка при удалении: {str(e)}')
-#
-#     return redirect('inventory:all_material_movements_list')

@@ -87,6 +87,17 @@
                     {{ filter_form.accounting_type }}
                 </div>
                 <div class="filter-group">
+                    <label for="id_employee">Водитель:</label>
+                    <select name="employee" id="id_employee" class="filter-select auto-submit">
+                        <option value="">Все водители</option>
+                        {% for driver in drivers %}
+                            <option value="{{ driver.id }}" {% if request.GET.employee|stringformat:"s" == driver.id|stringformat:"s" %}selected{% endif %}>
+                                {{ driver.last_name }} {{ driver.first_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
                     {{ filter_form.date_from.label_tag }}
                     {{ filter_form.date_from }}
                 </div>
@@ -165,60 +176,53 @@
                     <tbody>
                         {% for movement in movements %}
                         <tr class="movement-row {% if not movement.is_completed %}pending-row{% endif %}" data-movement-id="{{ movement.id }}">
-                            <td><strong>{{ movement.id }}</strong>2d
-                            <td>{{ movement.date_time|date:"d.m.Y H:i" }}2d
+                            <td><strong>{{ movement.id }}</strong>
+                            <td>{{ movement.date_time|date:"d.m.Y H:i" }}
                             <td>
                                 <span class="badge type-{{ movement.accounting_type }}">
                                     {{ movement.accounting_type }}
                                 </span>
-                            2d
-                            <td>{{ movement.from_location.get_source_name|truncatechars:35 }}2d
+                            <td>{{ movement.from_location.get_source_name|truncatechars:35 }}
                             <td>
                                 {% if movement.to_location %}
                                     {{ movement.to_location.get_source_name|truncatechars:35 }}
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            2d
-                            <td>{{ movement.material.name }}2d
-                            <td class="text-right quantity-cell">{{ movement.quantity_pieces|default:"0"|floatformat:3 }}2d
-                            <td class="text-right quantity-cell">{{ movement.quantity_meters|default:"0"|floatformat:3 }}2d
-                            <td class="text-right quantity-cell">{{ movement.quantity_cubic|default:"0"|floatformat:3 }}2d
+                            <td>{{ movement.material.name }}
+                            <td class="text-right quantity-cell">{{ movement.quantity_pieces|default:"0"|floatformat:3 }}
+                            <td class="text-right quantity-cell">{{ movement.quantity_meters|default:"0"|floatformat:3 }}
+                            <td class="text-right quantity-cell">{{ movement.quantity_cubic|default:"0"|floatformat:3 }}
                             <td class="text-right amount-cell">
                                 {% if movement.total_amount %}
                                     {{ movement.total_amount|floatformat:2 }} ₽
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            2d
                             <td>
                                 {% if movement.is_completed %}
                                     <span class="badge completed">✅ Выполнено</span>
                                 {% else %}
                                     <span class="badge pending">⏳ Ожидает</span>
                                 {% endif %}
-                            2d
                             <td class="employee-cell">
                                 {% if movement.employee %}
                                     {{ movement.employee.last_name }} {{ movement.employee.first_name|first }}.
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            2d
                             <td class="vehicle-cell">
                                 {% if movement.vehicle %}
                                     {{ movement.vehicle.brand }} {{ movement.vehicle.model }}
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            2d
                             <td>
                                 {% if movement.created_by_position %}
                                     <span class="position-badge">{{ movement.created_by_position.name }}</span>
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            2d
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
                                     <a href="{% url 'inventory:material_movement_detail' movement.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
@@ -243,7 +247,6 @@
                                         {% endif %}
                                     {% endif %}
                                 </div>
-                            2d
                         </tr>
                         {% endfor %}
                     </tbody>

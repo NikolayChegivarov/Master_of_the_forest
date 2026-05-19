@@ -255,12 +255,13 @@ class MaterialMovement(models.Model):
     def save(self, *args, **kwargs):
         """Метод сохранения с расчетом суммы только для Реализации"""
         if self.accounting_type == 'Реализация' and self.price:
-            if self.quantity_pieces is not None:
-                self.total_amount = self.quantity_pieces * self.price
-            elif self.quantity_meters is not None:
-                self.total_amount = self.quantity_meters * self.price
-            elif self.quantity_cubic is not None:
+            # Приоритет: кубические метры → штуки → погонные метры
+            if self.quantity_cubic is not None and self.quantity_cubic > 0:
                 self.total_amount = self.quantity_cubic * self.price
+            elif self.quantity_pieces is not None and self.quantity_pieces > 0:
+                self.total_amount = self.quantity_pieces * self.price
+            elif self.quantity_meters is not None and self.quantity_meters > 0:
+                self.total_amount = self.quantity_meters * self.price
             else:
                 self.total_amount = 0
         else:

@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.db.models import Q, Sum
 from django.utils import timezone
 from django.http import JsonResponse
+from datetime import timedelta
 
 from Forest_apps.forestry.models import Material
 from Forest_apps.inventory.models import MaterialMovement, StorageLocation, MaterialBalance
@@ -155,6 +156,7 @@ def material_movement_list_view(request):
     total_pieces = movements.aggregate(total=Sum('quantity_pieces'))['total'] or 0
     total_meters = movements.aggregate(total=Sum('quantity_meters'))['total'] or 0
     total_cubic = movements.aggregate(total=Sum('quantity_cubic'))['total'] or 0
+    now_minus_5_days = timezone.now() - timedelta(days=5)
 
     context = {
         'title': 'Движение материалов',
@@ -172,6 +174,8 @@ def material_movement_list_view(request):
         'user_locations': user_locations,
         'is_manager': is_manager,
         'drivers': drivers,
+        'now_minus_5_days': now_minus_5_days,
+        'user_role': None,
     }
 
     return render(request, 'MaterialMovement/material_movement_list.html', context)

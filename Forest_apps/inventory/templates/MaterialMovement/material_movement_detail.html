@@ -31,15 +31,15 @@
             <table class="detail-table">
                 <tr>
                     <th>Дата и время:</th>
-                    <td>{{ movement.date_time|date:"d.m.Y H:i" }}</td>
+                    <td>{{ movement.date_time|date:"d.m.Y H:i" }}
                 </tr>
                 <tr>
                     <th>Тип движения:</th>
-                    <td>{{ movement.get_accounting_type_display }}</td>
+                    <td>{{ movement.get_accounting_type_display }}
                 </tr>
                 <tr>
                     <th>Откуда:</th>
-                    <td>{{ movement.from_location.get_source_name }}</td>
+                    <td>{{ movement.from_location.get_source_name }}
                 </tr>
                 <tr>
                     <th>Куда:</th>
@@ -49,15 +49,15 @@
                         {% else %}
                             <span class="text-muted">—</span>
                         {% endif %}
-                    </td>
+
                 </tr>
                 <tr>
                     <th>Материал:</th>
-                    <td>{{ movement.material.name }}</td>
+                    <td>{{ movement.material.name }}
                 </tr>
                 <tr>
                     <th>Тип материала:</th>
-                    <td>{{ movement.material.get_material_type_display }}</td>
+                    <td>{{ movement.material.get_material_type_display }}
                 </tr>
                 <tr>
                     <th>Количество:</th>
@@ -74,28 +74,27 @@
                         {% if not movement.quantity_pieces and not movement.quantity_meters and not movement.quantity_cubic %}
                             <span class="text-muted">—</span>
                         {% endif %}
-                    </td>
                 </tr>
                 {% if movement.employee %}
                 <tr>
                     <th>Водитель:</th>
-                    <td>{{ movement.employee.short_name }}</td>
+                    <td>{{ movement.employee.last_name }} {{ movement.employee.first_name|default:"" }}
                 </tr>
                 {% endif %}
                 {% if movement.vehicle %}
                 <tr>
                     <th>Транспорт:</th>
-                    <td>{{ movement.vehicle.brand }} {{ movement.vehicle.model }} ({{ movement.vehicle.license_plate }})</td>
+                    <td>{{ movement.vehicle.brand }} {{ movement.vehicle.model }} ({{ movement.vehicle.license_plate }})
                 </tr>
                 {% endif %}
                 {% if movement.accounting_type == 'Реализация' %}
                 <tr>
                     <th>Цена:</th>
-                    <td>{{ movement.price|floatformat:2 }} ₽</td>
+                    <td>{{ movement.price|floatformat:2 }} ₽
                 </tr>
                 <tr>
                     <th>Сумма:</th>
-                    <td><strong>{{ movement.total_amount|floatformat:2 }} ₽</strong></td>
+                    <td><strong>{{ movement.total_amount|floatformat:2 }} ₽</strong>
                 </tr>
                 {% endif %}
                 <tr>
@@ -106,7 +105,6 @@
                         {% else %}
                             <span class="text-muted">—</span>
                         {% endif %}
-                    </td>
                 </tr>
                 <tr>
                     <th>Должность автора:</th>
@@ -116,12 +114,11 @@
                         {% else %}
                             <span class="text-muted">—</span>
                         {% endif %}
-                    </td>
                 </tr>
                 {% if movement.is_completed %}
                 <tr>
                     <th>Дата выполнения:</th>
-                    <td>{{ movement.completed_at|date:"d.m.Y H:i" }}</td>
+                    <td>{{ movement.completed_at|date:"d.m.Y H:i" }}
                 </tr>
                 {% endif %}
             </table>
@@ -129,41 +126,6 @@
 
         <div class="detail-actions">
             <a href="{% url 'inventory:material_movement_list' %}" class="btn btn-secondary">← К списку</a>
-
-            {% if is_manager %}
-                {# Руководитель - может всё #}
-                <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn btn-primary">✏️ Редактировать</a>
-                <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn btn-danger" onclick="return confirm('Удалить это движение?')">🗑️ Удалить</a>
-                {% if not movement.is_completed and movement.accounting_type != 'Отправление' %}
-                    <a href="{% url 'inventory:material_movement_execute' movement.id %}" class="btn btn-success" onclick="return confirm('Выполнить это движение?')">✅ Выполнить</a>
-                {% endif %}
-                {% if movement.is_completed and movement.accounting_type != 'Отправление' %}
-                    <a href="{% url 'inventory:material_movement_cancel' movement.id %}" class="btn btn-warning" onclick="return confirm('Отменить выполнение движения? Это вернет материалы на склад отправителя.')">↩️ Отменить выполнение</a>
-                {% endif %}
-            {% else %}
-                {# Обычные пользователи #}
-                {% if movement.accounting_type == 'Отправление' %}
-                    {% if user_role == 'receiver' and not movement.is_completed %}
-                        <a href="{% url 'inventory:material_movement_confirm' movement.id %}" class="btn btn-success" onclick="return confirm('Подтвердить получение этих материалов? Материалы будут перемещены на ваш склад.');">✅ Подтвердить получение</a>
-                    {% elif user_role == 'sender' %}
-                        {% if not movement.is_completed %}
-                            <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn btn-primary">✏️ Редактировать</a>
-                            <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn btn-danger" onclick="return confirm('Удалить это движение?')">🗑️ Удалить</a>
-                        {% else %}
-                            <span class="btn-disabled" title="Нельзя редактировать выполненное движение">✏️ Редактировать (недоступно)</span>
-                            <span class="btn-disabled" title="Нельзя удалить выполненное движение">🗑️ Удалить (недоступно)</span>
-                        {% endif %}
-                    {% endif %}
-                {% else %}
-                    {% if not movement.is_completed %}
-                        <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn btn-primary">✏️ Редактировать</a>
-                        <a href="{% url 'inventory:material_movement_execute' movement.id %}" class="btn btn-success" onclick="return confirm('Выполнить это движение?')">✅ Выполнить</a>
-                        <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn btn-danger" onclick="return confirm('Удалить это движение?')">🗑️ Удалить</a>
-                    {% else %}
-                        <a href="{% url 'inventory:material_movement_cancel' movement.id %}" class="btn btn-warning" onclick="return confirm('Отменить выполнение движения? Это вернет материалы на склад отправителя.')">↩️ Отменить выполнение</a>
-                    {% endif %}
-                {% endif %}
-            {% endif %}
         </div>
     </div>
 </div>
@@ -318,15 +280,6 @@
         transform: translateY(-2px);
     }
 
-    .btn-primary {
-        background: #2c5e2e;
-        color: white;
-    }
-
-    .btn-primary:hover {
-        background: #1e4220;
-    }
-
     .btn-secondary {
         background: #6c757d;
         color: white;
@@ -334,54 +287,6 @@
 
     .btn-secondary:hover {
         background: #5a6268;
-    }
-
-    .btn-success {
-        background: #28a745;
-        color: white;
-    }
-
-    .btn-success:hover {
-        background: #218838;
-    }
-
-    .btn-danger {
-        background: #dc3545;
-        color: white;
-    }
-
-    .btn-danger:hover {
-        background: #c82333;
-    }
-
-    .btn-warning {
-        background: #ffc107;
-        color: #212529;
-    }
-
-    .btn-warning:hover {
-        background: #e0a800;
-    }
-
-    .btn-disabled {
-        display: inline-block;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        background: #e9ecef;
-        color: #999;
-        cursor: not-allowed;
-        text-decoration: none;
-        text-align: center;
-        transition: none;
-        pointer-events: none;
-    }
-
-    .btn-disabled:hover {
-        transform: none;
-        background: #e9ecef;
     }
 
     @media (max-width: 768px) {
@@ -412,8 +317,7 @@
             flex-direction: column;
         }
 
-        .btn,
-        .btn-disabled {
+        .btn {
             width: 100%;
         }
     }

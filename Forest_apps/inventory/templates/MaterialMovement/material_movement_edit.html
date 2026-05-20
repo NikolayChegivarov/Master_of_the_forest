@@ -3,7 +3,7 @@
 
 {% block title %}Редактирование движения №{{ movement.id }}{% endblock %}
 
-{% block header %}Редактирование движения материалов{% endblock %}
+{% block header %}Редактирование движения{% endblock %}
 
 {% block content %}
 <div class="edit-container">
@@ -11,7 +11,7 @@
         <h2>Редактирование движения №{{ movement.id }}</h2>
 
         <!-- Форма редактирования -->
-        <form method="post" action="{% url 'inventory:material_movement_edit' movement.id %}">
+        <form method="post">
             {% csrf_token %}
 
             <!-- Отображение ошибок формы -->
@@ -60,13 +60,23 @@
                         {% endfor %}
                     </div>
                 {% endif %}
-                <small class="form-text text-muted">Для списания оставьте пустым</small>
             </div>
 
-            <!-- Поле Материал -->
-            <div class="form-group">
-                <label for="{{ form.material.id_for_label }}">{{ form.material.label }}:</label>
-                {{ form.material }}
+            <!-- Поле Материал с поиском и выпадающим списком -->
+            <div class="form-group" style="position: relative;">
+                <label for="material-search">{{ form.material.label }}:</label>
+                <div class="material-search-wrapper" style="position: relative;">
+                    <input type="text" id="material-search" class="form-control material-search"
+                           placeholder="Начните вводить название материала..." autocomplete="off"
+                           value="{{ form.material.value|default:'' }}">
+                    <div id="material-dropdown" class="material-dropdown" style="display: none;"></div>
+                </div>
+                <select name="material" id="id_material" style="display: none;">
+                    <option value="">---------</option>
+                    {% for material in form.fields.material.queryset %}
+                        <option value="{{ material.id }}" {% if form.material.value == material.id|stringformat:"s" %}selected{% endif %}>{{ material.name }}</option>
+                    {% endfor %}
+                </select>
                 {% if form.material.errors %}
                     <div class="field-error">
                         {% for error in form.material.errors %}
@@ -158,12 +168,12 @@
             </div>
 
             <div class="form-text">
-                Укажите хотя бы одно количество. Для списания оставьте поле "Куда" пустым.
+                Укажите хотя бы одно количество.
             </div>
 
             <!-- Кнопки -->
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                <button type="submit" class="btn btn-primary">💾 Сохранить изменения</button>
                 <a href="{% url 'inventory:material_movement_detail' movement.id %}" class="btn btn-secondary">Отмена</a>
             </div>
         </form>
@@ -232,6 +242,60 @@
     .form-group select:focus {
         outline: none;
         border-color: #2c5e2e;
+    }
+
+    /* Стили для поиска материалов */
+    .material-search-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
+    .material-search {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+        background-color: white;
+        box-sizing: border-box;
+    }
+
+    .material-search:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .material-dropdown {
+        position: absolute;
+        z-index: 1000;
+        max-height: 250px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        background-color: white;
+        width: 100%;
+        top: 100%;
+        left: 0;
+        margin-top: 4px;
+    }
+
+    .material-dropdown-item {
+        padding: 10px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+    }
+
+    .material-dropdown-item:hover {
+        background-color: #2c5e2e;
+        color: white;
+    }
+
+    .material-dropdown-item:last-child {
+        border-bottom: none;
     }
 
     .form-text {
@@ -324,4 +388,90 @@
         }
     }
 </style>
+
+<!-- Скрипт для поиска материалов -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ========== ЛОГИКА ДЛЯ ПОИСКА МАТЕРИАЛОВ С ВЫПАДАЮЩИМ СПИСКОМ ==========
+    const materialSearch = document.getElementById('material-search');
+    const materialHiddenSelect = document.getElementById('id_material');
+    const materialDropdown = document.getElementById('material-dropdown');
+
+    if (materialSearch && materialHiddenSelect) {
+        // Получаем все опции из скрытого select
+        let materialOptions = Array.from(materialHiddenSelect.options).filter(opt => opt.value !== '');
+
+        // Функция обновления опций
+        window.updateMaterialOptions = function() {
+            materialOptions = Array.from(materialHiddenSelect.options).filter(opt => opt.value !== '');
+        };
+
+        // Функция показа выпадающего списка
+        function showDropdown(filteredOptions) {
+            if (filteredOptions.length === 0) {
+                materialDropdown.style.display = 'none';
+                return;
+            }
+
+            materialDropdown.innerHTML = '';
+            filteredOptions.forEach(opt => {
+                const item = document.createElement('div');
+                item.className = 'material-dropdown-item';
+                item.textContent = opt.textContent;
+                item.setAttribute('data-value', opt.value);
+                item.addEventListener('click', function() {
+                    materialSearch.value = this.textContent;
+                    materialHiddenSelect.value = this.getAttribute('data-value');
+                    materialDropdown.style.display = 'none';
+
+                    // Триггерим событие change для проверки формы
+                    const changeEvent = new Event('change', { bubbles: true });
+                    materialHiddenSelect.dispatchEvent(changeEvent);
+                });
+                materialDropdown.appendChild(item);
+            });
+            materialDropdown.style.display = 'block';
+
+            // Позиционируем выпадающий список под полем ввода
+            const rect = materialSearch.getBoundingClientRect();
+            materialDropdown.style.position = 'absolute';
+            materialDropdown.style.top = rect.bottom + 'px';
+            materialDropdown.style.left = rect.left + 'px';
+            materialDropdown.style.width = rect.width + 'px';
+        }
+
+        // Фильтрация материалов
+        function filterMaterials() {
+            const searchText = materialSearch.value.toLowerCase();
+            const filtered = materialOptions.filter(opt =>
+                opt.textContent.toLowerCase().includes(searchText)
+            );
+            showDropdown(filtered);
+        }
+
+        // Обработчики событий
+        materialSearch.addEventListener('input', filterMaterials);
+        materialSearch.addEventListener('focus', filterMaterials);
+        materialSearch.addEventListener('click', function(e) {
+            e.stopPropagation();
+            filterMaterials();
+        });
+
+        // Закрываем выпадающий список при клике вне
+        document.addEventListener('click', function(e) {
+            if (e.target !== materialSearch && !materialDropdown.contains(e.target)) {
+                materialDropdown.style.display = 'none';
+            }
+        });
+
+        // При изменении скрытого select обновляем поле ввода
+        materialHiddenSelect.addEventListener('change', function() {
+            const selectedOption = materialOptions.find(opt => opt.value === materialHiddenSelect.value);
+            if (selectedOption) {
+                materialSearch.value = selectedOption.textContent;
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

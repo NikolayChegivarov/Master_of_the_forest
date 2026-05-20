@@ -225,22 +225,59 @@
                                 {% endif %}
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
+                                    <!-- 👁️ Просмотр - есть у всех -->
                                     <a href="{% url 'inventory:material_movement_detail' movement.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
 
                                     {% if is_manager %}
-                                        <!-- Для руководителя - кнопки без ограничений -->
-                                        <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
-                                        <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
-                                    {% else %}
-                                        <!-- Для обычных пользователей - кнопки с ограничениями -->
+                                        {# ========== РУКОВОДИТЕЛЬ ========== #}
                                         {% if movement.accounting_type == 'Отправление' and not movement.is_completed %}
-                                            {% if movement.to_location.id in user_locations %}
+                                            {% if user_role == 'receiver' %}
+                                                <!-- Руководитель как получатель: 👁️ + ✅ + ✏️ + 🗑️ -->
                                                 <a href="{% url 'inventory:material_movement_confirm' movement.id %}" class="btn-action confirm-btn" title="Подтвердить получение" onclick="return confirm('Подтвердить получение этих материалов?');">✅</a>
                                             {% endif %}
+                                            <!-- Редактирование и удаление для всех невыполненных отправлений -->
+                                            <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                                            <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
+                                        {% elif movement.accounting_type == 'Отправление' and movement.is_completed %}
+                                            <!-- Выполненные отправления: 👁️ + 🔒 -->
+                                            <span class="btn-action disabled-btn" title="Редактирование недоступно">🔒</span>
+                                        {% else %}
+                                            <!-- Перемещение, Реализация, Списание (любой статус): 👁️ + ✏️ + 🗑️ -->
+                                            <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                                            <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
                                         {% endif %}
 
-                                        {% if not movement.is_completed %}
-                                            {% if movement.accounting_type != 'Отправление' or movement.author == request.user %}
+                                    {% else %}
+                                        {# ========== МАСТЕР ========== #}
+                                        {% if movement.accounting_type == 'Отправление' %}
+                                            {% if not movement.is_completed %}
+                                                {% if user_role == 'receiver' %}
+                                                    <!-- Мастер как получатель: 👁️ + ✅ -->
+                                                    <a href="{% url 'inventory:material_movement_confirm' movement.id %}" class="btn-action confirm-btn" title="Подтвердить получение" onclick="return confirm('Подтвердить получение этих материалов?');">✅</a>
+                                                {% elif user_role == 'sender' %}
+                                                    <!-- Мастер как отправитель: 👁️ + ✏️ + 🗑️ -->
+                                                    <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                                                    <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
+                                                {% endif %}
+                                            {% else %}
+                                                <!-- Выполненные отправления: 👁️ + 🔒 -->
+                                                <span class="btn-action disabled-btn" title="Редактирование недоступно">🔒</span>
+                                            {% endif %}
+                                        {% elif movement.accounting_type == 'Реализация' %}
+                                            <!-- Мастер не видит реализации -->
+                                        {% else %}
+                                            <!-- Перемещение, Списание -->
+                                            {% if movement.is_completed %}
+                                                {% if movement.date_time >= now_minus_5_days %}
+                                                    <!-- Выполнено, младше 5 дней: 👁️ + ✏️ + 🗑️ -->
+                                                    <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                                                    <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
+                                                {% else %}
+                                                    <!-- Выполнено, старше 5 дней: 👁️ + 🔒 -->
+                                                    <span class="btn-action disabled-btn" title="Редактирование недоступно (старше 5 дней)">🔒</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <!-- Не выполнено: 👁️ + ✏️ + 🗑️ -->
                                                 <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                                 <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
                                             {% endif %}
@@ -782,6 +819,19 @@
         background: #28a745;
         color: white;
         border-color: #28a745;
+    }
+
+    .disabled-btn {
+        color: #999;
+        background: #e9ecef;
+        cursor: not-allowed;
+        border-color: #dee2e6;
+    }
+
+    .disabled-btn:hover {
+        transform: none;
+        background: #e9ecef;
+        color: #999;
     }
 
     .empty-message {

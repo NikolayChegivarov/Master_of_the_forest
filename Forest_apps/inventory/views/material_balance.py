@@ -188,20 +188,29 @@ def receipt_list_view(request):
     """Список поступлений материалов с фильтрацией"""
 
     user_position_name = request.session.get('position_name')
+    is_manager = (user_position_name and user_position_name.lower() == 'руководитель')
 
-    # Получаем склады пользователя через сервис
-    user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(user_position_name)
-    user_warehouse_ids = list(user_warehouses.values_list('id', flat=True))
+    if is_manager:
+        # Руководитель видит ВСЕ поступления
+        receipts = Receipt.objects.select_related(
+            'storage_location', 'material', 'source_location', 'created_by_position'
+        ).order_by('-receipt_date')
+
+        # Для фильтра складов показываем все склады
+        user_warehouses = StorageLocation.objects.filter(source_type='склад').order_by('source_type')
+    else:
+        # Мастер - только свои поступления
+        user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(user_position_name)
+        user_warehouse_ids = list(user_warehouses.values_list('id', flat=True))
+
+        receipts = Receipt.objects.filter(
+            storage_location_id__in=user_warehouse_ids
+        ).select_related(
+            'storage_location', 'material', 'source_location', 'created_by_position'
+        ).order_by('-receipt_date')
 
     # Получаем все контрагенты для фильтра
     counterparties = StorageLocation.objects.filter(source_type='контрагент').order_by('source_id')
-
-    # Базовый запрос
-    receipts = Receipt.objects.filter(
-        storage_location_id__in=user_warehouse_ids
-    ).select_related(
-        'storage_location', 'material', 'source_location', 'created_by_position'
-    ).order_by('-receipt_date')
 
     # Фильтрация
     storage_location_id = request.GET.get('storage_location')
@@ -244,6 +253,7 @@ def receipt_list_view(request):
         'total_meters': total_meters,
         'total_cubic': total_cubic,
         'total_amount': total_amount,
+        'is_manager': is_manager,  # Добавляем флаг для шаблона
     }
 
     return render(request, 'MaterialBalance/receipt_list.html', context)

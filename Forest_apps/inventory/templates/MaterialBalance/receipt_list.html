@@ -140,8 +140,8 @@
                     <tbody>
                         {% for receipt in receipts %}
                         <tr>
-                            <td><strong>{{ receipt.id }}</strong></td>
-                            <td>{{ receipt.receipt_date|date:"d.m.Y H:i" }}</td>
+                            <td><strong>{{ receipt.id }}</strong>
+                            <td>{{ receipt.receipt_date|date:"d.m.Y H:i" }}
                             <td class="location-cell">{{ receipt.storage_location.get_source_name }}
                             <td class="location-cell">
                                 {% if receipt.source_location %}
@@ -153,24 +153,33 @@
                             <td class="text-right quantity-cell">{{ receipt.quantity_pieces|floatformat:3|default:"0.000" }}
                             <td class="text-right quantity-cell">{{ receipt.quantity_meters|floatformat:3|default:"0.000" }}
                             <td class="text-right quantity-cell">{{ receipt.quantity_cubic|floatformat:3|default:"0.000" }}
-                            <td class="text-right amount-cell">{{ receipt.total_amount|floatformat:2|default:"0.00" }} ₽</td>
+                            <td class="text-right amount-cell">{{ receipt.total_amount|floatformat:2|default:"0.00" }} ₽
                             <td>
                                 {% if receipt.created_by_position %}
                                     <span class="position-badge">{{ receipt.created_by_position.name }}</span>
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
+
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
+                                    <!-- 👁️ Просмотр - есть у всех -->
                                     <a href="{% url 'inventory:receipt_detail' receipt.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
-                                    {% if receipt.can_edit %}
+
+                                    {% if is_manager %}
+                                        <!-- Руководитель: всегда может редактировать и удалять -->
                                         <a href="{% url 'inventory:receipt_edit' receipt.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                         <a href="{% url 'inventory:receipt_delete' receipt.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это поступление?');">🗑️</a>
                                     {% else %}
-                                        <span class="no-action" title="Поступление старше 5 дней, редактирование невозможно">🔒</span>
+                                        <!-- Мастер: кнопки активны только 5 дней -->
+                                        {% if receipt.can_edit %}
+                                            <a href="{% url 'inventory:receipt_edit' receipt.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                                            <a href="{% url 'inventory:receipt_delete' receipt.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это поступление?');">🗑️</a>
+                                        {% else %}
+                                            <span class="no-action" title="Поступление старше 5 дней, редактирование невозможно">🔒</span>
+                                        {% endif %}
                                     {% endif %}
                                 </div>
-
                         </tr>
                         {% endfor %}
                     </tbody>

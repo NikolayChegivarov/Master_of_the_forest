@@ -1,7 +1,7 @@
 <!-- Forest_apps/inventory/templates/MaterialBalance/receipt_detail.html -->
 {% extends "base.html" %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Поступление №{{ receipt.id }}{% endblock %}
 
 {% block header %}Детали поступления{% endblock %}
 
@@ -91,12 +91,6 @@
         </div>
 
         <div class="detail-actions">
-            {% if receipt.can_edit %}
-                <a href="{% url 'inventory:receipt_edit' receipt.id %}" class="btn btn-warning">✏️ Редактировать</a>
-                <a href="{% url 'inventory:receipt_delete' receipt.id %}" class="btn btn-danger" onclick="return confirm('Удалить это поступление?');">🗑️ Удалить</a>
-            {% else %}
-                <span class="btn-disabled" title="Поступление старше 5 дней, редактирование невозможно">🔒 Редактирование недоступно</span>
-            {% endif %}
             <a href="{% url 'inventory:receipt_list' %}" class="btn btn-secondary">← К списку</a>
         </div>
     </div>
@@ -214,15 +208,6 @@
         transform: translateY(-2px);
     }
 
-    .btn-warning {
-        background: #ffc107;
-        color: #212529;
-    }
-
-    .btn-warning:hover {
-        background: #e0a800;
-    }
-
     .btn-secondary {
         background: #6c757d;
         color: white;
@@ -230,25 +215,6 @@
 
     .btn-secondary:hover {
         background: #5a6268;
-    }
-
-    .btn-danger {
-        background: #dc3545;
-        color: white;
-    }
-
-    .btn-danger:hover {
-        background: #c82333;
-    }
-
-    .btn-disabled {
-        padding: 10px 20px;
-        background: #e9ecef;
-        color: #999;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: not-allowed;
     }
 
     @media (max-width: 768px) {
@@ -265,7 +231,7 @@
             flex-direction: column;
         }
 
-        .btn, .btn-disabled {
+        .btn {
             width: 100%;
         }
     }

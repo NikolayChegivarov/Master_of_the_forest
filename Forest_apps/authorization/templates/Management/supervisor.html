@@ -70,6 +70,42 @@
 
     <!-- Второй ряд кнопок -->
     <div class="dashboard-row">
+        <!-- Кнопка Конвертация древесины -->
+        <a href="{% url 'inventory:conversion_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🔄</div>
+                <div class="card-title">Конвертация древесины</div>
+                <div class="card-description">Переработка бревен в доски, брус и т.д.</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Учет времени -->
+        <a href="{% url 'employees:worktime_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">⏱️</div>
+                <div class="card-title">Учет времени</div>
+                <div class="card-description">Рабочее время сотрудников</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Транспорт -->
+        <a href="{% url 'core:vehicle_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">🚛</div>
+                <div class="card-title">Транспорт</div>
+                <div class="card-description">Управление ТС</div>
+            </div>
+        </a>
+
+        <!-- Кнопка Бригады -->
+        <a href="{% url 'core:brigade_list' %}" class="dashboard-card">
+            <div class="card-content">
+                <div class="card-icon">👷</div>
+                <div class="card-title">Бригады</div>
+                <div class="card-description">Управление бригадами</div>
+            </div>
+        </a>
+
         <!-- Кнопка Сторонние интерфейсы -->
         <a href="{% url 'authorization:third_party_interfaces' %}" class="dashboard-card">
             <div class="card-content">
@@ -82,7 +118,7 @@
         <!-- Кнопка Все места хранения -->
         <a href="{% url 'inventory:storage_location_list' %}" class="dashboard-card">
             <div class="card-content">
-                <div class="card-icon">🗄</div>
+                <div class="card-icon">🗄️</div>
                 <div class="card-title">Все места хранения</div>
                 <div class="card-description">Склады, ТС, контрагенты, бригады</div>
             </div>

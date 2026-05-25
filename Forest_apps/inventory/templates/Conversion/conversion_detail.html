@@ -1,0 +1,243 @@
+<!-- Forest_apps/inventory/templates/Conversion/conversion_detail.html -->
+{% extends "base.html" %}
+
+{% block title %}Конвертация №{{ conversion.id }}{% endblock %}
+
+{% block header %}Детали конвертации{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+    <div class="detail-card">
+        <div class="detail-header">
+            <div class="detail-icon">🔄</div>
+            <h2>Конвертация #{{ conversion.id }}</h2>
+            <div class="conversion-status">
+                <span class="badge {% if conversion.is_completed %}completed{% else %}pending{% endif %}">
+                    {% if conversion.is_completed %}✅ Выполнена{% else %}⏳ В обработке{% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div class="detail-content">
+            <div class="detail-row">
+                <div class="detail-label">Дата создания:</div>
+                <div class="detail-value">{{ conversion.created_at|date:"d.m.Y H:i:s" }}</div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Склад:</div>
+                <div class="detail-value">{{ conversion.storage_location.get_source_name }}</div>
+            </div>
+
+            <div class="detail-row source-row">
+                <div class="detail-label">📤 Списано:</div>
+                <div class="detail-value">
+                    <strong>{{ conversion.source_material.name }}</strong><br>
+                    {{ conversion.source_quantity_display }}
+                </div>
+            </div>
+
+            <div class="detail-row arrow-row">
+                <div class="detail-label">↓ КОНВЕРТАЦИЯ ↓</div>
+                <div class="detail-value"></div>
+            </div>
+
+            <div class="detail-row target-row">
+                <div class="detail-label">📥 Создано:</div>
+                <div class="detail-value">
+                    <strong>{{ conversion.target_material.name }}</strong><br>
+                    {{ conversion.target_quantity_display }}
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Кто создал:</div>
+                <div class="detail-value">
+                    {% if conversion.created_by %}
+                        {{ conversion.created_by.get_full_name|default:conversion.created_by.username }}
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="detail-row">
+                <div class="detail-label">Должность создателя:</div>
+                <div class="detail-value">
+                    {% if conversion.created_by_position %}
+                        <span class="position-badge">{{ conversion.created_by_position.name }}</span>
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if conversion.is_completed %}
+            <div class="detail-row">
+                <div class="detail-label">Дата выполнения:</div>
+                <div class="detail-value">{{ conversion.completed_at|date:"d.m.Y H:i:s" }}</div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="detail-actions">
+            <a href="{% url 'inventory:conversion_list' %}" class="btn btn-secondary">← К списку</a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .detail-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+        padding: 20px;
+    }
+
+    .detail-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 600px;
+        overflow: hidden;
+    }
+
+    .detail-header {
+        background: linear-gradient(145deg, #2c5e2e, #1e3f20);
+        color: white;
+        padding: 30px;
+        text-align: center;
+    }
+
+    .detail-icon {
+        font-size: 48px;
+        margin-bottom: 10px;
+    }
+
+    .detail-header h2 {
+        margin: 0 0 10px 0;
+        font-size: 24px;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .badge.completed {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge.pending {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .detail-content {
+        padding: 30px;
+    }
+
+    .detail-row {
+        display: flex;
+        padding: 12px 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        width: 130px;
+        font-weight: 600;
+        color: #666;
+    }
+
+    .detail-value {
+        flex: 1;
+        color: #333;
+    }
+
+    .source-row .detail-value,
+    .target-row .detail-value {
+        font-weight: 500;
+    }
+
+    .arrow-row .detail-label {
+        color: #2c5e2e;
+        font-weight: 700;
+    }
+
+    .position-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: #e9ecef;
+        color: #495057;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .text-muted {
+        color: #999;
+        font-style: italic;
+    }
+
+    .detail-actions {
+        display: flex;
+        gap: 10px;
+        padding: 20px 30px 30px;
+        justify-content: center;
+    }
+
+    .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        text-align: center;
+        transition: background-color 0.3s, transform 0.2s;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
+    @media (max-width: 768px) {
+        .detail-row {
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .detail-label {
+            width: 100%;
+        }
+
+        .detail-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

@@ -54,4 +54,6 @@ urlpatterns = [
     path('conversions/', conversion.conversion_list_view, name='conversion_list'),
     path('conversions/create/', conversion.conversion_create_view, name='conversion_create'),
     path('conversions/<int:conversion_id>/', conversion.conversion_detail_view, name='conversion_detail'),
+    path('conversions/<int:conversion_id>/edit/', conversion.conversion_edit_view, name='conversion_edit'),
+    path('conversions/<int:conversion_id>/delete/', conversion.conversion_delete_view, name='conversion_delete'),
 ]

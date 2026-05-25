@@ -1,9 +1,9 @@
 <!-- Forest_apps/inventory/templates/Conversion/conversion_create.html -->
 {% extends "base.html" %}
 
-{% block title %}Создание конвертации{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 
-{% block header %}Конвертация древесины{% endblock %}
+{% block header %}{{ title }}{% endblock %}
 
 {% block content %}
 <div class="create-container">
@@ -15,11 +15,17 @@
             </a>
         </div>
 
-        <h2>Новая конвертация</h2>
+        <h2>
+            {% if conversion %}
+                Редактирование конвертации №{{ conversion.id }}
+            {% else %}
+                Новая конвертация
+            {% endif %}
+        </h2>
         <p class="subtitle">Списание одного материала и создание другого (только древесина)</p>
 
-        <!-- Форма создания -->
-        <form method="post" action="{% url 'inventory:conversion_create' %}">
+        <!-- Форма создания/редактирования -->
+        <form method="post">
             {% csrf_token %}
 
             <!-- Отображение ошибок формы -->
@@ -34,7 +40,15 @@
             <!-- Поле Место хранения (склад) -->
             <div class="form-group">
                 <label for="{{ form.storage_location.id_for_label }}">{{ form.storage_location.label }}:</label>
-                {{ form.storage_location }}
+                {% if conversion %}
+                    <!-- При редактировании - только для чтения -->
+                    <input type="text" class="form-control readonly-field"
+                           value="{{ conversion.storage_location.get_source_name }}" readonly disabled>
+                    <input type="hidden" name="storage_location" value="{{ conversion.storage_location.id }}">
+                {% else %}
+                    <!-- При создании - выбор из списка -->
+                    {{ form.storage_location }}
+                {% endif %}
                 {% if form.storage_location.errors %}
                     <div class="field-error">
                         {% for error in form.storage_location.errors %}
@@ -168,7 +182,13 @@
 
             <!-- Кнопки -->
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">🔄 Сконвертировать</button>
+                <button type="submit" class="btn btn-primary">
+                    {% if conversion %}
+                        💾 Сохранить изменения
+                    {% else %}
+                        🔄 Сконвертировать
+                    {% endif %}
+                </button>
                 <a href="{% url 'inventory:conversion_list' %}" class="btn btn-secondary">Отмена</a>
             </div>
         </form>
@@ -304,6 +324,13 @@
     .form-group select:focus {
         outline: none;
         border-color: #2c5e2e;
+    }
+
+    /* Стиль для readonly поля */
+    .readonly-field {
+        background-color: #e9ecef;
+        cursor: not-allowed;
+        opacity: 0.8;
     }
 
     .form-text {

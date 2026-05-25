@@ -58,7 +58,8 @@
                             <th>Целевой материал</th>
                             <th>Кол-во (создано)</th>
                             <th>Статус</th>
-                            <th>Должность создателя</th>
+                            <th>Создатель</th>
+                            <th class="text-center">Действия</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -69,7 +70,7 @@
                             <td class="location-cell">{{ conversion.storage_location.get_source_name|truncatechars:30 }}
                             <td>{{ conversion.source_material.name }}
                             <td class="quantity-cell">{{ conversion.source_quantity_display }}
-                            <td class="arrow-cell">→</td>
+                            <td class="arrow-cell">→
                             <td>{{ conversion.target_material.name }}
                             <td class="quantity-cell">{{ conversion.target_quantity_display }}
                             <td>
@@ -78,14 +79,32 @@
                                 {% else %}
                                     <span class="badge pending">⏳ В обработке</span>
                                 {% endif %}
-                            </td>
                             <td>
                                 {% if conversion.created_by_position %}
                                     <span class="position-badge">{{ conversion.created_by_position.name }}</span>
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            </td>
+
+                            <td class="actions-cell">
+                                <div class="action-buttons-group">
+                                    <!-- 👁️ Просмотр - есть у всех -->
+                                    <a href="{% url 'inventory:conversion_detail' conversion.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
+
+                                    {% if is_manager %}
+                                        <!-- Руководитель: всегда может редактировать и удалять -->
+                                        <a href="{% url 'inventory:conversion_edit' conversion.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                                        <a href="{% url 'inventory:conversion_delete' conversion.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить эту конвертацию?');">🗑️</a>
+                                    {% else %}
+                                        <!-- Мастер: кнопки активны только для невыполненных -->
+                                        {% if not conversion.is_completed %}
+                                            <a href="{% url 'inventory:conversion_edit' conversion.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                                            <a href="{% url 'inventory:conversion_delete' conversion.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить эту конвертацию?');">🗑️</a>
+                                        {% else %}
+                                            <span class="no-action" title="Конвертация выполнена, редактирование невозможно">🔒</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -302,6 +321,85 @@
         font-style: italic;
     }
 
+    .text-center {
+        text-align: center;
+    }
+
+    .actions-cell {
+        min-width: 100px;
+        text-align: center;
+    }
+
+    .action-buttons-group {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .btn-action {
+        text-decoration: none;
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        font-size: 14px;
+        transition: all 0.2s;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .view-btn {
+        color: #2c5e2e;
+    }
+
+    .view-btn:hover {
+        background: #2c5e2e;
+        color: white;
+        border-color: #2c5e2e;
+    }
+
+    .edit-btn {
+        color: #ffc107;
+    }
+
+    .edit-btn:hover {
+        background: #ffc107;
+        color: white;
+        border-color: #ffc107;
+    }
+
+    .delete-btn {
+        color: #dc3545;
+    }
+
+    .delete-btn:hover {
+        background: #dc3545;
+        color: white;
+        border-color: #dc3545;
+    }
+
+    .no-action {
+        display: inline-block;
+        width: 28px;
+        height: 28px;
+        line-height: 28px;
+        text-align: center;
+        font-size: 14px;
+        color: #999;
+        cursor: default;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+    }
+
     .empty-message {
         text-align: center;
         padding: 60px 40px;
@@ -353,6 +451,16 @@
 
         .stat-card {
             width: 100%;
+        }
+
+        .action-buttons-group {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .btn-action, .no-action {
+            width: 100%;
+            margin: 2px 0;
         }
     }
 </style>

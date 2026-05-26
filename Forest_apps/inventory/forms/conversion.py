@@ -77,16 +77,17 @@ class ConversionCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
-        self.position_name = kwargs.pop('position_name', None)  # Добавляем должность
+        self.position_name = kwargs.pop('position_name', None)
+        self.instance = kwargs.get('instance', None)
         super().__init__(*args, **kwargs)
 
-        # Получаем склады через сервис
-        user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(
-            self.position_name
-        )
-
-        # Только склады, принадлежащие пользователю
-        self.fields['storage_location'].queryset = user_warehouses.filter(source_type='склад')
+        # Если это редактирование, полностью убираем поле storage_location из формы
+        if self.instance and self.instance.pk:
+            self.fields.pop('storage_location')
+        else:
+            # Только при создании - получаем склады через сервис по должности
+            user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(self.position_name)
+            self.fields['storage_location'].queryset = user_warehouses
 
         # Только материалы типа "древесина"
         self.fields['source_material'].queryset = Material.objects.filter(
@@ -125,3 +126,17 @@ class ConversionCreateForm(forms.ModelForm):
             raise forms.ValidationError('Исходный и целевой материалы должны быть разными')
 
         return cleaned_data
+
+    def save(self, commit=True, position=None, user=None):
+        """Сохраняет конвертацию"""
+        conversion = super().save(commit=False)
+
+        # При редактировании storage_location уже есть в instance
+        if not self.instance or not self.instance.pk:
+            # При создании - передаем склад из формы
+            conversion.storage_location = self.cleaned_data.get('storage_location')
+
+        if commit:
+            conversion.save()
+
+        return conversion

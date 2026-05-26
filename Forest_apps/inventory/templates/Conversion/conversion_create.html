@@ -39,22 +39,14 @@
 
             <!-- Поле Место хранения (склад) -->
             <div class="form-group">
-                <label for="{{ form.storage_location.id_for_label }}">{{ form.storage_location.label }}:</label>
+                <label>Склад:</label>
                 {% if conversion %}
-                    <!-- При редактировании - только для чтения -->
+                    <!-- При редактировании - только текст -->
                     <input type="text" class="form-control readonly-field"
                            value="{{ conversion.storage_location.get_source_name }}" readonly disabled>
-                    <input type="hidden" name="storage_location" value="{{ conversion.storage_location.id }}">
                 {% else %}
                     <!-- При создании - выбор из списка -->
                     {{ form.storage_location }}
-                {% endif %}
-                {% if form.storage_location.errors %}
-                    <div class="field-error">
-                        {% for error in form.storage_location.errors %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
                 {% endif %}
             </div>
 

@@ -84,7 +84,13 @@
                 {% if movement.vehicle %}
                 <tr>
                     <th>Транспорт:</th>
-                    <td>{{ movement.vehicle.brand }} {{ movement.vehicle.model }} ({{ movement.vehicle.license_plate }})
+                    <td>{{ movement.vehicle.brand }} {{ movement.vehicle.model }} ({{ movement.vehicle.license_plate }})</td>
+                </tr>
+                {% endif %}
+                {% if movement.wagon_number %}
+                <tr>
+                    <th>№ вагона:</th>
+                    <td>{{ movement.wagon_number }}</td>
                 </tr>
                 {% endif %}
                 {% if movement.accounting_type == 'Реализация' %}

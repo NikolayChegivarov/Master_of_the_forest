@@ -140,6 +140,15 @@ class MaterialMovement(models.Model):
         blank=True
     )
 
+    wagon_number = models.CharField(
+        '№ вагона',
+        max_length=50,
+        null=True,
+        blank=True,
+        default=None,
+        help_text='Номер железнодорожного вагона'
+    )
+
     from_location = models.ForeignKey(
         'inventory.StorageLocation',
         on_delete=models.PROTECT,

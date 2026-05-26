@@ -131,7 +131,8 @@ def material_movement_list_view(request):
             movements = movements.filter(
                 Q(material__name__icontains=search) |
                 Q(from_location__source_type__icontains=search) |
-                Q(to_location__source_type__icontains=search)
+                Q(to_location__source_type__icontains=search) |
+                Q(wagon_number__icontains=search)
             )
 
     # Фильтр по водителю

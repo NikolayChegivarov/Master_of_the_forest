@@ -96,12 +96,12 @@
                                         <a href="{% url 'inventory:conversion_edit' conversion.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                         <a href="{% url 'inventory:conversion_delete' conversion.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить эту конвертацию?');">🗑️</a>
                                     {% else %}
-                                        <!-- Мастер: кнопки активны только для невыполненных -->
-                                        {% if not conversion.is_completed %}
+                                        <!-- Мастер: кнопки активны только для конвертаций младше 5 дней -->
+                                        {% if conversion.created_at >= now_minus_5_days %}
                                             <a href="{% url 'inventory:conversion_edit' conversion.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                             <a href="{% url 'inventory:conversion_delete' conversion.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить эту конвертацию?');">🗑️</a>
                                         {% else %}
-                                            <span class="no-action" title="Конвертация выполнена, редактирование невозможно">🔒</span>
+                                            <span class="no-action" title="Конвертация старше 5 дней, редактирование невозможно. Обратитесь к руководителю.">🔒</span>
                                         {% endif %}
                                     {% endif %}
                                 </div>

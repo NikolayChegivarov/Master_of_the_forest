@@ -169,6 +169,7 @@
                             <th>Статус</th>
                             <th>Водитель</th>
                             <th>Т.С.</th>
+                            <th>№ вагона</th>
                             <th>Создатель</th>
                             <th class="text-center">Действия</th>
                         </tr>
@@ -217,7 +218,21 @@
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            <td>
+                            </td>
+                            <td class="wagon-cell">  <!-- НОВАЯ ЯЧЕЙКА -->
+    `                            {% if movement.wagon_number %}
+                                    {{ movement.wagon_number }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="employee-cell">
+                                {% if movement.created_by_position %}
+                                    <span class="position-badge">{{ movement.created_by_position.name }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>`
                                 {% if movement.created_by_position %}
                                     <span class="position-badge">{{ movement.created_by_position.name }}</span>
                                 {% else %}
@@ -307,6 +322,28 @@
 <style>
     .movement-container {
         padding: 20px;
+    }
+
+    .employee-cell,
+    .vehicle-cell {
+        white-space: nowrap;
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* НОВЫЙ СТИЛЬ ДЛЯ КОЛОНКИ № ВАГОНА */
+    .wagon-cell {
+        white-space: nowrap;
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .quantity-cell {
+        white-space: nowrap;
+        font-weight: 500;
+        text-align: right;
     }
 
     /* Две кнопки в ряд */

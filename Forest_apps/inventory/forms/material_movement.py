@@ -9,6 +9,8 @@ from decimal import Decimal
 from Forest_apps.inventory.services import StorageLocationService
 
 
+
+
 class MaterialMovementCreateForm(forms.ModelForm):
     """Форма создания движения материалов"""
 
@@ -17,7 +19,7 @@ class MaterialMovementCreateForm(forms.ModelForm):
         fields = [
             'accounting_type', 'from_location', 'to_location', 'material',
             'quantity_pieces', 'quantity_meters', 'quantity_cubic',
-            'employee', 'vehicle', 'price'
+            'employee', 'vehicle', 'wagon_number', 'price'  # добавляем wagon_number
         ]
         widgets = {
             'accounting_type': forms.Select(attrs={
@@ -60,6 +62,11 @@ class MaterialMovementCreateForm(forms.ModelForm):
             'vehicle': forms.Select(attrs={
                 'class': 'form-control'
             }),
+            'wagon_number': forms.TextInput(attrs={  # добавляем
+                'class': 'form-control',
+                'placeholder': 'Номер вагона',
+                'autocomplete': 'off'
+            }),
             'price': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Цена за единицу',
@@ -77,6 +84,7 @@ class MaterialMovementCreateForm(forms.ModelForm):
             'quantity_cubic': 'Кубические метры',
             'employee': 'Водитель',
             'vehicle': 'Транспортное средство',
+            'wagon_number': '№ вагона',  # добавляем
             'price': 'Цена',
         }
 
@@ -400,6 +408,6 @@ class MaterialMovementFilterForm(forms.Form):
         label='Поиск',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Поиск по материалу...'
+            'placeholder': 'Поиск по материалу, номеру вагона...'
         })
     )

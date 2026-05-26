@@ -3,13 +3,13 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q, Sum
-from django.utils import timezone
-from decimal import Decimal
-from datetime import timedelta
+# from django.utils import timezone
+# from decimal import Decimal
+# from datetime import timedelta
 
 from Forest_apps.inventory.models import MaterialBalance, StorageLocation, Receipt
-from Forest_apps.forestry.models import Material
-from Forest_apps.core.models import Position, Warehouse, Brigade, Vehicle
+# from Forest_apps.forestry.models import Material
+from Forest_apps.core.models import Position, Warehouse #, Brigade, Vehicle
 from Forest_apps.inventory.forms.material_balance import (
     MaterialBalanceCreateForm,
     MaterialBalanceFilterForm
@@ -270,19 +270,27 @@ def receipt_edit_view(request, receipt_id):
 
     # Получаем должность пользователя
     position_name = request.session.get('position_name')
+    is_manager = (position_name and position_name.lower() == 'руководитель')
 
-    # Проверка, что склад принадлежит пользователю (через сервис)
-    user_warehouse_ids = list(
-        StorageLocationService.get_user_warehouses_by_position_name(position_name).values_list('id', flat=True)
-    )
-    if receipt.storage_location.id not in user_warehouse_ids:
-        messages.error(request, 'Вы можете редактировать только поступления на свои склады')
-        return redirect('inventory:receipt_list')
+    if is_manager:
+        # Руководитель может редактировать ЛЮБЫЕ поступления
+        pass
+    else:
+        # Мастер: проверяем, что склад принадлежит ему
+        from Forest_apps.inventory.services import StorageLocationService
 
-    # Проверка, можно ли редактировать
-    if not receipt.can_edit:
-        messages.error(request, 'Поступление старше 5 дней, редактирование невозможно')
-        return redirect('inventory:receipt_list')
+        # Получаем склады мастера через сервис
+        user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(position_name)
+        user_warehouse_ids = list(user_warehouses.values_list('id', flat=True))
+
+        if receipt.storage_location.id not in user_warehouse_ids:
+            messages.error(request, 'Вы можете редактировать только поступления на свои склады')
+            return redirect('inventory:receipt_list')
+
+        # Проверка на 5 дней ТОЛЬКО для мастера
+        if not receipt.can_edit:
+            messages.error(request, 'Поступление старше 5 дней, редактирование невозможно')
+            return redirect('inventory:receipt_list')
 
     if request.method == 'POST':
         form = MaterialBalanceCreateForm(
@@ -346,19 +354,27 @@ def receipt_delete_view(request, receipt_id):
 
     # Получаем должность пользователя
     position_name = request.session.get('position_name')
+    is_manager = (position_name and position_name.lower() == 'руководитель')
 
-    # Проверка, что склад принадлежит пользователю
-    user_warehouse_ids = list(
-        StorageLocationService.get_user_warehouses_by_position_name(position_name).values_list('id', flat=True)
-    )
-    if receipt.storage_location.id not in user_warehouse_ids:
-        messages.error(request, 'Вы можете удалять только поступления на свои склады')
-        return redirect('inventory:receipt_list')
+    if is_manager:
+        # Руководитель может удалять ЛЮБЫЕ поступления
+        pass
+    else:
+        # Мастер: проверяем, что склад принадлежит ему
+        from Forest_apps.inventory.services import StorageLocationService
 
-    # Проверка, можно ли удалять
-    if not receipt.can_edit:
-        messages.error(request, 'Поступление старше 5 дней, удаление невозможно')
-        return redirect('inventory:receipt_list')
+        # Получаем склады мастера через сервис
+        user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(position_name)
+        user_warehouse_ids = list(user_warehouses.values_list('id', flat=True))
+
+        if receipt.storage_location.id not in user_warehouse_ids:
+            messages.error(request, 'Вы можете удалять только поступления на свои склады')
+            return redirect('inventory:receipt_list')
+
+        # Проверка на 5 дней ТОЛЬКО для мастера
+        if not receipt.can_edit:
+            messages.error(request, 'Поступление старше 5 дней, удаление невозможно')
+            return redirect('inventory:receipt_list')
 
     try:
         # Получаем баланс

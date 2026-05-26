@@ -80,7 +80,6 @@
     <!-- Фильтры -->
     <div class="filters-container">
         <form method="get" class="filters-form" id="filter-form">
-            <!-- Автоматические фильтры -->
             <div class="auto-filters-row">
                 <div class="filter-group">
                     {{ filter_form.accounting_type.label_tag }}
@@ -127,7 +126,6 @@
                 </div>
             </div>
 
-            <!-- Поиск с кнопкой -->
             <div class="search-row">
                 <div class="search-group">
                     {{ filter_form.search.label_tag }}
@@ -177,41 +175,46 @@
                     <tbody>
                         {% for movement in movements %}
                         <tr class="movement-row {% if not movement.is_completed %}pending-row{% endif %}" data-movement-id="{{ movement.id }}">
-                            <td><strong>{{ movement.id }}</strong>
-                            <td>{{ movement.date_time|date:"d.m.Y H:i" }}
+                            <td><strong>{{ movement.id }}</strong></td>
+                            <td>{{ movement.date_time|date:"d.m.Y H:i" }}</td>
                             <td>
                                 <span class="badge type-{{ movement.accounting_type }}">
                                     {{ movement.accounting_type }}
                                 </span>
-                            <td>{{ movement.from_location.get_source_name|truncatechars:35 }}
+                            </td>
+                            <td>{{ movement.from_location.get_source_name|truncatechars:35 }}</td>
                             <td>
                                 {% if movement.to_location %}
                                     {{ movement.to_location.get_source_name|truncatechars:35 }}
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            <td>{{ movement.material.name }}
-                            <td class="text-right quantity-cell">{{ movement.quantity_pieces|default:"0"|floatformat:3 }}
-                            <td class="text-right quantity-cell">{{ movement.quantity_meters|default:"0"|floatformat:3 }}
-                            <td class="text-right quantity-cell">{{ movement.quantity_cubic|default:"0"|floatformat:3 }}
+                            </td>
+                            <td>{{ movement.material.name }}</td>
+                            <td class="text-right quantity-cell">{{ movement.quantity_pieces|default:"0"|floatformat:3 }}</td>
+                            <td class="text-right quantity-cell">{{ movement.quantity_meters|default:"0"|floatformat:3 }}</td>
+                            <td class="text-right quantity-cell">{{ movement.quantity_cubic|default:"0"|floatformat:3 }}</td>
                             <td class="text-right amount-cell">
                                 {% if movement.total_amount %}
                                     {{ movement.total_amount|floatformat:2 }} ₽
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
+                            </td>
                             <td>
                                 {% if movement.is_completed %}
                                     <span class="badge completed">✅ Выполнено</span>
                                 {% else %}
                                     <span class="badge pending">⏳ Ожидает</span>
                                 {% endif %}
+                            </td>
                             <td class="employee-cell">
                                 {% if movement.employee %}
                                     {{ movement.employee.last_name }} {{ movement.employee.first_name|first }}.
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
+                            </td>
                             <td class="vehicle-cell">
                                 {% if movement.vehicle %}
                                     {{ movement.vehicle.brand }} {{ movement.vehicle.model }}
@@ -219,86 +222,67 @@
                                     <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
-                            <td class="wagon-cell">  <!-- НОВАЯ ЯЧЕЙКА -->
-    `                            {% if movement.wagon_number %}
+                            <td class="wagon-cell">
+                                {% if movement.wagon_number %}
                                     {{ movement.wagon_number }}
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
-                            <td class="employee-cell">
+                            <td class="position-cell">
                                 {% if movement.created_by_position %}
                                     <span class="position-badge">{{ movement.created_by_position.name }}</span>
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
                             </td>
-                                {% if movement.created_by_position %}
-                                    <span class="position-badge">{{ movement.created_by_position.name }}</span>
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
-                                    <!-- 👁️ Просмотр - есть у всех -->
                                     <a href="{% url 'inventory:material_movement_detail' movement.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
 
                                     {% if is_manager %}
-                                        {# ========== РУКОВОДИТЕЛЬ ========== #}
                                         {% if movement.accounting_type == 'Отправление' and not movement.is_completed %}
                                             {% if user_role == 'receiver' %}
-                                                <!-- Руководитель как получатель: 👁️ + ✅ + ✏️ + 🗑️ -->
                                                 <a href="{% url 'inventory:material_movement_confirm' movement.id %}" class="btn-action confirm-btn" title="Подтвердить получение" onclick="return confirm('Подтвердить получение этих материалов?');">✅</a>
                                             {% endif %}
-                                            <!-- Редактирование и удаление для всех невыполненных отправлений -->
                                             <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                             <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
                                         {% elif movement.accounting_type == 'Отправление' and movement.is_completed %}
-                                            <!-- Выполненные отправления: 👁️ + 🔒 -->
                                             <span class="btn-action disabled-btn" title="Редактирование недоступно">🔒</span>
                                         {% else %}
-                                            <!-- Перемещение, Реализация, Списание (любой статус): 👁️ + ✏️ + 🗑️ -->
                                             <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                             <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
                                         {% endif %}
 
                                     {% else %}
-                                        {# ========== МАСТЕР ========== #}
                                         {% if movement.accounting_type == 'Отправление' %}
                                             {% if not movement.is_completed %}
                                                 {% if user_role == 'receiver' %}
-                                                    <!-- Мастер как получатель: 👁️ + ✅ -->
                                                     <a href="{% url 'inventory:material_movement_confirm' movement.id %}" class="btn-action confirm-btn" title="Подтвердить получение" onclick="return confirm('Подтвердить получение этих материалов?');">✅</a>
                                                 {% elif user_role == 'sender' %}
-                                                    <!-- Мастер как отправитель: 👁️ + ✏️ + 🗑️ -->
                                                     <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                                     <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
                                                 {% endif %}
                                             {% else %}
-                                                <!-- Выполненные отправления: 👁️ + 🔒 -->
                                                 <span class="btn-action disabled-btn" title="Редактирование недоступно">🔒</span>
                                             {% endif %}
                                         {% elif movement.accounting_type == 'Реализация' %}
-                                            <!-- Мастер не видит реализации -->
                                         {% else %}
-                                            <!-- Перемещение, Списание -->
                                             {% if movement.is_completed %}
                                                 {% if movement.date_time >= now_minus_5_days %}
-                                                    <!-- Выполнено, младше 5 дней: 👁️ + ✏️ + 🗑️ -->
                                                     <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                                     <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
                                                 {% else %}
-                                                    <!-- Выполнено, старше 5 дней: 👁️ + 🔒 -->
                                                     <span class="btn-action disabled-btn" title="Редактирование недоступно (старше 5 дней)">🔒</span>
                                                 {% endif %}
                                             {% else %}
-                                                <!-- Не выполнено: 👁️ + ✏️ + 🗑️ -->
                                                 <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                                 <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
                                             {% endif %}
                                         {% endif %}
                                     {% endif %}
                                 </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -324,29 +308,6 @@
         padding: 20px;
     }
 
-    .employee-cell,
-    .vehicle-cell {
-        white-space: nowrap;
-        max-width: 100px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* НОВЫЙ СТИЛЬ ДЛЯ КОЛОНКИ № ВАГОНА */
-    .wagon-cell {
-        white-space: nowrap;
-        max-width: 100px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .quantity-cell {
-        white-space: nowrap;
-        font-weight: 500;
-        text-align: right;
-    }
-
-    /* Две кнопки в ряд */
     .create-buttons-row {
         display: flex;
         gap: 20px;
@@ -423,7 +384,6 @@
         100% { transform: scale(1); }
     }
 
-    /* Статистика */
     .stats-cards {
         display: flex;
         justify-content: center;
@@ -480,7 +440,6 @@
         color: #666;
     }
 
-    /* Фильтры */
     .filters-container {
         background: white;
         border-radius: 12px;
@@ -549,7 +508,6 @@
         background: #e9ecef;
     }
 
-    /* Поиск */
     .search-row {
         display: flex;
         gap: 15px;
@@ -621,7 +579,6 @@
         background: #e9ecef;
     }
 
-    /* Таблица */
     .movements-list {
         background: white;
         border-radius: 16px;
@@ -674,7 +631,6 @@
         background-color: #f5f5f5;
     }
 
-    /* Выделенная строка */
     .movements-table tbody tr.selected-row {
         background-color: #d4edda !important;
         border-left: 3px solid #2c5e2e;
@@ -704,7 +660,9 @@
     }
 
     .employee-cell,
-    .vehicle-cell {
+    .vehicle-cell,
+    .wagon-cell,
+    .position-cell {
         white-space: nowrap;
         max-width: 100px;
         overflow: hidden;
@@ -971,13 +929,10 @@
     }
 </style>
 
-<!-- JavaScript для автоматической отправки и выделения строк -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // ========== ЛОГИКА ДЛЯ ВЫДЕЛЕНИЯ СТРОК ==========
         const rows = document.querySelectorAll('.movements-table tbody tr');
 
-        // Функция для сохранения выделенной строки в localStorage
         function saveSelectedRow(rowId) {
             if (rowId) {
                 localStorage.setItem('selectedMovementRow', rowId);
@@ -986,7 +941,6 @@
             }
         }
 
-        // Функция для загрузки выделенной строки из localStorage
         function loadSelectedRow() {
             const savedRowId = localStorage.getItem('selectedMovementRow');
             if (savedRowId) {
@@ -997,38 +951,26 @@
             }
         }
 
-        // Добавляем обработчик клика на каждую строку
         rows.forEach(row => {
             row.addEventListener('click', function(e) {
-                // Если кликнули по кнопке действия, не выделяем строку
                 if (e.target.closest('.btn-action')) {
                     return;
                 }
-
-                // Убираем выделение со всех строк
                 rows.forEach(r => r.classList.remove('selected-row'));
-
-                // Выделяем текущую строку
                 this.classList.add('selected-row');
-
-                // Сохраняем ID выделенной строки
                 const movementId = this.getAttribute('data-movement-id');
                 saveSelectedRow(movementId);
             });
         });
 
-        // Загружаем сохраненное выделение при загрузке страницы
         loadSelectedRow();
 
-        // ========== ЛОГИКА ДЛЯ ФИЛЬТРОВ ==========
         const form = document.getElementById('filter-form');
         const autoSubmitFields = document.querySelectorAll('.auto-submit');
         const searchInput = document.querySelector('input[name="search"]');
 
-        // Автоматическая отправка при изменении auto-submit полей
         autoSubmitFields.forEach(field => {
             field.addEventListener('change', function() {
-                // При фильтрации очищаем сохраненное выделение
                 localStorage.removeItem('selectedMovementRow');
                 form.submit();
             });
@@ -1041,7 +983,6 @@
             }
         });
 
-        // Для поиска используем кнопку или Enter
         if (searchInput) {
             searchInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {

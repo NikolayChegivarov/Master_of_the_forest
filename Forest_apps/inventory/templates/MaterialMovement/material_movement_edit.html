@@ -153,6 +153,20 @@
                 <small class="form-text text-muted">Необязательное поле</small>
             </div>
 
+            <!-- Поле № вагона -->
+            <div class="form-group">
+                <label for="{{ form.wagon_number.id_for_label }}">{{ form.wagon_number.label }}:</label>
+                {{ form.wagon_number }}
+                {% if form.wagon_number.errors %}
+                    <div class="field-error">
+                        {% for error in form.wagon_number.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Необязательное поле</small>
+            </div>
+
             <!-- Поле Цена -->
             <div class="form-group">
                 <label for="{{ form.price.id_for_label }}">{{ form.price.label }}:</label>

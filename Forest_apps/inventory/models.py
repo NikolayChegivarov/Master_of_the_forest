@@ -545,14 +545,16 @@ class MaterialMovement(models.Model):
 
     @classmethod
     def get_pending_shipments_for_user(cls, user):
-        """Получение ожидающих отправлений для пользователя"""
+        """Получение ожидающих отправлений для пользователя (где пользователь - получатель)"""
         from Forest_apps.inventory.models import StorageLocation
+        from Forest_apps.core.models import Warehouse, Brigade, Vehicle, Position
 
-        # Находим все места хранения, созданные пользователем
+        # Получаем должность пользователя из сессии (нужно передавать или получать)
+        # Временно используем created_by, но лучше через сессию
+
         user_locations = []
 
-        # Склады
-        from Forest_apps.core.models import Warehouse
+        # Склады, созданные пользователем
         warehouses = Warehouse.objects.filter(created_by=user)
         for wh in warehouses:
             try:
@@ -562,7 +564,6 @@ class MaterialMovement(models.Model):
                 pass
 
         # Бригады
-        from Forest_apps.core.models import Brigade
         brigades = Brigade.objects.filter(created_by=user)
         for br in brigades:
             try:
@@ -572,7 +573,6 @@ class MaterialMovement(models.Model):
                 pass
 
         # Транспорт
-        from Forest_apps.core.models import Vehicle
         vehicles = Vehicle.objects.filter(created_by=user)
         for vh in vehicles:
             try:

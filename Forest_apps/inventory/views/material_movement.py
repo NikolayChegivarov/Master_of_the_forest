@@ -316,11 +316,17 @@ def material_movement_edit_view(request, movement_id):
                 messages.error(request, 'Нельзя редактировать выполненное движение')
                 return redirect('inventory:material_movement_detail', movement_id=movement.id)
 
-            # Проверка на 5 дней
-            time_diff = timezone.now() - movement.date_time
+            # Проверка на 5 дней (от даты подтверждения или от даты создания)
+            if movement.completed_at:
+                time_diff = timezone.now() - movement.completed_at
+                reference_date = movement.completed_at
+            else:
+                time_diff = timezone.now() - movement.date_time
+                reference_date = movement.date_time
+
             if time_diff.days >= 5:
                 messages.error(request,
-                               f'Движение старше 5 дней (создано {movement.date_time.date()}), редактирование невозможно')
+                               f'Движение старше 5 дней с момента подтверждения (от {reference_date.date()}), редактирование невозможно')
                 return redirect('inventory:material_movement_detail', movement_id=movement.id)
 
             if movement.accounting_type == 'Отправление':
@@ -363,7 +369,7 @@ def material_movement_edit_view(request, movement_id):
 
 @login_required
 def material_movement_delete_view(request, movement_id):
-    """Удаление движения (для руководителя - любые, для остальных - только свои в течение 5 дней)"""
+    """Удаление движения (для руководителя - любые, для остальных - только свои в течение 5 дней от подтверждения)"""
 
     # Получаем должность текущего пользователя
     position_name = request.session.get('position_name')
@@ -391,10 +397,17 @@ def material_movement_delete_view(request, movement_id):
                 messages.error(request, 'Нельзя удалить выполненное движение')
                 return redirect('inventory:material_movement_list')
 
-            time_diff = timezone.now() - movement.date_time
+            # Проверка на 5 дней (от даты подтверждения или от даты создания)
+            if movement.completed_at:
+                time_diff = timezone.now() - movement.completed_at
+                reference_date = movement.completed_at
+            else:
+                time_diff = timezone.now() - movement.date_time
+                reference_date = movement.date_time
+
             if time_diff.days >= 5:
                 messages.error(request,
-                               f'Движение старше 5 дней (создано {movement.date_time.date()}), удаление невозможно')
+                               f'Движение старше 5 дней с момента подтверждения (от {reference_date.date()}), удаление невозможно')
                 return redirect('inventory:material_movement_list')
 
         # Сохраняем ID ДО удаления

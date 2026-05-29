@@ -297,8 +297,14 @@ def material_movement_edit_view(request, movement_id):
 
     try:
         if is_manager:
-            # Руководитель может редактировать ЛЮБОЕ движение
+            # Руководитель может редактировать ЛЮБОЕ движение, КРОМЕ выполненных отправлений
             movement = get_object_or_404(MaterialMovement, id=movement_id)
+
+            # Даже руководитель не может редактировать выполненное отправление
+            if movement.accounting_type == 'Отправление' and movement.is_completed:
+                messages.error(request, 'Нельзя редактировать выполненное отправление (это договор между сторонами)')
+                return redirect('inventory:material_movement_detail', movement_id=movement.id)
+
         else:
             # Обычные пользователи - только свои движения
             try:
@@ -312,7 +318,7 @@ def material_movement_edit_view(request, movement_id):
                 messages.error(request, 'Ошибка определения должности')
                 return redirect('inventory:material_movement_list')
 
-            # ===== НОВАЯ ЛОГИКА ПРОВЕРОК ДЛЯ МАСТЕРА =====
+            # ===== ПРОВЕРКИ ДЛЯ МАСТЕРА =====
 
             # 1. Для Отправлений: нельзя редактировать выполненные
             if movement.accounting_type == 'Отправление' and movement.is_completed:
@@ -329,7 +335,6 @@ def material_movement_edit_view(request, movement_id):
             # 3. Для Перемещения и Списания: проверка 5 дней от создания
             if movement.accounting_type in ['Перемещение', 'Списание']:
                 if movement.is_completed:
-                    # Проверяем возраст от ДАТЫ СОЗДАНИЯ (date_time)
                     time_diff = timezone.now() - movement.date_time
                     if time_diff.days >= 5:
                         messages.error(request,
@@ -337,7 +342,7 @@ def material_movement_edit_view(request, movement_id):
                         return redirect('inventory:material_movement_detail', movement_id=movement.id)
                 # Если не выполнено - можно редактировать без проверки возраста
 
-            # 4. Для Реализации: мастер их вообще не видит, но на всякий случай
+            # 4. Для Реализации: мастер их вообще не видит
             if movement.accounting_type == 'Реализация':
                 messages.error(request, 'Доступ запрещен')
                 return redirect('inventory:material_movement_list')
@@ -384,8 +389,14 @@ def material_movement_delete_view(request, movement_id):
 
     try:
         if is_manager:
-            # Руководитель может удалить ЛЮБОЕ движение
+            # Руководитель может удалить ЛЮБОЕ движение, КРОМЕ выполненных отправлений
             movement = get_object_or_404(MaterialMovement, id=movement_id)
+
+            # Даже руководитель не может удалить выполненное отправление
+            if movement.accounting_type == 'Отправление' and movement.is_completed:
+                messages.error(request, 'Нельзя удалить выполненное отправление (это договор между сторонами)')
+                return redirect('inventory:material_movement_list')
+
         else:
             # Обычные пользователи - только свои движения
             try:
@@ -400,7 +411,7 @@ def material_movement_delete_view(request, movement_id):
                 created_by_position=position
             )
 
-            # ===== НОВАЯ ЛОГИКА ПРОВЕРОК ДЛЯ МАСТЕРА =====
+            # ===== ПРОВЕРКИ ДЛЯ МАСТЕРА =====
 
             # 1. Для Отправлений: нельзя удалять выполненные
             if movement.accounting_type == 'Отправление' and movement.is_completed:
@@ -424,8 +435,8 @@ def material_movement_delete_view(request, movement_id):
         # Сохраняем ID ДО удаления
         movement_id_for_message = movement.id
 
-        # Для руководителя: если движение выполнено, восстанавливаем остатки
-        if is_manager and movement.is_completed:
+        # Для руководителя: если движение выполнено (не отправление), восстанавливаем остатки
+        if is_manager and movement.is_completed and movement.accounting_type != 'Отправление':
             MaterialBalance.cancel_movement(movement)
             messages.info(request, f'Остатки материалов восстановлены для движения №{movement_id_for_message}')
 

@@ -23,7 +23,7 @@
                 </div>
             {% endif %}
 
-            <!-- Поле Тип движения -->
+            <!-- Поле Тип движения (заблокировано при редактировании) -->
             <div class="form-group">
                 <label for="{{ form.accounting_type.id_for_label }}">{{ form.accounting_type.label }}:</label>
                 {{ form.accounting_type }}
@@ -34,6 +34,7 @@
                         {% endfor %}
                     </div>
                 {% endif %}
+                <small class="form-text text-muted">Тип движения нельзя изменить при редактировании</small>
             </div>
 
             <!-- Поле Откуда -->
@@ -67,14 +68,13 @@
                 <label for="material-search">{{ form.material.label }}:</label>
                 <div class="material-search-wrapper" style="position: relative;">
                     <input type="text" id="material-search" class="form-control material-search"
-                           placeholder="Начните вводить название материала..." autocomplete="off"
-                           value="{{ form.material.value|default:'' }}">
+                           placeholder="Начните вводить название материала..." autocomplete="off">
                     <div id="material-dropdown" class="material-dropdown" style="display: none;"></div>
                 </div>
                 <select name="material" id="id_material" style="display: none;">
                     <option value="">---------</option>
                     {% for material in form.fields.material.queryset %}
-                        <option value="{{ material.id }}" {% if form.material.value == material.id|stringformat:"s" %}selected{% endif %}>{{ material.name }}</option>
+                        <option value="{{ material.id }}" {% if form.material.value|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>{{ material.name }}</option>
                     {% endfor %}
                 </select>
                 {% if form.material.errors %}
@@ -221,6 +221,7 @@
 
     .form-group {
         margin-bottom: 20px;
+        position: relative;
     }
 
     .form-row {
@@ -250,6 +251,12 @@
         border-radius: 8px;
         font-size: 16px;
         transition: border-color 0.3s;
+    }
+
+    /* Блокировка поля тип движения */
+    select[name="accounting_type"] {
+        background-color: #e9ecef;
+        cursor: not-allowed;
     }
 
     .form-group input:focus,
@@ -403,9 +410,27 @@
     }
 </style>
 
-<!-- Скрипт для поиска материалов -->
+<!-- Скрипт для поиска материалов и инициализации полей -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ========== БЛОКИРУЕМ ПОЛЕ "ТИП ДВИЖЕНИЯ" ПРИ РЕДАКТИРОВАНИИ ==========
+    const typeSelect = document.getElementById('id_accounting_type');
+    if (typeSelect) {
+        typeSelect.disabled = true;
+    }
+
+    // ========== ЛОГИКА ДЛЯ ПОЛЕЙ "ОТКУДА" И "КУДА" ==========
+    const fromLocationSelect = document.getElementById('id_from_location');
+    const toLocationSelect = document.getElementById('id_to_location');
+    const priceField = document.querySelector('input[name="price"]');
+    const priceGroup = priceField?.closest('.form-group');
+
+    // Поля для водителя и транспортного средства
+    const employeeSelect = document.getElementById('id_employee');
+    const vehicleSelect = document.getElementById('id_vehicle');
+    const employeeGroup = employeeSelect?.closest('.form-group');
+    const vehicleGroup = vehicleSelect?.closest('.form-group');
+
     // ========== ЛОГИКА ДЛЯ ПОИСКА МАТЕРИАЛОВ С ВЫПАДАЮЩИМ СПИСКОМ ==========
     const materialSearch = document.getElementById('material-search');
     const materialHiddenSelect = document.getElementById('id_material');
@@ -414,11 +439,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (materialSearch && materialHiddenSelect) {
         // Получаем все опции из скрытого select
         let materialOptions = Array.from(materialHiddenSelect.options).filter(opt => opt.value !== '');
-
-        // Функция обновления опций
-        window.updateMaterialOptions = function() {
-            materialOptions = Array.from(materialHiddenSelect.options).filter(opt => opt.value !== '');
-        };
 
         // Функция показа выпадающего списка
         function showDropdown(filteredOptions) {
@@ -438,20 +458,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     materialHiddenSelect.value = this.getAttribute('data-value');
                     materialDropdown.style.display = 'none';
 
-                    // Триггерим событие change для проверки формы
                     const changeEvent = new Event('change', { bubbles: true });
                     materialHiddenSelect.dispatchEvent(changeEvent);
                 });
                 materialDropdown.appendChild(item);
             });
             materialDropdown.style.display = 'block';
-
-            // Позиционируем выпадающий список под полем ввода
-            const rect = materialSearch.getBoundingClientRect();
-            materialDropdown.style.position = 'absolute';
-            materialDropdown.style.top = rect.bottom + 'px';
-            materialDropdown.style.left = rect.left + 'px';
-            materialDropdown.style.width = rect.width + 'px';
         }
 
         // Фильтрация материалов
@@ -478,13 +490,74 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // ===== ИНИЦИАЛИЗАЦИЯ: Устанавливаем значение в поле поиска =====
+        const selectedOption = materialOptions.find(opt => opt.value === materialHiddenSelect.value);
+        if (selectedOption) {
+            materialSearch.value = selectedOption.textContent;
+        } else if (materialHiddenSelect.value) {
+            const selectedText = materialHiddenSelect.options[materialHiddenSelect.selectedIndex]?.text;
+            if (selectedText && selectedText !== '---------') {
+                materialSearch.value = selectedText;
+            }
+        }
+
         // При изменении скрытого select обновляем поле ввода
         materialHiddenSelect.addEventListener('change', function() {
-            const selectedOption = materialOptions.find(opt => opt.value === materialHiddenSelect.value);
-            if (selectedOption) {
-                materialSearch.value = selectedOption.textContent;
+            const selectedOpt = materialOptions.find(opt => opt.value === materialHiddenSelect.value);
+            if (selectedOpt) {
+                materialSearch.value = selectedOpt.textContent;
             }
         });
+    }
+
+    // ========== ОБНОВЛЕНИЕ ПОЛЕЙ В ЗАВИСИМОСТИ ОТ ТИПА ==========
+    function updateFields() {
+        const selectedType = typeSelect ? typeSelect.value : null;
+        if (!selectedType) return;
+
+        // Управление полем цены
+        if (selectedType === 'Реализация') {
+            if (priceField) {
+                priceField.disabled = false;
+                priceField.required = true;
+                priceGroup?.classList.remove('disabled-field');
+            }
+        } else {
+            if (priceField) {
+                priceField.disabled = true;
+                priceField.required = false;
+                priceField.value = '';
+                priceGroup?.classList.add('disabled-field');
+            }
+        }
+
+        // Управление полями водителя и транспортного средства
+        if (selectedType === 'Списание') {
+            if (employeeSelect) {
+                employeeSelect.disabled = true;
+                employeeSelect.value = '';
+                employeeGroup?.classList.add('disabled-field');
+            }
+            if (vehicleSelect) {
+                vehicleSelect.disabled = true;
+                vehicleSelect.value = '';
+                vehicleGroup?.classList.add('disabled-field');
+            }
+        } else {
+            if (employeeSelect) {
+                employeeSelect.disabled = false;
+                employeeGroup?.classList.remove('disabled-field');
+            }
+            if (vehicleSelect) {
+                vehicleSelect.disabled = false;
+                vehicleGroup?.classList.remove('disabled-field');
+            }
+        }
+    }
+
+    // Вызываем при загрузке для установки правильного состояния полей
+    if (typeSelect && typeSelect.value) {
+        updateFields();
     }
 });
 </script>

@@ -289,7 +289,7 @@ def material_movement_detail_view(request, movement_id):
 
 @login_required
 def material_movement_edit_view(request, movement_id):
-    """Редактирование движения (только для своей должности и только невыполненных)"""
+    """Редактирование движения"""
 
     # Получаем должность текущего пользователя из сессии
     position_name = request.session.get('position_name')
@@ -312,28 +312,35 @@ def material_movement_edit_view(request, movement_id):
                 messages.error(request, 'Ошибка определения должности')
                 return redirect('inventory:material_movement_list')
 
-            if movement.is_completed:
-                messages.error(request, 'Нельзя редактировать выполненное движение')
+            # ===== НОВАЯ ЛОГИКА ПРОВЕРОК ДЛЯ МАСТЕРА =====
+
+            # 1. Для Отправлений: нельзя редактировать выполненные
+            if movement.accounting_type == 'Отправление' and movement.is_completed:
+                messages.error(request, 'Нельзя редактировать выполненное отправление')
                 return redirect('inventory:material_movement_detail', movement_id=movement.id)
 
-            # Проверка на 5 дней (от даты подтверждения или от даты создания)
-            if movement.completed_at:
-                time_diff = timezone.now() - movement.completed_at
-                reference_date = movement.completed_at
-            else:
-                time_diff = timezone.now() - movement.date_time
-                reference_date = movement.date_time
-
-            if time_diff.days >= 5:
-                messages.error(request,
-                               f'Движение старше 5 дней с момента подтверждения (от {reference_date.date()}), редактирование невозможно')
-                return redirect('inventory:material_movement_detail', movement_id=movement.id)
-
+            # 2. Для Отправлений: только отправитель может редактировать
             if movement.accounting_type == 'Отправление':
                 user_role = movement.get_user_role(request.user)
                 if user_role != 'sender':
-                    messages.error(request, 'Только отправитель может редактировать это движение')
+                    messages.error(request, 'Только отправитель может редактировать это отправление')
                     return redirect('inventory:material_movement_detail', movement_id=movement.id)
+
+            # 3. Для Перемещения и Списания: проверка 5 дней от создания
+            if movement.accounting_type in ['Перемещение', 'Списание']:
+                if movement.is_completed:
+                    # Проверяем возраст от ДАТЫ СОЗДАНИЯ (date_time)
+                    time_diff = timezone.now() - movement.date_time
+                    if time_diff.days >= 5:
+                        messages.error(request,
+                                       f'Движение старше 5 дней (создано {movement.date_time.date()}), редактирование невозможно')
+                        return redirect('inventory:material_movement_detail', movement_id=movement.id)
+                # Если не выполнено - можно редактировать без проверки возраста
+
+            # 4. Для Реализации: мастер их вообще не видит, но на всякий случай
+            if movement.accounting_type == 'Реализация':
+                messages.error(request, 'Доступ запрещен')
+                return redirect('inventory:material_movement_list')
 
         if request.method == 'POST':
             form = MaterialMovementCreateForm(
@@ -369,7 +376,7 @@ def material_movement_edit_view(request, movement_id):
 
 @login_required
 def material_movement_delete_view(request, movement_id):
-    """Удаление движения (для руководителя - любые, для остальных - только свои в течение 5 дней от подтверждения)"""
+    """Удаление движения"""
 
     # Получаем должность текущего пользователя
     position_name = request.session.get('position_name')
@@ -393,21 +400,25 @@ def material_movement_delete_view(request, movement_id):
                 created_by_position=position
             )
 
-            if movement.is_completed:
-                messages.error(request, 'Нельзя удалить выполненное движение')
+            # ===== НОВАЯ ЛОГИКА ПРОВЕРОК ДЛЯ МАСТЕРА =====
+
+            # 1. Для Отправлений: нельзя удалять выполненные
+            if movement.accounting_type == 'Отправление' and movement.is_completed:
+                messages.error(request, 'Нельзя удалить выполненное отправление')
                 return redirect('inventory:material_movement_list')
 
-            # Проверка на 5 дней (от даты подтверждения или от даты создания)
-            if movement.completed_at:
-                time_diff = timezone.now() - movement.completed_at
-                reference_date = movement.completed_at
-            else:
-                time_diff = timezone.now() - movement.date_time
-                reference_date = movement.date_time
+            # 2. Для Перемещения и Списания: проверка 5 дней от создания
+            if movement.accounting_type in ['Перемещение', 'Списание']:
+                if movement.is_completed:
+                    time_diff = timezone.now() - movement.date_time
+                    if time_diff.days >= 5:
+                        messages.error(request,
+                                       f'Движение старше 5 дней (создано {movement.date_time.date()}), удаление невозможно')
+                        return redirect('inventory:material_movement_list')
 
-            if time_diff.days >= 5:
-                messages.error(request,
-                               f'Движение старше 5 дней с момента подтверждения (от {reference_date.date()}), удаление невозможно')
+            # 3. Для Реализации: мастер их не видит
+            if movement.accounting_type == 'Реализация':
+                messages.error(request, 'Доступ запрещен')
                 return redirect('inventory:material_movement_list')
 
         # Сохраняем ID ДО удаления

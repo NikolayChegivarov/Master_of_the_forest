@@ -27,6 +27,8 @@
             <div class="form-group">
                 <label for="{{ form.accounting_type.id_for_label }}">{{ form.accounting_type.label }}:</label>
                 {{ form.accounting_type }}
+                <!-- Скрытое поле для передачи значения типа движения -->
+                <input type="hidden" name="accounting_type" value="{{ movement.accounting_type }}">
                 {% if form.accounting_type.errors %}
                     <div class="field-error">
                         {% for error in form.accounting_type.errors %}

@@ -46,7 +46,7 @@
 
         {% if conversions %}
             <div class="table-responsive">
-                <table class="conversions-table">
+                <table class="conversions-table" id="conversions-table">
                     <thead>
                         <tr>
                             <th>№</th>
@@ -64,7 +64,7 @@
                     </thead>
                     <tbody>
                         {% for conversion in conversions %}
-                        <tr class="{% if not conversion.is_completed %}pending-row{% endif %}">
+                        <tr class="{% if not conversion.is_completed %}pending-row{% endif %}" data-conversion-id="{{ conversion.id }}">
                             <td><strong>{{ conversion.id }}</strong>
                             <td>{{ conversion.created_at|date:"d.m.Y H:i" }}
                             <td class="location-cell">{{ conversion.storage_location.get_source_name|truncatechars:30 }}
@@ -85,7 +85,6 @@
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
                                     <!-- 👁️ Просмотр - есть у всех -->
@@ -255,12 +254,31 @@
         font-size: 14px;
     }
 
+    .conversions-table tbody tr {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
     .conversions-table tbody tr:hover {
         background: #f5f5f5;
     }
 
+    /* Выделенная строка */
+    .conversions-table tbody tr.selected-row {
+        background-color: #d4edda !important;
+        border-left: 3px solid #2c5e2e;
+    }
+
+    .conversions-table tbody tr.selected-row:hover {
+        background-color: #c3e6cb !important;
+    }
+
     .pending-row {
         background-color: #fff3cd;
+    }
+
+    .pending-row.selected-row {
+        background-color: #ffe69c !important;
     }
 
     .pending-row:hover {
@@ -464,4 +482,55 @@
         }
     }
 </style>
+
+<!-- JavaScript для выделения строк -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // ========== ЛОГИКА ДЛЯ ВЫДЕЛЕНИЯ СТРОК ==========
+        const rows = document.querySelectorAll('.conversions-table tbody tr');
+
+        // Функция для сохранения выделенной строки в localStorage
+        function saveSelectedRow(rowId) {
+            if (rowId) {
+                localStorage.setItem('selectedConversionRow', rowId);
+            } else {
+                localStorage.removeItem('selectedConversionRow');
+            }
+        }
+
+        // Функция для загрузки выделенной строки из localStorage
+        function loadSelectedRow() {
+            const savedRowId = localStorage.getItem('selectedConversionRow');
+            if (savedRowId) {
+                const savedRow = document.querySelector(`.conversions-table tbody tr[data-conversion-id="${savedRowId}"]`);
+                if (savedRow) {
+                    savedRow.classList.add('selected-row');
+                }
+            }
+        }
+
+        // Добавляем обработчик клика на каждую строку
+        rows.forEach(row => {
+            row.addEventListener('click', function(e) {
+                // Если кликнули по кнопке действия, не выделяем строку
+                if (e.target.closest('.btn-action')) {
+                    return;
+                }
+
+                // Убираем выделение со всех строк
+                rows.forEach(r => r.classList.remove('selected-row'));
+
+                // Выделяем текущую строку
+                this.classList.add('selected-row');
+
+                // Сохраняем ID выделенной строки
+                const conversionId = this.getAttribute('data-conversion-id');
+                saveSelectedRow(conversionId);
+            });
+        });
+
+        // Загружаем сохраненное выделение при загрузке страницы
+        loadSelectedRow();
+    });
+</script>
 {% endblock %}

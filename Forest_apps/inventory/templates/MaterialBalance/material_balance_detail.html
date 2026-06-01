@@ -39,17 +39,17 @@
 
             <div class="detail-row">
                 <div class="detail-label">Штуки:</div>
-                <div class="detail-value quantity">{{ balance.quantity_pieces|floatformat:1|default:"0" }} шт</div>
+                <div class="detail-value quantity">{{ balance.quantity_pieces|floatformat:3|default:"0.000" }} шт</div>
             </div>
 
             <div class="detail-row">
                 <div class="detail-label">Погонные метры:</div>
-                <div class="detail-value quantity">{{ balance.quantity_meters|floatformat:1|default:"0" }} м.п.</div>
+                <div class="detail-value quantity">{{ balance.quantity_meters|floatformat:3|default:"0.000" }} м.п.</div>
             </div>
 
             <div class="detail-row">
                 <div class="detail-label">Кубические метры:</div>
-                <div class="detail-value quantity">{{ balance.quantity_cubic|floatformat:1|default:"0" }} м³</div>
+                <div class="detail-value quantity">{{ balance.quantity_cubic|floatformat:3|default:"0.000" }} м³</div>
             </div>
 
             <div class="detail-row">

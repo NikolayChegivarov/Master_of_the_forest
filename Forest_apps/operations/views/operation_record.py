@@ -141,6 +141,7 @@ def operation_record_create_view(request):
                 )
                 record.created_by_position = position
 
+            # Дата уже установлена в форме
             record.save()
 
             messages.success(
@@ -213,6 +214,7 @@ def operation_record_edit_view(request, record_id):
         'form': form,
         'record': record,
         'employee_name': request.session.get('employee_name'),
+        'date_time': record.date_time.strftime('%Y-%m-%dT%H:%M') if record.date_time else '',
     }
 
     return render(request, 'OperationRecord/operation_record_create.html', context)

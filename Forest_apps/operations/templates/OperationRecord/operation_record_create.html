@@ -29,6 +29,17 @@
                 </div>
             {% endif %}
 
+            <!-- Поле Дата и время -->
+            <div class="form-group">
+                <label for="id_date_time">Дата и время:</label>
+                <input type="datetime-local" name="date_time" id="id_date_time" class="form-control"
+                       value="{{ date_time|default:'' }}">
+                {% if date_time_error %}
+                    <div class="field-error">{{ date_time_error }}</div>
+                {% endif %}
+                <small class="form-text text-muted">Выберите дату и время операции. По умолчанию - текущее время.</small>
+            </div>
+
             <!-- Поле Тип операции -->
             <div class="form-group">
                 <label for="{{ form.operation_type.id_for_label }}">{{ form.operation_type.label }}:</label>
@@ -67,8 +78,6 @@
                     </div>
                 {% endif %}
             </div>
-
-<!-- После поля Количество (где-то после строки 60-70) -->
 
             <!-- Поле Количество (шт) -->
             <div class="form-group">
@@ -172,6 +181,10 @@
         border-radius: 8px;
         font-size: 16px;
         transition: border-color 0.3s;
+    }
+
+    .form-group input[type="datetime-local"] {
+        font-family: inherit;
     }
 
     .form-group input:focus,

@@ -1,5 +1,6 @@
 # Forest_apps/operations/forms/operation_record.py
 from django import forms
+from django.utils import timezone
 from Forest_apps.operations.models import OperationRecord
 from Forest_apps.core.models import Warehouse
 from Forest_apps.forestry.models import Material
@@ -8,6 +9,15 @@ from Forest_apps.inventory.services import StorageLocationService
 
 class OperationRecordCreateForm(forms.ModelForm):
     """Форма создания записи операции"""
+
+    date_time = forms.DateTimeField(
+        label='Дата и время',
+        required=False,
+        widget=forms.DateTimeInput(attrs={
+            'class': 'form-control',
+            'type': 'datetime-local'
+        })
+    )
 
     class Meta:
         model = OperationRecord
@@ -53,8 +63,15 @@ class OperationRecordCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
-        self.position_name = kwargs.pop('position_name', None)  # Добавляем должность
+        self.position_name = kwargs.pop('position_name', None)
         super().__init__(*args, **kwargs)
+
+        # Если это редактирование и у записи есть дата, подставляем её
+        if self.instance and self.instance.pk:
+            self.initial['date_time'] = self.instance.date_time.strftime('%Y-%m-%dT%H:%M')
+        else:
+            # Для новой записи подставляем текущую дату
+            self.initial['date_time'] = timezone.now().strftime('%Y-%m-%dT%H:%M')
 
         # Только активные типы операций
         from Forest_apps.operations.models import OperationType
@@ -88,7 +105,6 @@ class OperationRecordCreateForm(forms.ModelForm):
 
         # Проверка, что хотя бы одно из полей (количество, площадь или объем) заполнено
         if not square_meters and not cubic_meters:
-            # Если не заполнены ни площадь, ни объем, то количество обязательно
             quantity = cleaned_data.get('quantity')
             if not quantity:
                 raise forms.ValidationError(
@@ -96,6 +112,20 @@ class OperationRecordCreateForm(forms.ModelForm):
                 )
 
         return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        # Устанавливаем дату из формы
+        if self.cleaned_data.get('date_time'):
+            instance.date_time = self.cleaned_data['date_time']
+        else:
+            # Если дата не указана, ставим текущую
+            instance.date_time = timezone.now()
+
+        if commit:
+            instance.save()
+        return instance
 
 
 class OperationRecordFilterForm(forms.Form):

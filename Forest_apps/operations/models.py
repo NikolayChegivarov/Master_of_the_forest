@@ -70,7 +70,7 @@ class OperationRecord(models.Model):
         on_delete=models.PROTECT,
         verbose_name='Операция'
     )
-    date_time = models.DateTimeField('Дата/время', auto_now_add=True)
+    date_time = models.DateTimeField('Дата/время', default=timezone.now)
     warehouse = models.ForeignKey(
         'core.Warehouse',
         on_delete=models.PROTECT,

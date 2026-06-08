@@ -9,17 +9,25 @@ from decimal import Decimal
 from Forest_apps.inventory.services import StorageLocationService
 
 
-
-
 class MaterialMovementCreateForm(forms.ModelForm):
     """Форма создания движения материалов"""
+
+    date_time = forms.DateTimeField(
+        label='Дата и время',
+        required=False,
+        initial=timezone.now,
+        widget=forms.DateTimeInput(attrs={
+            'class': 'form-control',
+            'type': 'datetime-local'
+        })
+    )
 
     class Meta:
         model = MaterialMovement
         fields = [
             'accounting_type', 'from_location', 'to_location', 'material',
             'quantity_pieces', 'quantity_meters', 'quantity_cubic',
-            'employee', 'vehicle', 'wagon_number', 'price'  # добавляем wagon_number
+            'employee', 'vehicle', 'wagon_number', 'price', 'date_time'
         ]
         widgets = {
             'accounting_type': forms.Select(attrs={
@@ -62,7 +70,7 @@ class MaterialMovementCreateForm(forms.ModelForm):
             'vehicle': forms.Select(attrs={
                 'class': 'form-control'
             }),
-            'wagon_number': forms.TextInput(attrs={  # добавляем
+            'wagon_number': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Номер вагона',
                 'autocomplete': 'off'
@@ -84,15 +92,22 @@ class MaterialMovementCreateForm(forms.ModelForm):
             'quantity_cubic': 'Кубические метры',
             'employee': 'Водитель',
             'vehicle': 'Транспортное средство',
-            'wagon_number': '№ вагона',  # добавляем
+            'wagon_number': '№ вагона',
             'price': 'Цена',
+            'date_time': 'Дата и время',
         }
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
-        self.position_name = kwargs.pop('position_name', None)  # Получаем должность
+        self.position_name = kwargs.pop('position_name', None)
         self.instance = kwargs.get('instance', None)
         super().__init__(*args, **kwargs)
+
+        # Если это редактирование, подставляем дату
+        if self.instance and self.instance.pk:
+            self.initial['date_time'] = self.instance.date_time.strftime('%Y-%m-%dT%H:%M')
+        else:
+            self.initial['date_time'] = timezone.now().strftime('%Y-%m-%dT%H:%M')
 
         # ОПРЕДЕЛЯЕМ ДОЛЖНОСТЬ ПОЛЬЗОВАТЕЛЯ
         is_supervisor = (self.position_name and self.position_name.lower() == 'руководитель')
@@ -135,12 +150,10 @@ class MaterialMovementCreateForm(forms.ModelForm):
             source_type__in=['бригады', 'автомобиль']
         ).values_list('id', flat=True))
 
-        # queryset'ы
+        # Устанавливаем начальные queryset'ы
         self.fields['from_location'].queryset = StorageLocation.objects.all().order_by('source_type')
         self.fields['to_location'].queryset = StorageLocation.objects.all().order_by('source_type')
         self.fields['material'].queryset = Material.objects.all().order_by('material_type', 'name')
-
-        # ✅ ИЗМЕНЯЕМ ВИДЖЕТ для поля material с Select на TextInput
         self.fields['material'].widget = forms.TextInput(attrs={
             'class': 'form-control material-search',
             'list': 'material-list',
@@ -341,6 +354,20 @@ class MaterialMovementCreateForm(forms.ModelForm):
                 raise forms.ValidationError('Списание возможно только для материалов типа ГСМ или запчасти')
 
         return cleaned_data
+
+    def save(self, commit=True):
+        """Сохраняет движение с установкой даты"""
+        instance = super().save(commit=False)
+
+        # Устанавливаем дату из формы
+        if self.cleaned_data.get('date_time'):
+            instance.date_time = self.cleaned_data['date_time']
+        else:
+            instance.date_time = timezone.now()
+
+        if commit:
+            instance.save()
+        return instance
 
 
 class MaterialMovementFilterForm(forms.Form):

@@ -204,38 +204,32 @@ def material_movement_create_view(request):
                 position = Position.objects.get(name__iexact=position_name)
                 movement.created_by_position = position
             except Position.DoesNotExist:
-                # Если должность не найдена, создаем
                 position, _ = Position.objects.get_or_create(
                     name=position_name,
                     defaults={'is_active': True}
                 )
                 movement.created_by_position = position
 
-            # Сохраняем движение сначала (чтобы получить ID)
+            # Сохраняем движение (дата уже установлена в форме)
             movement.save()
 
             # Для Перемещения, Реализации и Списания сразу выполняем движение
             if movement.accounting_type in ['Перемещение', 'Реализация', 'Списание']:
                 try:
-                    # Вызываем выполнение движения
                     movement.execute_movement()
-
                     messages.success(
                         request,
                         f'Движение №{movement.id} успешно создано и выполнено!'
                     )
                 except ValueError as e:
-                    # Если не хватает материалов, удаляем созданное движение
                     movement.delete()
                     messages.error(request, str(e))
                     return redirect('inventory:material_movement_create')
                 except Exception as e:
-                    # Другие ошибки
                     movement.delete()
                     messages.error(request, f'Ошибка при выполнении движения: {str(e)}')
                     return redirect('inventory:material_movement_create')
             else:
-                # Для отправления просто сохраняем
                 messages.success(
                     request,
                     f'Отправление №{movement.id} успешно создано и ожидает подтверждения!'
@@ -252,6 +246,7 @@ def material_movement_create_view(request):
         'title': 'Создание движения',
         'form': form,
         'employee_name': request.session.get('employee_name'),
+        'is_manager': is_manager,
     }
 
     return render(request, 'MaterialMovement/material_movement_create.html', context)
@@ -355,7 +350,9 @@ def material_movement_edit_view(request, movement_id):
                 position_name=position_name
             )
             if form.is_valid():
-                updated_movement = form.save()
+                updated_movement = form.save(commit=False)
+                # Дата и время сохраняются через форму, просто сохраняем
+                updated_movement.save()
                 messages.success(request, f'Движение №{updated_movement.id} успешно обновлено!')
                 return redirect('inventory:material_movement_detail', movement_id=updated_movement.id)
         else:

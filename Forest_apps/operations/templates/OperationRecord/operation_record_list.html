@@ -121,7 +121,7 @@
 
         {% if records %}
             <div class="table-responsive">
-                <table class="records-table">
+                <table class="records-table" id="records-table">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -138,8 +138,8 @@
                     </thead>
                     <tbody>
                         {% for record in records %}
-                        <tr>
-                            <td><strong>{{ record.id }}</strong></td>
+                        <tr class="record-row" data-record-id="{{ record.id }}">
+                            <td><strong>{{ record.id }}</strong>
                             <td>{{ record.date_time|date:"d.m.Y H:i" }}
                             <td>
                                 <span class="operation-badge">{{ record.operation_type.name }}</span>
@@ -471,8 +471,23 @@
         font-size: 14px;
     }
 
+    .records-table tbody tr {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
     .records-table tbody tr:hover {
         background: #f5f5f5;
+    }
+
+    /* Выделенная строка */
+    .records-table tbody tr.selected-row {
+        background-color: #d4edda !important;
+        border-left: 3px solid #2c5e2e;
+    }
+
+    .records-table tbody tr.selected-row:hover {
+        background-color: #c3e6cb !important;
     }
 
     .warehouse-cell,
@@ -677,9 +692,56 @@
     }
 </style>
 
-<!-- JavaScript для автоматической отправки фильтров -->
+<!-- JavaScript для автоматической отправки фильтров и выделения строк -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // ========== ЛОГИКА ДЛЯ ВЫДЕЛЕНИЯ СТРОК ==========
+        const rows = document.querySelectorAll('.records-table tbody tr');
+
+        // Функция для сохранения выделенной строки в localStorage
+        function saveSelectedRow(rowId) {
+            if (rowId) {
+                localStorage.setItem('selectedOperationRow', rowId);
+            } else {
+                localStorage.removeItem('selectedOperationRow');
+            }
+        }
+
+        // Функция для загрузки выделенной строки из localStorage
+        function loadSelectedRow() {
+            const savedRowId = localStorage.getItem('selectedOperationRow');
+            if (savedRowId) {
+                const savedRow = document.querySelector(`.records-table tbody tr[data-record-id="${savedRowId}"]`);
+                if (savedRow) {
+                    savedRow.classList.add('selected-row');
+                }
+            }
+        }
+
+        // Добавляем обработчик клика на каждую строку
+        rows.forEach(row => {
+            row.addEventListener('click', function(e) {
+                // Если кликнули по кнопке действия, не выделяем строку
+                if (e.target.closest('.btn-action')) {
+                    return;
+                }
+
+                // Убираем выделение со всех строк
+                rows.forEach(r => r.classList.remove('selected-row'));
+
+                // Выделяем текущую строку
+                this.classList.add('selected-row');
+
+                // Сохраняем ID выделенной строки
+                const recordId = this.getAttribute('data-record-id');
+                saveSelectedRow(recordId);
+            });
+        });
+
+        // Загружаем сохраненное выделение при загрузке страницы
+        loadSelectedRow();
+
+        // ========== ЛОГИКА ДЛЯ ФИЛЬТРОВ ==========
         const form = document.getElementById('filter-form');
         const autoSubmitFields = document.querySelectorAll('select[name="operation_type"], select[name="warehouse"], select[name="material"], input[name="date_from"], input[name="date_to"], select[name="has_measurements"]');
         const searchInput = document.querySelector('input[name="search"]');
@@ -687,6 +749,8 @@
         // Автоматическая отправка при изменении select-полей
         autoSubmitFields.forEach(field => {
             field.addEventListener('change', function() {
+                // При фильтрации очищаем сохраненное выделение
+                localStorage.removeItem('selectedOperationRow');
                 form.submit();
             });
         });
@@ -696,6 +760,7 @@
             searchInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
+                    localStorage.removeItem('selectedOperationRow');
                     form.submit();
                 }
             });

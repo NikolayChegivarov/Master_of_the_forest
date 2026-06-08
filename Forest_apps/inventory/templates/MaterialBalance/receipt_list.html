@@ -121,7 +121,7 @@
 
         {% if receipts %}
             <div class="table-responsive">
-                <table class="receipts-table">
+                <table class="receipts-table" id="receipts-table">
                     <thead>
                         <tr>
                             <th>№</th>
@@ -139,7 +139,7 @@
                     </thead>
                     <tbody>
                         {% for receipt in receipts %}
-                        <tr>
+                        <tr class="receipt-row" data-receipt-id="{{ receipt.id }}">
                             <td><strong>{{ receipt.id }}</strong>
                             <td>{{ receipt.receipt_date|date:"d.m.Y H:i" }}
                             <td class="location-cell">{{ receipt.storage_location.get_source_name }}
@@ -160,7 +160,6 @@
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
                                     <!-- 👁️ Просмотр - есть у всех -->
@@ -402,8 +401,23 @@
         font-size: 13px;
     }
 
+    .receipts-table tbody tr {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
     .receipts-table tbody tr:hover {
         background: #f5f5f5;
+    }
+
+    /* Выделенная строка */
+    .receipts-table tbody tr.selected-row {
+        background-color: #d4edda !important;
+        border-left: 3px solid #2c5e2e;
+    }
+
+    .receipts-table tbody tr.selected-row:hover {
+        background-color: #c3e6cb !important;
     }
 
     .location-cell {
@@ -593,9 +607,56 @@
     }
 </style>
 
-<!-- JavaScript для автоматической отправки фильтров -->
+<!-- JavaScript для автоматической отправки фильтров и выделения строк -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // ========== ЛОГИКА ДЛЯ ВЫДЕЛЕНИЯ СТРОК ==========
+        const rows = document.querySelectorAll('.receipts-table tbody tr');
+
+        // Функция для сохранения выделенной строки в localStorage
+        function saveSelectedRow(rowId) {
+            if (rowId) {
+                localStorage.setItem('selectedReceiptRow', rowId);
+            } else {
+                localStorage.removeItem('selectedReceiptRow');
+            }
+        }
+
+        // Функция для загрузки выделенной строки из localStorage
+        function loadSelectedRow() {
+            const savedRowId = localStorage.getItem('selectedReceiptRow');
+            if (savedRowId) {
+                const savedRow = document.querySelector(`.receipts-table tbody tr[data-receipt-id="${savedRowId}"]`);
+                if (savedRow) {
+                    savedRow.classList.add('selected-row');
+                }
+            }
+        }
+
+        // Добавляем обработчик клика на каждую строку
+        rows.forEach(row => {
+            row.addEventListener('click', function(e) {
+                // Если кликнули по кнопке действия, не выделяем строку
+                if (e.target.closest('.btn-action')) {
+                    return;
+                }
+
+                // Убираем выделение со всех строк
+                rows.forEach(r => r.classList.remove('selected-row'));
+
+                // Выделяем текущую строку
+                this.classList.add('selected-row');
+
+                // Сохраняем ID выделенной строки
+                const receiptId = this.getAttribute('data-receipt-id');
+                saveSelectedRow(receiptId);
+            });
+        });
+
+        // Загружаем сохраненное выделение при загрузке страницы
+        loadSelectedRow();
+
+        // ========== ЛОГИКА ДЛЯ ФИЛЬТРОВ ==========
         const form = document.getElementById('filter-form');
         const autoSubmitFields = document.querySelectorAll('.auto-submit');
         const materialInput = document.querySelector('input[name="material"]');
@@ -603,6 +664,8 @@
         // Автоматическая отправка при изменении select-полей и дат
         autoSubmitFields.forEach(field => {
             field.addEventListener('change', function() {
+                // При фильтрации очищаем сохраненное выделение
+                localStorage.removeItem('selectedReceiptRow');
                 form.submit();
             });
         });
@@ -612,6 +675,7 @@
             materialInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
+                    localStorage.removeItem('selectedReceiptRow');
                     form.submit();
                 }
             });

@@ -1,6 +1,7 @@
 # ФОРМЫ КОНВЕРТАЦИЯ
 from django import forms
-from Forest_apps.inventory.models import Conversion, StorageLocation
+from django.utils import timezone
+from Forest_apps.inventory.models import Conversion #, StorageLocation
 from Forest_apps.forestry.models import Material
 from Forest_apps.inventory.services import StorageLocationService
 
@@ -8,10 +9,20 @@ from Forest_apps.inventory.services import StorageLocationService
 class ConversionCreateForm(forms.ModelForm):
     """Форма создания конвертации древесины"""
 
+    conversion_date = forms.DateTimeField(
+        label='Дата конвертации',
+        required=False,
+        initial=timezone.now,
+        widget=forms.DateTimeInput(attrs={
+            'class': 'form-control',
+            'type': 'datetime-local'
+        })
+    )
+
     class Meta:
         model = Conversion
         fields = [
-            'storage_location',
+            'storage_location', 'conversion_date',
             'source_material', 'source_quantity_pieces', 'source_quantity_meters', 'source_quantity_cubic',
             'target_material', 'target_quantity_pieces', 'target_quantity_meters', 'target_quantity_cubic'
         ]
@@ -65,6 +76,7 @@ class ConversionCreateForm(forms.ModelForm):
         }
         labels = {
             'storage_location': 'Склад',
+            'conversion_date': 'Дата конвертации',
             'source_material': 'Исходный материал (что списываем)',
             'source_quantity_pieces': 'Штуки',
             'source_quantity_meters': 'Погонные метры',
@@ -80,6 +92,12 @@ class ConversionCreateForm(forms.ModelForm):
         self.position_name = kwargs.pop('position_name', None)
         self.instance = kwargs.get('instance', None)
         super().__init__(*args, **kwargs)
+
+        # Если это редактирование, подставляем дату
+        if self.instance and self.instance.pk:
+            self.initial['conversion_date'] = self.instance.conversion_date.strftime('%Y-%m-%dT%H:%M')
+        else:
+            self.initial['conversion_date'] = timezone.now().strftime('%Y-%m-%dT%H:%M')
 
         # Если это редактирование, полностью убираем поле storage_location из формы
         if self.instance and self.instance.pk:
@@ -130,6 +148,12 @@ class ConversionCreateForm(forms.ModelForm):
     def save(self, commit=True, position=None, user=None):
         """Сохраняет конвертацию"""
         conversion = super().save(commit=False)
+
+        # Устанавливаем дату из формы
+        if self.cleaned_data.get('conversion_date'):
+            conversion.conversion_date = self.cleaned_data['conversion_date']
+        else:
+            conversion.conversion_date = timezone.now()
 
         # При редактировании storage_location уже есть в instance
         if not self.instance or not self.instance.pk:

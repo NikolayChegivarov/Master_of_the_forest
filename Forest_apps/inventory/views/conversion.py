@@ -99,7 +99,7 @@ def conversion_create_view(request):
                 )
                 conversion.created_by_position = position
 
-            # Сохраняем
+            # Сохраняем (дата уже установлена в форме)
             conversion.save()
 
             try:
@@ -408,6 +408,7 @@ def conversion_edit_view(request, conversion_id):
                 conversion.target_quantity_pieces = new_target_pieces
                 conversion.target_quantity_meters = new_target_meters
                 conversion.target_quantity_cubic = new_target_cubic
+                conversion.conversion_date = form.cleaned_data.get('conversion_date', timezone.now())
                 conversion.save()
 
                 print("\n" + "=" * 80)

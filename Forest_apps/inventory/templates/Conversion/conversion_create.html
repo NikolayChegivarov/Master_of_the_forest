@@ -50,6 +50,20 @@
                 {% endif %}
             </div>
 
+            <!-- Поле Дата конвертации -->
+            <div class="form-group">
+                <label for="{{ form.conversion_date.id_for_label }}">{{ form.conversion_date.label }}:</label>
+                {{ form.conversion_date }}
+                {% if form.conversion_date.errors %}
+                    <div class="field-error">
+                        {% for error in form.conversion_date.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Выберите дату и время конвертации</small>
+            </div>
+
             <!-- Блок СПИСАНИЕ -->
             <div class="conversion-block source-block">
                 <h3>📤 Списать (исходный материал)</h3>

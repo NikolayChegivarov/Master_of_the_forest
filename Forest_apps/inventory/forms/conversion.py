@@ -1,4 +1,5 @@
 # ФОРМЫ КОНВЕРТАЦИЯ
+import datetime
 from django import forms
 from django.utils import timezone
 from Forest_apps.inventory.models import Conversion #, StorageLocation
@@ -12,7 +13,6 @@ class ConversionCreateForm(forms.ModelForm):
     conversion_date = forms.DateTimeField(
         label='Дата конвертации',
         required=False,
-        initial=timezone.now,
         widget=forms.DateTimeInput(attrs={
             'class': 'form-control',
             'type': 'datetime-local'
@@ -93,11 +93,14 @@ class ConversionCreateForm(forms.ModelForm):
         self.instance = kwargs.get('instance', None)
         super().__init__(*args, **kwargs)
 
-        # Если это редактирование, подставляем дату
+        # Устанавливаем локальное время для поля conversion_date
+        local_now = timezone.localtime(timezone.now())
+
         if self.instance and self.instance.pk:
-            self.initial['conversion_date'] = self.instance.conversion_date.strftime('%Y-%m-%dT%H:%M')
+            self.initial['conversion_date'] = timezone.localtime(self.instance.conversion_date).strftime(
+                '%Y-%m-%dT%H:%M')
         else:
-            self.initial['conversion_date'] = timezone.now().strftime('%Y-%m-%dT%H:%M')
+            self.initial['conversion_date'] = local_now.strftime('%Y-%m-%dT%H:%M')
 
         # Если это редактирование, полностью убираем поле storage_location из формы
         if self.instance and self.instance.pk:
@@ -151,7 +154,15 @@ class ConversionCreateForm(forms.ModelForm):
 
         # Устанавливаем дату из формы
         if self.cleaned_data.get('conversion_date'):
-            conversion.conversion_date = self.cleaned_data['conversion_date']
+            local_dt = self.cleaned_data['conversion_date']
+
+            # Делаем время осознанным (aware) если оно наивное
+            if timezone.is_naive(local_dt):
+                local_tz = timezone.get_current_timezone()
+                local_dt = timezone.make_aware(local_dt, local_tz)
+
+            # Преобразуем в UTC для хранения в БД
+            conversion.conversion_date = local_dt.astimezone(datetime.timezone.utc)
         else:
             conversion.conversion_date = timezone.now()
 

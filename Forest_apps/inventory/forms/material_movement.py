@@ -1,11 +1,11 @@
 # ФОРМЫ ДВИЖЕНИЕ МАТЕРИАЛОВ
 from django import forms
 from django.utils import timezone
+import datetime
 from Forest_apps.inventory.models import MaterialMovement, StorageLocation
 from Forest_apps.forestry.models import Material
 from Forest_apps.employees.models import Employee
 from Forest_apps.core.models import Vehicle, Position
-from decimal import Decimal
 from Forest_apps.inventory.services import StorageLocationService
 
 
@@ -354,7 +354,7 @@ class MaterialMovementCreateForm(forms.ModelForm):
         return cleaned_data
 
     def save(self, commit=True):
-        """Сохраняет движение"""
+        """Сохраняет движение с правильным преобразованием времени"""
         instance = super().save(commit=False)
 
         # Устанавливаем дату из формы
@@ -367,7 +367,7 @@ class MaterialMovementCreateForm(forms.ModelForm):
                 local_dt = timezone.make_aware(local_dt, local_tz)
 
             # Преобразуем в UTC для хранения в БД
-            instance.date_time = local_dt.astimezone(timezone.utc)
+            instance.date_time = local_dt.astimezone(datetime.timezone.utc)
         else:
             instance.date_time = timezone.now()
 

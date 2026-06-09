@@ -15,27 +15,134 @@
         </a>
     </div>
 
-    <!-- Статистика -->
-    <div class="stats-cards">
-        <div class="stat-card">
-            <div class="stat-icon">📋</div>
-            <div class="stat-content">
-                <div class="stat-value">{{ total_count }}</div>
-                <div class="stat-label">Всего операций</div>
+    <!-- Фильтры -->
+    <div class="filters-container">
+        <form method="get" class="filters-form" id="filter-form">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label for="storage_location">Склад:</label>
+                    <input type="text" id="storage_location_search" class="form-control storage-location-search"
+                           placeholder="Поиск склада..." autocomplete="off">
+                    <select name="storage_location" id="id_storage_location" style="display: none;">
+                        <option value="">Все склады</option>
+                        {% for warehouse in user_warehouses %}
+                            <option value="{{ warehouse.id }}" {% if request.GET.storage_location|stringformat:"s" == warehouse.id|stringformat:"s" %}selected{% endif %}>
+                                {{ warehouse.get_source_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <div id="storage_location_dropdown" class="filter-dropdown" style="display: none;"></div>
+                </div>
+
+                <div class="filter-group">
+                    <label for="source_material">Исходный материал:</label>
+                    <input type="text" id="source_material_search" class="form-control material-search"
+                           placeholder="Поиск исходного материала..." autocomplete="off">
+                    <select name="source_material" id="id_source_material" style="display: none;">
+                        <option value="">Все материалы</option>
+                        {% for material in materials %}
+                            <option value="{{ material.id }}" {% if request.GET.source_material|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>
+                                {{ material.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <div id="source_material_dropdown" class="filter-dropdown" style="display: none;"></div>
+                </div>
+
+                <div class="filter-group">
+                    <label for="target_material">Целевой материал:</label>
+                    <input type="text" id="target_material_search" class="form-control material-search"
+                           placeholder="Поиск целевого материала..." autocomplete="off">
+                    <select name="target_material" id="id_target_material" style="display: none;">
+                        <option value="">Все материалы</option>
+                        {% for material in materials %}
+                            <option value="{{ material.id }}" {% if request.GET.target_material|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>
+                                {{ material.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <div id="target_material_dropdown" class="filter-dropdown" style="display: none;"></div>
+                </div>
+            </div>
+
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label for="date_from">Дата с:</label>
+                    <input type="date" name="date_from" id="date_from" class="filter-input auto-submit"
+                           value="{{ request.GET.date_from|default:'' }}">
+                </div>
+
+                <div class="filter-group">
+                    <label for="date_to">Дата по:</label>
+                    <input type="date" name="date_to" id="date_to" class="filter-input auto-submit"
+                           value="{{ request.GET.date_to|default:'' }}">
+                </div>
+
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="filter-btn">🔍 Применить</button>
+                </div>
+
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <a href="{% url 'inventory:conversion_list' %}" class="filter-clear">✖ Сбросить все</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Статистика: Списано -->
+    <div class="stats-section">
+        <h4 class="stats-section-title">📤 Списано (исходные материалы)</h4>
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_source_pieces|floatformat:3 }}</div>
+                    <div class="stat-label">Штуки</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📏</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_source_meters|floatformat:3 }}</div>
+                    <div class="stat-label">Погонные метры</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🧊</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_source_cubic|floatformat:3 }}</div>
+                    <div class="stat-label">Кубические метры</div>
+                </div>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon">✅</div>
-            <div class="stat-content">
-                <div class="stat-value">{{ completed_count }}</div>
-                <div class="stat-label">Выполнено</div>
+    </div>
+
+    <!-- Статистика: Создано -->
+    <div class="stats-section">
+        <h4 class="stats-section-title">📥 Создано (целевые материалы)</h4>
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_target_pieces|floatformat:3 }}</div>
+                    <div class="stat-label">Штуки</div>
+                </div>
             </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon">⏳</div>
-            <div class="stat-content">
-                <div class="stat-value">{{ pending_count }}</div>
-                <div class="stat-label">В обработке</div>
+            <div class="stat-card">
+                <div class="stat-icon">📏</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_target_meters|floatformat:3 }}</div>
+                    <div class="stat-label">Погонные метры</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🧊</div>
+                <div class="stat-content">
+                    <div class="stat-value">{{ total_target_cubic|floatformat:3 }}</div>
+                    <div class="stat-label">Кубические метры</div>
+                </div>
             </div>
         </div>
     </div>
@@ -57,28 +164,21 @@
                             <th>→</th>
                             <th>Целевой материал</th>
                             <th>Кол-во (создано)</th>
-                            <th>Статус</th>
                             <th>Создатель</th>
                             <th class="text-center">Действия</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for conversion in conversions %}
-                        <tr class="{% if not conversion.is_completed %}pending-row{% endif %}" data-conversion-id="{{ conversion.id }}">
+                        <tr class="conversion-row" data-conversion-id="{{ conversion.id }}">
                             <td><strong>{{ conversion.id }}</strong>
-                            <td>{{ conversion.created_at|date:"d.m.Y H:i" }}
+                            <td>{{ conversion.conversion_date|date:"d.m.Y H:i" }}
                             <td class="location-cell">{{ conversion.storage_location.get_source_name|truncatechars:30 }}
                             <td>{{ conversion.source_material.name }}
                             <td class="quantity-cell">{{ conversion.source_quantity_display }}
                             <td class="arrow-cell">→
                             <td>{{ conversion.target_material.name }}
                             <td class="quantity-cell">{{ conversion.target_quantity_display }}
-                            <td>
-                                {% if conversion.is_completed %}
-                                    <span class="badge completed">✅ Выполнено</span>
-                                {% else %}
-                                    <span class="badge pending">⏳ В обработке</span>
-                                {% endif %}
                             <td>
                                 {% if conversion.created_by_position %}
                                     <span class="position-badge">{{ conversion.created_by_position.name }}</span>
@@ -87,20 +187,17 @@
                                 {% endif %}
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
-                                    <!-- 👁️ Просмотр - есть у всех -->
                                     <a href="{% url 'inventory:conversion_detail' conversion.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
 
                                     {% if is_manager %}
-                                        <!-- Руководитель: всегда может редактировать и удалять -->
                                         <a href="{% url 'inventory:conversion_edit' conversion.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                         <a href="{% url 'inventory:conversion_delete' conversion.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить эту конвертацию?');">🗑️</a>
                                     {% else %}
-                                        <!-- Мастер: кнопки активны только для конвертаций младше 5 дней -->
                                         {% if conversion.created_at >= now_minus_5_days %}
                                             <a href="{% url 'inventory:conversion_edit' conversion.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                             <a href="{% url 'inventory:conversion_delete' conversion.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить эту конвертацию?');">🗑️</a>
                                         {% else %}
-                                            <span class="no-action" title="Конвертация старше 5 дней, редактирование невозможно. Обратитесь к руководителю.">🔒</span>
+                                            <span class="no-action" title="Конвертация старше 5 дней, редактирование невозможно">🔒</span>
                                         {% endif %}
                                     {% endif %}
                                 </div>
@@ -111,9 +208,14 @@
             </div>
         {% else %}
             <div class="empty-message">
-                <p>У {{ position_name|default:"вашей должности" }} пока нет ни одной конвертации древесины.</p>
-                <p class="text-muted">Создайте первую конвертацию, чтобы переработать древесину.</p>
-                <a href="{% url 'inventory:conversion_create' %}" class="btn btn-primary">Создать конвертацию</a>
+                {% if request.GET.date_from or request.GET.date_to or request.GET.storage_location or request.GET.source_material or request.GET.target_material %}
+                    <p>По заданным критериям ничего не найдено.</p>
+                    <a href="{% url 'inventory:conversion_list' %}" class="btn btn-secondary">Сбросить фильтры</a>
+                {% else %}
+                    <p>У {{ position_name|default:"вашей должности" }} пока нет ни одной конвертации древесины.</p>
+                    <p class="text-muted">Создайте первую конвертацию, чтобы переработать древесину.</p>
+                    <a href="{% url 'inventory:conversion_create' %}" class="btn btn-primary">Создать конвертацию</a>
+                {% endif %}
             </div>
         {% endif %}
     </div>
@@ -162,13 +264,142 @@
         letter-spacing: 0.5px;
     }
 
-    /* Статистика */
-    .stats-cards {
-        display: flex;
-        justify-content: center;
-        gap: 20px;
+    /* Фильтры */
+    .filters-container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
         margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .filters-form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .filters-row {
+        display: flex;
+        gap: 15px;
         flex-wrap: wrap;
+        align-items: flex-end;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+        position: relative;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .filter-group input,
+    .filter-group select {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+        outline: none;
+        border-color: #2c5e2e;
+    }
+
+    .filter-dropdown {
+        position: absolute;
+        z-index: 1000;
+        max-height: 250px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        background-color: white;
+        width: calc(100% - 2px);
+        top: 100%;
+        left: 0;
+        margin-top: 4px;
+    }
+
+    .filter-dropdown-item {
+        padding: 10px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+    }
+
+    .filter-dropdown-item:hover {
+        background-color: #2c5e2e;
+        color: white;
+    }
+
+    .filter-dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .filter-btn {
+        padding: 8px 16px;
+        background: #2c5e2e;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+        white-space: nowrap;
+        width: 100%;
+    }
+
+    .filter-btn:hover {
+        background: #1e4220;
+    }
+
+    .filter-clear {
+        padding: 8px 16px;
+        background: #f8f9fa;
+        color: #666;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: background 0.3s;
+        display: inline-block;
+        white-space: nowrap;
+        width: 100%;
+        text-align: center;
+        border: 1px solid #ddd;
+    }
+
+    .filter-clear:hover {
+        background: #e9ecef;
+    }
+
+    /* Статистика - секции */
+    .stats-section {
+        margin-bottom: 30px;
+    }
+
+    .stats-section-title {
+        color: #2c5e2e;
+        font-size: 18px;
+        margin-bottom: 15px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e0e0e0;
+    }
+
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 20px;
     }
 
     .stat-card {
@@ -179,9 +410,7 @@
         display: flex;
         align-items: center;
         gap: 15px;
-        min-width: 200px;
         transition: transform 0.3s, box-shadow 0.3s;
-        flex: 1;
     }
 
     .stat-card:hover {
@@ -190,7 +419,7 @@
     }
 
     .stat-icon {
-        font-size: 40px;
+        font-size: 36px;
         color: #2c5e2e;
     }
 
@@ -200,14 +429,14 @@
     }
 
     .stat-value {
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 700;
         color: #2c5e2e;
         line-height: 1.2;
     }
 
     .stat-label {
-        font-size: 14px;
+        font-size: 12px;
         color: #666;
     }
 
@@ -263,7 +492,6 @@
         background: #f5f5f5;
     }
 
-    /* Выделенная строка */
     .conversions-table tbody tr.selected-row {
         background-color: #d4edda !important;
         border-left: 3px solid #2c5e2e;
@@ -271,18 +499,6 @@
 
     .conversions-table tbody tr.selected-row:hover {
         background-color: #c3e6cb !important;
-    }
-
-    .pending-row {
-        background-color: #fff3cd;
-    }
-
-    .pending-row.selected-row {
-        background-color: #ffe69c !important;
-    }
-
-    .pending-row:hover {
-        background-color: #ffe69c !important;
     }
 
     .location-cell {
@@ -302,25 +518,6 @@
         text-align: center;
         font-size: 18px;
         color: #2c5e2e;
-    }
-
-    .badge {
-        display: inline-block;
-        padding: 5px 10px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
-        white-space: nowrap;
-    }
-
-    .badge.completed {
-        background: #d4edda;
-        color: #155724;
-    }
-
-    .badge.pending {
-        background: #fff3cd;
-        color: #856404;
     }
 
     .position-badge {
@@ -464,10 +661,15 @@
         }
 
         .stats-cards {
-            flex-direction: column;
+            grid-template-columns: 1fr;
         }
 
-        .stat-card {
+        .filters-row {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-group {
             width: 100%;
         }
 
@@ -483,54 +685,135 @@
     }
 </style>
 
-<!-- JavaScript для выделения строк -->
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // ========== ЛОГИКА ДЛЯ ВЫДЕЛЕНИЯ СТРОК ==========
-        const rows = document.querySelectorAll('.conversions-table tbody tr');
+document.addEventListener('DOMContentLoaded', function() {
+    // ========== ФИЛЬТРЫ С ПОИСКОМ ==========
 
-        // Функция для сохранения выделенной строки в localStorage
-        function saveSelectedRow(rowId) {
-            if (rowId) {
-                localStorage.setItem('selectedConversionRow', rowId);
-            } else {
-                localStorage.removeItem('selectedConversionRow');
+    // Функция для создания поискового фильтра
+    function setupSearchFilter(inputId, selectId, dropdownId) {
+        const searchInput = document.getElementById(inputId);
+        const hiddenSelect = document.getElementById(selectId);
+        const dropdown = document.getElementById(dropdownId);
+
+        if (!searchInput || !hiddenSelect || !dropdown) return;
+
+        const options = Array.from(hiddenSelect.options).filter(opt => opt.value !== '');
+
+        function showDropdown(filteredOptions) {
+            if (filteredOptions.length === 0) {
+                dropdown.style.display = 'none';
+                return;
             }
-        }
 
-        // Функция для загрузки выделенной строки из localStorage
-        function loadSelectedRow() {
-            const savedRowId = localStorage.getItem('selectedConversionRow');
-            if (savedRowId) {
-                const savedRow = document.querySelector(`.conversions-table tbody tr[data-conversion-id="${savedRowId}"]`);
-                if (savedRow) {
-                    savedRow.classList.add('selected-row');
-                }
-            }
-        }
-
-        // Добавляем обработчик клика на каждую строку
-        rows.forEach(row => {
-            row.addEventListener('click', function(e) {
-                // Если кликнули по кнопке действия, не выделяем строку
-                if (e.target.closest('.btn-action')) {
-                    return;
-                }
-
-                // Убираем выделение со всех строк
-                rows.forEach(r => r.classList.remove('selected-row'));
-
-                // Выделяем текущую строку
-                this.classList.add('selected-row');
-
-                // Сохраняем ID выделенной строки
-                const conversionId = this.getAttribute('data-conversion-id');
-                saveSelectedRow(conversionId);
+            dropdown.innerHTML = '';
+            filteredOptions.forEach(opt => {
+                const item = document.createElement('div');
+                item.className = 'filter-dropdown-item';
+                item.textContent = opt.textContent;
+                item.setAttribute('data-value', opt.value);
+                item.addEventListener('click', function() {
+                    searchInput.value = this.textContent;
+                    hiddenSelect.value = this.getAttribute('data-value');
+                    dropdown.style.display = 'none';
+                    document.getElementById('filter-form').submit();
+                });
+                dropdown.appendChild(item);
             });
+            dropdown.style.display = 'block';
+
+            const rect = searchInput.getBoundingClientRect();
+            dropdown.style.position = 'absolute';
+            dropdown.style.top = rect.bottom + 'px';
+            dropdown.style.left = rect.left + 'px';
+            dropdown.style.width = rect.width + 'px';
+        }
+
+        function filterOptions() {
+            const searchText = searchInput.value.toLowerCase();
+            const filtered = options.filter(opt =>
+                opt.textContent.toLowerCase().includes(searchText)
+            );
+            showDropdown(filtered);
+        }
+
+        searchInput.addEventListener('input', filterOptions);
+        searchInput.addEventListener('focus', filterOptions);
+        searchInput.addEventListener('click', function(e) {
+            e.stopPropagation();
+            filterOptions();
         });
 
-        // Загружаем сохраненное выделение при загрузке страницы
-        loadSelectedRow();
+        document.addEventListener('click', function(e) {
+            if (e.target !== searchInput && !dropdown.contains(e.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        // Устанавливаем начальное значение
+        if (hiddenSelect.value) {
+            const selected = options.find(opt => opt.value === hiddenSelect.value);
+            if (selected) {
+                searchInput.value = selected.textContent;
+            }
+        }
+    }
+
+    // Настраиваем все фильтры
+    setupSearchFilter('storage_location_search', 'id_storage_location', 'storage_location_dropdown');
+    setupSearchFilter('source_material_search', 'id_source_material', 'source_material_dropdown');
+    setupSearchFilter('target_material_search', 'id_target_material', 'target_material_dropdown');
+
+    // ========== ВЫДЕЛЕНИЕ СТРОК ==========
+    const rows = document.querySelectorAll('.conversions-table tbody tr');
+
+    function saveSelectedRow(rowId) {
+        if (rowId) {
+            localStorage.setItem('selectedConversionRow', rowId);
+        } else {
+            localStorage.removeItem('selectedConversionRow');
+        }
+    }
+
+    function loadSelectedRow() {
+        const savedRowId = localStorage.getItem('selectedConversionRow');
+        if (savedRowId) {
+            const savedRow = document.querySelector(`.conversions-table tbody tr[data-conversion-id="${savedRowId}"]`);
+            if (savedRow) {
+                savedRow.classList.add('selected-row');
+            }
+        }
+    }
+
+    rows.forEach(row => {
+        row.addEventListener('click', function(e) {
+            if (e.target.closest('.btn-action')) {
+                return;
+            }
+            rows.forEach(r => r.classList.remove('selected-row'));
+            this.classList.add('selected-row');
+            const conversionId = this.getAttribute('data-conversion-id');
+            saveSelectedRow(conversionId);
+        });
     });
+
+    loadSelectedRow();
+
+    // ========== АВТОМАТИЧЕСКАЯ ОТПРАВКА ДЛЯ ДАТ ==========
+    const dateFrom = document.getElementById('date_from');
+    const dateTo = document.getElementById('date_to');
+    const form = document.getElementById('filter-form');
+
+    function submitForm() {
+        localStorage.removeItem('selectedConversionRow');
+        form.submit();
+    }
+
+    if (dateFrom) {
+        dateFrom.addEventListener('change', submitForm);
+    }
+    if (dateTo) {
+        dateTo.addEventListener('change', submitForm);
+    }
+});
 </script>
 {% endblock %}

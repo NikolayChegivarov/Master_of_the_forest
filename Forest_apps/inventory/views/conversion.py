@@ -1,17 +1,18 @@
 # ПРЕДСТАВЛЕНИЯ КОНВЕРТАЦИИ
 from django.contrib.auth.decorators import login_required
+from django.db.models import Sum
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.utils import timezone
 from datetime import timedelta
-from Forest_apps.inventory.models import Conversion, MaterialBalance
+from Forest_apps.inventory.models import Conversion, MaterialBalance, StorageLocation
 from Forest_apps.core.models import Position
 from Forest_apps.inventory.forms.conversion import ConversionCreateForm
 
 
 @login_required
 def conversion_list_view(request):
-    """Список конвертаций древесины"""
+    """Список конвертаций древесины с фильтрацией"""
 
     # Получаем должность текущего пользователя из сессии
     user_position_name = request.session.get('position_name')
@@ -20,15 +21,20 @@ def conversion_list_view(request):
     # Вычисляем дату 5 дней назад для проверки возраста
     now_minus_5_days = timezone.now() - timedelta(days=5)
 
+    # Получаем все материалы для фильтров
+    from Forest_apps.forestry.models import Material
+    materials = Material.objects.filter(material_type='древесина').order_by('name')
+
     if is_manager:
         # Руководитель видит ВСЕ конвертации
         conversions = Conversion.objects.select_related(
             'storage_location', 'source_material', 'target_material', 'created_by_position'
-        ).order_by('-created_at')
+        ).order_by('-conversion_date')
+        # Для руководителя - все склады
+        user_warehouses = StorageLocation.objects.filter(source_type='склад').order_by('source_type')
     else:
         # Находим склады, созданные должностью мастера
         from Forest_apps.core.models import Warehouse
-        from Forest_apps.inventory.models import StorageLocation
 
         user_position_id = None
         try:
@@ -52,23 +58,55 @@ def conversion_list_view(request):
             storage_location_id__in=user_warehouse_ids
         ).select_related(
             'storage_location', 'source_material', 'target_material', 'created_by_position'
-        ).order_by('-created_at')
+        ).order_by('-conversion_date')
 
-    # Статистика
-    total_count = conversions.count()
-    completed_count = conversions.filter(is_completed=True).count()
-    pending_count = conversions.filter(is_completed=False).count()
+        user_warehouses = StorageLocation.objects.filter(id__in=user_warehouse_ids).order_by('source_type')
+
+    # ===== ФИЛЬТРАЦИЯ =====
+    storage_location_id = request.GET.get('storage_location')
+    source_material_id = request.GET.get('source_material')
+    target_material_id = request.GET.get('target_material')
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+
+    if storage_location_id:
+        conversions = conversions.filter(storage_location_id=storage_location_id)
+
+    if source_material_id:
+        conversions = conversions.filter(source_material_id=source_material_id)
+
+    if target_material_id:
+        conversions = conversions.filter(target_material_id=target_material_id)
+
+    if date_from:
+        conversions = conversions.filter(conversion_date__date__gte=date_from)
+
+    if date_to:
+        conversions = conversions.filter(conversion_date__date__lte=date_to)
+
+    # ===== СТАТИСТИКА =====
+    total_source_pieces = conversions.aggregate(total=Sum('source_quantity_pieces'))['total'] or 0
+    total_source_meters = conversions.aggregate(total=Sum('source_quantity_meters'))['total'] or 0
+    total_source_cubic = conversions.aggregate(total=Sum('source_quantity_cubic'))['total'] or 0
+    total_target_pieces = conversions.aggregate(total=Sum('target_quantity_pieces'))['total'] or 0
+    total_target_meters = conversions.aggregate(total=Sum('target_quantity_meters'))['total'] or 0
+    total_target_cubic = conversions.aggregate(total=Sum('target_quantity_cubic'))['total'] or 0
 
     context = {
         'title': 'Конвертация древесины',
         'employee_name': request.session.get('employee_name'),
         'position_name': user_position_name,
         'conversions': conversions,
-        'total_count': total_count,
-        'completed_count': completed_count,
-        'pending_count': pending_count,
+        'user_warehouses': user_warehouses,
+        'materials': materials,
         'is_manager': is_manager,
-        'now_minus_5_days': now_minus_5_days,  # Добавляем для шаблона
+        'now_minus_5_days': now_minus_5_days,
+        'total_source_pieces': total_source_pieces,
+        'total_source_meters': total_source_meters,
+        'total_source_cubic': total_source_cubic,
+        'total_target_pieces': total_target_pieces,
+        'total_target_meters': total_target_meters,
+        'total_target_cubic': total_target_cubic,
     }
 
     return render(request, 'Conversion/conversion_list.html', context)

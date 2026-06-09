@@ -15,7 +15,6 @@ class MaterialMovementCreateForm(forms.ModelForm):
     date_time = forms.DateTimeField(
         label='Дата и время',
         required=False,
-        initial=timezone.localtime(timezone.now()),
         widget=forms.DateTimeInput(attrs={
             'class': 'form-control',
             'type': 'datetime-local'
@@ -103,11 +102,15 @@ class MaterialMovementCreateForm(forms.ModelForm):
         self.instance = kwargs.get('instance', None)
         super().__init__(*args, **kwargs)
 
-        # Если это редактирование, подставляем дату
+        # ===== УСТАНОВКА ЛОКАЛЬНОГО ВРЕМЕНИ ДЛЯ ПОЛЯ date_time =====
+        local_now = timezone.localtime(timezone.now())
+
         if self.instance and self.instance.pk:
-            self.initial['date_time'] = self.instance.date_time.strftime('%Y-%m-%dT%H:%M')
+            # При редактировании: преобразуем UTC → локальное время
+            self.initial['date_time'] = timezone.localtime(self.instance.date_time).strftime('%Y-%m-%dT%H:%M')
         else:
-            self.initial['date_time'] = timezone.now().strftime('%Y-%m-%dT%H:%M')
+            # При создании: текущее локальное время
+            self.initial['date_time'] = local_now.strftime('%Y-%m-%dT%H:%M')
 
         # ОПРЕДЕЛЯЕМ ДОЛЖНОСТЬ ПОЛЬЗОВАТЕЛЯ
         is_supervisor = (self.position_name and self.position_name.lower() == 'руководитель')
@@ -122,30 +125,24 @@ class MaterialMovementCreateForm(forms.ModelForm):
             # Для всех остальных - все кроме Реализации
             filtered_choices = [choice for choice in all_choices if choice[0] != 'Реализация']
 
-        # Применяем отфильтрованные choices к полю
         self.fields['accounting_type'].choices = filtered_choices
 
-        # Если есть только один вариант и он не выбран, устанавливаем его по умолчанию
         if len(filtered_choices) == 1 and not self.initial.get('accounting_type') and not self.instance:
             self.initial['accounting_type'] = filtered_choices[0][0]
 
         # ПОЛУЧАЕМ МЕСТА ХРАНЕНИЯ ЧЕРЕЗ СЕРВИС
-        # Получаем ID мест хранения, принадлежащих пользователю
         user_locations = StorageLocationService.get_user_storage_locations_by_position_name(
             self.position_name
         )
         self.user_location_ids = list(user_locations.values_list('id', flat=True))
 
-        # Получаем ID мест хранения, НЕ принадлежащих пользователю
         all_location_ids = list(StorageLocation.objects.all().values_list('id', flat=True))
         self.foreign_location_ids = [loc_id for loc_id in all_location_ids if loc_id not in self.user_location_ids]
 
-        # Получаем ID контрагентов
         self.counterparty_ids = list(StorageLocation.objects.filter(
             source_type='контрагент'
         ).values_list('id', flat=True))
 
-        # Получаем ID бригад и автомобилей (для списания)
         self.brigade_and_vehicle_ids = list(StorageLocation.objects.filter(
             source_type__in=['бригады', 'автомобиль']
         ).values_list('id', flat=True))
@@ -154,6 +151,8 @@ class MaterialMovementCreateForm(forms.ModelForm):
         self.fields['from_location'].queryset = StorageLocation.objects.all().order_by('source_type')
         self.fields['to_location'].queryset = StorageLocation.objects.all().order_by('source_type')
         self.fields['material'].queryset = Material.objects.all().order_by('material_type', 'name')
+
+        # Настройка поля материала для поиска
         self.fields['material'].widget = forms.TextInput(attrs={
             'class': 'form-control material-search',
             'list': 'material-list',
@@ -173,7 +172,6 @@ class MaterialMovementCreateForm(forms.ModelForm):
 
         self.fields['vehicle'].queryset = Vehicle.objects.all().order_by('brand', 'model')
 
-        # Если это редактирование, применяем фильтры в соответствии с типом движения
         if self.instance and self.instance.pk:
             self._apply_filters_for_type(self.instance.accounting_type)
 
@@ -356,17 +354,26 @@ class MaterialMovementCreateForm(forms.ModelForm):
         return cleaned_data
 
     def save(self, commit=True):
-        """Сохраняет движение с установкой даты"""
+        """Сохраняет движение"""
         instance = super().save(commit=False)
 
         # Устанавливаем дату из формы
         if self.cleaned_data.get('date_time'):
-            instance.date_time = self.cleaned_data['date_time']
+            local_dt = self.cleaned_data['date_time']
+
+            # Делаем время осознанным (aware) если оно наивное
+            if timezone.is_naive(local_dt):
+                local_tz = timezone.get_current_timezone()
+                local_dt = timezone.make_aware(local_dt, local_tz)
+
+            # Преобразуем в UTC для хранения в БД
+            instance.date_time = local_dt.astimezone(timezone.utc)
         else:
             instance.date_time = timezone.now()
 
         if commit:
             instance.save()
+            self.save_m2m()
         return instance
 
 

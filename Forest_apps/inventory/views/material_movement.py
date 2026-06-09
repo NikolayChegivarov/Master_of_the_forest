@@ -199,7 +199,6 @@ def material_movement_create_view(request):
             movement.created_by = request.user
 
             # Добавляем должность создателя
-            position_name = request.session.get('position_name')
             try:
                 position = Position.objects.get(name__iexact=position_name)
                 movement.created_by_position = position
@@ -292,16 +291,11 @@ def material_movement_edit_view(request, movement_id):
 
     try:
         if is_manager:
-            # Руководитель может редактировать ЛЮБОЕ движение, КРОМЕ выполненных отправлений
             movement = get_object_or_404(MaterialMovement, id=movement_id)
-
-            # Даже руководитель не может редактировать выполненное отправление
             if movement.accounting_type == 'Отправление' and movement.is_completed:
-                messages.error(request, 'Нельзя редактировать выполненное отправление (это договор между сторонами)')
+                messages.error(request, 'Нельзя редактировать выполненное отправление')
                 return redirect('inventory:material_movement_detail', movement_id=movement.id)
-
         else:
-            # Обычные пользователи - только свои движения
             try:
                 position = Position.objects.get(name__iexact=position_name)
                 movement = get_object_or_404(
@@ -313,31 +307,24 @@ def material_movement_edit_view(request, movement_id):
                 messages.error(request, 'Ошибка определения должности')
                 return redirect('inventory:material_movement_list')
 
-            # ===== ПРОВЕРКИ ДЛЯ МАСТЕРА =====
-
-            # 1. Для Отправлений: нельзя редактировать выполненные
             if movement.accounting_type == 'Отправление' and movement.is_completed:
                 messages.error(request, 'Нельзя редактировать выполненное отправление')
                 return redirect('inventory:material_movement_detail', movement_id=movement.id)
 
-            # 2. Для Отправлений: только отправитель может редактировать
             if movement.accounting_type == 'Отправление':
                 user_role = movement.get_user_role(request.user)
                 if user_role != 'sender':
                     messages.error(request, 'Только отправитель может редактировать это отправление')
                     return redirect('inventory:material_movement_detail', movement_id=movement.id)
 
-            # 3. Для Перемещения и Списания: проверка 5 дней от создания
             if movement.accounting_type in ['Перемещение', 'Списание']:
                 if movement.is_completed:
                     time_diff = timezone.now() - movement.date_time
                     if time_diff.days >= 5:
                         messages.error(request,
-                                       f'Движение старше 5 дней (создано {movement.date_time.date()}), редактирование невозможно')
+                            f'Движение старше 5 дней (создано {movement.date_time.date()}), редактирование невозможно')
                         return redirect('inventory:material_movement_detail', movement_id=movement.id)
-                # Если не выполнено - можно редактировать без проверки возраста
 
-            # 4. Для Реализации: мастер их вообще не видит
             if movement.accounting_type == 'Реализация':
                 messages.error(request, 'Доступ запрещен')
                 return redirect('inventory:material_movement_list')
@@ -351,7 +338,6 @@ def material_movement_edit_view(request, movement_id):
             )
             if form.is_valid():
                 updated_movement = form.save(commit=False)
-                # Дата и время сохраняются через форму, просто сохраняем
                 updated_movement.save()
                 messages.success(request, f'Движение №{updated_movement.id} успешно обновлено!')
                 return redirect('inventory:material_movement_detail', movement_id=updated_movement.id)

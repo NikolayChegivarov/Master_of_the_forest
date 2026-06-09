@@ -120,17 +120,14 @@ def operation_record_list_view(request):
 def operation_record_create_view(request):
     """Создание новой записи операции"""
 
-    # Получаем должность пользователя из сессии
     position_name = request.session.get('position_name')
 
     if request.method == 'POST':
         form = OperationRecordCreateForm(request.POST, user=request.user, position_name=position_name)
         if form.is_valid():
-            # Сохраняем запись
             record = form.save(commit=False)
             record.created_by = request.user
 
-            # Добавляем должность создателя
             try:
                 position = Position.objects.get(name__iexact=position_name)
                 record.created_by_position = position
@@ -141,7 +138,6 @@ def operation_record_create_view(request):
                 )
                 record.created_by_position = position
 
-            # Дата уже установлена в форме
             record.save()
 
             messages.success(
@@ -153,20 +149,11 @@ def operation_record_create_view(request):
     else:
         form = OperationRecordCreateForm(user=request.user, position_name=position_name)
 
-        # Проверяем, есть ли у пользователя склады
-        user_warehouses = StorageLocationService.get_user_warehouses_by_position_name(position_name)
-        if user_warehouses.count() == 0:
-            messages.warning(
-                request,
-                '⚠️ У вас нет складов для учета операций. Сначала создайте склад.'
-            )
+        if form.fields['warehouse'].queryset.count() == 0:
+            messages.warning(request, '⚠️ У вас нет складов для учета операций. Сначала создайте склад.')
 
-        # Проверяем, есть ли активные типы операций
         if form.fields['operation_type'].queryset.count() == 0:
-            messages.warning(
-                request,
-                '⚠️ Нет активных типов операций. Сначала создайте тип операции.'
-            )
+            messages.warning(request, '⚠️ Нет активных типов операций. Сначала создайте тип операции.')
 
     context = {
         'title': 'Создание записи операции',

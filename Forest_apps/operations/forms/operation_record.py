@@ -66,12 +66,13 @@ class OperationRecordCreateForm(forms.ModelForm):
         self.position_name = kwargs.pop('position_name', None)
         super().__init__(*args, **kwargs)
 
-        # Если это редактирование и у записи есть дата, подставляем её
+        # Устанавливаем локальное время для поля date_time
+        local_now = timezone.localtime(timezone.now())
+
         if self.instance and self.instance.pk:
-            self.initial['date_time'] = self.instance.date_time.strftime('%Y-%m-%dT%H:%M')
+            self.initial['date_time'] = timezone.localtime(self.instance.date_time).strftime('%Y-%m-%dT%H:%M')
         else:
-            # Для новой записи подставляем текущую дату
-            self.initial['date_time'] = timezone.now().strftime('%Y-%m-%dT%H:%M')
+            self.initial['date_time'] = local_now.strftime('%Y-%m-%dT%H:%M')
 
         # Только активные типы операций
         from Forest_apps.operations.models import OperationType
@@ -116,11 +117,17 @@ class OperationRecordCreateForm(forms.ModelForm):
     def save(self, commit=True):
         instance = super().save(commit=False)
 
-        # Устанавливаем дату из формы
+        # Устанавливаем дату из формы и преобразуем в UTC для хранения в БД
         if self.cleaned_data.get('date_time'):
-            instance.date_time = self.cleaned_data['date_time']
+            # Браузер передаёт локальное время, преобразуем в UTC
+            local_dt = self.cleaned_data['date_time']
+            # Делаем время осознанным (aware)
+            if timezone.is_naive(local_dt):
+                local_tz = timezone.get_current_timezone()
+                local_dt = timezone.make_aware(local_dt, local_tz)
+            # Преобразуем в UTC для хранения
+            instance.date_time = local_dt.astimezone(timezone.utc)
         else:
-            # Если дата не указана, ставим текущую
             instance.date_time = timezone.now()
 
         if commit:

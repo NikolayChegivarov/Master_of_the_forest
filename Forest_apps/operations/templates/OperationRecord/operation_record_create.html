@@ -31,11 +31,14 @@
 
             <!-- Поле Дата и время -->
             <div class="form-group">
-                <label for="id_date_time">Дата и время:</label>
-                <input type="datetime-local" name="date_time" id="id_date_time" class="form-control"
-                       value="{{ date_time|default:'' }}">
-                {% if date_time_error %}
-                    <div class="field-error">{{ date_time_error }}</div>
+                <label for="{{ form.date_time.id_for_label }}">{{ form.date_time.label }}:</label>
+                {{ form.date_time }}
+                {% if form.date_time.errors %}
+                    <div class="field-error">
+                        {% for error in form.date_time.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
                 {% endif %}
                 <small class="form-text text-muted">Выберите дату и время операции. По умолчанию - текущее время.</small>
             </div>

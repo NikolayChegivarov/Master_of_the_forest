@@ -15,7 +15,7 @@ class MaterialMovementCreateForm(forms.ModelForm):
     date_time = forms.DateTimeField(
         label='Дата и время',
         required=False,
-        initial=timezone.now,
+        initial=timezone.localtime(timezone.now()),
         widget=forms.DateTimeInput(attrs={
             'class': 'form-control',
             'type': 'datetime-local'

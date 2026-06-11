@@ -21,8 +21,11 @@
             <div class="filters-row">
                 <div class="filter-group">
                     <label for="storage_location">Склад:</label>
-                    <input type="text" id="storage_location_search" class="form-control storage-location-search"
-                           placeholder="Поиск склада..." autocomplete="off">
+                    <div class="filter-input-wrapper">
+                        <input type="text" id="storage_location_search" class="form-control storage-location-search"
+                               placeholder="Поиск склада..." autocomplete="off">
+                        <div id="storage_location_dropdown" class="filter-dropdown" style="display: none;"></div>
+                    </div>
                     <select name="storage_location" id="id_storage_location" style="display: none;">
                         <option value="">Все склады</option>
                         {% for warehouse in user_warehouses %}
@@ -31,13 +34,15 @@
                             </option>
                         {% endfor %}
                     </select>
-                    <div id="storage_location_dropdown" class="filter-dropdown" style="display: none;"></div>
                 </div>
 
                 <div class="filter-group">
                     <label for="source_material">Исходный материал:</label>
-                    <input type="text" id="source_material_search" class="form-control material-search"
-                           placeholder="Поиск исходного материала..." autocomplete="off">
+                    <div class="filter-input-wrapper">
+                        <input type="text" id="source_material_search" class="form-control material-search"
+                               placeholder="Поиск исходного материала..." autocomplete="off">
+                        <div id="source_material_dropdown" class="filter-dropdown" style="display: none;"></div>
+                    </div>
                     <select name="source_material" id="id_source_material" style="display: none;">
                         <option value="">Все материалы</option>
                         {% for material in materials %}
@@ -46,13 +51,15 @@
                             </option>
                         {% endfor %}
                     </select>
-                    <div id="source_material_dropdown" class="filter-dropdown" style="display: none;"></div>
                 </div>
 
                 <div class="filter-group">
                     <label for="target_material">Целевой материал:</label>
-                    <input type="text" id="target_material_search" class="form-control material-search"
-                           placeholder="Поиск целевого материала..." autocomplete="off">
+                    <div class="filter-input-wrapper">
+                        <input type="text" id="target_material_search" class="form-control material-search"
+                               placeholder="Поиск целевого материала..." autocomplete="off">
+                        <div id="target_material_dropdown" class="filter-dropdown" style="display: none;"></div>
+                    </div>
                     <select name="target_material" id="id_target_material" style="display: none;">
                         <option value="">Все материалы</option>
                         {% for material in materials %}
@@ -61,7 +68,6 @@
                             </option>
                         {% endfor %}
                     </select>
-                    <div id="target_material_dropdown" class="filter-dropdown" style="display: none;"></div>
                 </div>
             </div>
 
@@ -171,20 +177,21 @@
                     <tbody>
                         {% for conversion in conversions %}
                         <tr class="conversion-row" data-conversion-id="{{ conversion.id }}">
-                            <td><strong>{{ conversion.id }}</strong>
-                            <td>{{ conversion.conversion_date|date:"d.m.Y H:i" }}
-                            <td class="location-cell">{{ conversion.storage_location.get_source_name|truncatechars:30 }}
-                            <td>{{ conversion.source_material.name }}
-                            <td class="quantity-cell">{{ conversion.source_quantity_display }}
-                            <td class="arrow-cell">→
-                            <td>{{ conversion.target_material.name }}
-                            <td class="quantity-cell">{{ conversion.target_quantity_display }}
+                            <td><strong>{{ conversion.id }}</strong>2d
+                            <td>{{ conversion.conversion_date|date:"d.m.Y H:i" }}2d
+                            <td class="location-cell">{{ conversion.storage_location.get_source_name|truncatechars:30 }}2d
+                            <td>{{ conversion.source_material.name }}2d
+                            <td class="quantity-cell">{{ conversion.source_quantity_display }}2d
+                            <td class="arrow-cell">→2d
+                            <td>{{ conversion.target_material.name }}2d
+                            <td class="quantity-cell">{{ conversion.target_quantity_display }}2d
                             <td>
                                 {% if conversion.created_by_position %}
                                     <span class="position-badge">{{ conversion.created_by_position.name }}</span>
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
+                            2d
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
                                     <a href="{% url 'inventory:conversion_detail' conversion.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
@@ -201,6 +208,7 @@
                                         {% endif %}
                                     {% endif %}
                                 </div>
+                            2d
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -300,6 +308,11 @@
         font-weight: 500;
     }
 
+    .filter-input-wrapper {
+        position: relative;
+        width: 100%;
+    }
+
     .filter-group input,
     .filter-group select {
         width: 100%;
@@ -325,7 +338,7 @@
         border-radius: 8px;
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         background-color: white;
-        width: calc(100% - 2px);
+        width: 100%;
         top: 100%;
         left: 0;
         margin-top: 4px;
@@ -689,7 +702,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     // ========== ФИЛЬТРЫ С ПОИСКОМ ==========
 
-    // Функция для создания поискового фильтра
     function setupSearchFilter(inputId, selectId, dropdownId) {
         const searchInput = document.getElementById(inputId);
         const hiddenSelect = document.getElementById(selectId);
@@ -697,6 +709,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!searchInput || !hiddenSelect || !dropdown) return;
 
+        // Находим wrapper для правильного позиционирования
+        const wrapper = searchInput.closest('.filter-input-wrapper');
+
+        // Получаем опции из скрытого select
         const options = Array.from(hiddenSelect.options).filter(opt => opt.value !== '');
 
         function showDropdown(filteredOptions) {
@@ -711,21 +727,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 item.className = 'filter-dropdown-item';
                 item.textContent = opt.textContent;
                 item.setAttribute('data-value', opt.value);
-                item.addEventListener('click', function() {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
                     searchInput.value = this.textContent;
                     hiddenSelect.value = this.getAttribute('data-value');
                     dropdown.style.display = 'none';
+                    // Отправляем форму
                     document.getElementById('filter-form').submit();
                 });
                 dropdown.appendChild(item);
             });
             dropdown.style.display = 'block';
-
-            const rect = searchInput.getBoundingClientRect();
-            dropdown.style.position = 'absolute';
-            dropdown.style.top = rect.bottom + 'px';
-            dropdown.style.left = rect.left + 'px';
-            dropdown.style.width = rect.width + 'px';
         }
 
         function filterOptions() {
@@ -736,6 +749,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showDropdown(filtered);
         }
 
+        // Обработчики событий
         searchInput.addEventListener('input', filterOptions);
         searchInput.addEventListener('focus', filterOptions);
         searchInput.addEventListener('click', function(e) {
@@ -743,8 +757,9 @@ document.addEventListener('DOMContentLoaded', function() {
             filterOptions();
         });
 
+        // Закрываем dropdown при клике вне
         document.addEventListener('click', function(e) {
-            if (e.target !== searchInput && !dropdown.contains(e.target)) {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
                 dropdown.style.display = 'none';
             }
         });

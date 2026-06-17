@@ -243,7 +243,7 @@
                                     {% if is_manager %}
                                         {# ========== РУКОВОДИТЕЛЬ ========== #}
                                         {% if movement.accounting_type == 'Отправление' and not movement.is_completed %}
-                                            {% if user_role == 'receiver' %}
+                                            {% if movement.user_role == 'receiver' %}
                                                 <a href="{% url 'inventory:material_movement_confirm' movement.id %}" class="btn-action confirm-btn" title="Подтвердить получение" onclick="return confirm('Подтвердить получение этих материалов?');">✅</a>
                                             {% endif %}
                                             <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
@@ -259,22 +259,13 @@
                                         {# ========== МАСТЕР ========== #}
                                         {% if movement.accounting_type == 'Отправление' %}
                                             {% if not movement.is_completed %}
-                                                {% if user_role == 'receiver' %}
-                                                    <!-- Мастер как получатель: 👁️ + ✅ (всегда, без ограничений) -->
+                                                {% if movement.user_role == 'receiver' %}
+                                                    <!-- Мастер как получатель: 👁️ + ✅ -->
                                                     <a href="{% url 'inventory:material_movement_confirm' movement.id %}" class="btn-action confirm-btn" title="Подтвердить получение" onclick="return confirm('Подтвердить получение этих материалов?');">✅</a>
-                                                {% elif user_role == 'sender' %}
-                                                    <!-- Мастер как отправитель: 👁️ + ✏️ + 🗑️ (ограничения только после выполнения) -->
-                                                    {% if movement.is_completed %}
-                                                        {% if movement.completed_at and movement.completed_at >= now_minus_5_days %}
-                                                            <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
-                                                            <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
-                                                        {% else %}
-                                                            <span class="btn-action disabled-btn" title="Редактирование недоступно (старше 5 дней с момента подтверждения)">🔒</span>
-                                                        {% endif %}
-                                                    {% else %}
-                                                        <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
-                                                        <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
-                                                    {% endif %}
+                                                {% elif movement.user_role == 'sender' %}
+                                                    <!-- Мастер как отправитель: 👁️ + ✏️ + 🗑️ -->
+                                                    <a href="{% url 'inventory:material_movement_edit' movement.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                                                    <a href="{% url 'inventory:material_movement_delete' movement.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить это движение?');">🗑️</a>
                                                 {% endif %}
                                             {% else %}
                                                 <!-- Выполненные отправления: 👁️ + 🔒 -->

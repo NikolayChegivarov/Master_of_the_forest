@@ -23,6 +23,9 @@ def material_movement_list_view(request):
 
     # Получаем должность текущего пользователя из сессии
     user_position_name = request.session.get('position_name')
+    print(f"=== VIEW DEBUG: user_position_name = {user_position_name} ===")
+    print(f"=== VIEW DEBUG: session keys = {request.session.keys()} ===")
+
     user_position_id = None
 
     # Проверяем, является ли пользователь руководителем
@@ -140,6 +143,10 @@ def material_movement_list_view(request):
     if employee_id:
         movements = movements.filter(employee_id=employee_id)
 
+    # Добавляем роль для каждого движения (передаем position_name)
+    for movement in movements:
+        movement.user_role = movement.get_user_role(request.user, user_position_name)
+
     # Получаем ID мест хранения текущего пользователя для проверки прав на подтверждение
     user_locations = user_location_ids
 
@@ -157,6 +164,8 @@ def material_movement_list_view(request):
     total_pieces = movements.aggregate(total=Sum('quantity_pieces'))['total'] or 0
     total_meters = movements.aggregate(total=Sum('quantity_meters'))['total'] or 0
     total_cubic = movements.aggregate(total=Sum('quantity_cubic'))['total'] or 0
+
+    # Вычисляем дату 5 дней назад для проверки возраста
     now_minus_5_days = timezone.now() - timedelta(days=5)
 
     context = {
@@ -176,7 +185,7 @@ def material_movement_list_view(request):
         'is_manager': is_manager,
         'drivers': drivers,
         'now_minus_5_days': now_minus_5_days,
-        'user_role': None,
+        'user_position_name': user_position_name,
     }
 
     return render(request, 'MaterialMovement/material_movement_list.html', context)

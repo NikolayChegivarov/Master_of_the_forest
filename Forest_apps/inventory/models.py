@@ -602,54 +602,94 @@ class MaterialMovement(models.Model):
             parts.append(f"{self.quantity_cubic} м³")
         return ", ".join(parts) if parts else "0"
 
-    def get_user_role(self, user):
+    def get_user_role(self, user, position_name=None):
         """Определяет роль пользователя для данного движения"""
-        from Forest_apps.core.models import Warehouse, Brigade, Vehicle
+        from Forest_apps.core.models import Warehouse, Brigade, Vehicle, Position
         from Forest_apps.inventory.models import StorageLocation
 
-        # Определяем должность пользователя
-        from Forest_apps.core.models import Position
-        position_name = None
-        if hasattr(user, 'session') and user.is_authenticated:
-            # В реальном коде нужно получать должность из сессии
-            # Это упрощенный вариант
-            pass
+        print(f"=== get_user_role для движения {self.id} ===")
 
-        # Проверяем, является ли пользователь отправителем (владелец from_location)
+        # Если position_name не передан, пытаемся получить из сессии
+        if not position_name:
+            if hasattr(user, 'session') and user.is_authenticated:
+                position_name = user.session.get('position_name')
+
+        print(f"position_name: {position_name}")
+
+        if not position_name:
+            print("position_name is None, returning 'none'")
+            return 'none'
+
+        # Находим должность
+        position = Position.objects.filter(name__iexact=position_name).first()
+        if not position:
+            print(f"Position not found for name: {position_name}")
+            return 'none'
+
+        print(f"Position found: {position.id} - {position.name}")
+
+        # Проверяем, является ли пользователь отправителем
         try:
             if self.from_location.source_type == 'склад':
-                warehouse = Warehouse.objects.get(id=self.from_location.source_id)
-                if warehouse.created_by == user:
+                warehouse = Warehouse.objects.filter(
+                    id=self.from_location.source_id,
+                    created_by_position=position
+                ).first()
+                if warehouse:
+                    print("Returning 'sender'")
                     return 'sender'
             elif self.from_location.source_type == 'бригады':
-                brigade = Brigade.objects.get(id=self.from_location.source_id)
-                if brigade.created_by == user:
+                brigade = Brigade.objects.filter(
+                    id=self.from_location.source_id,
+                    created_by_position=position
+                ).first()
+                if brigade:
+                    print("Returning 'sender'")
                     return 'sender'
             elif self.from_location.source_type == 'автомобиль':
-                vehicle = Vehicle.objects.get(id=self.from_location.source_id)
-                if vehicle.created_by == user:
+                vehicle = Vehicle.objects.filter(
+                    id=self.from_location.source_id,
+                    created_by_position=position
+                ).first()
+                if vehicle:
+                    print("Returning 'sender'")
                     return 'sender'
-        except:
-            pass
+        except Exception as e:
+            print(f"Error checking from_location: {e}")
 
-        # Проверяем, является ли пользователь получателем (владелец to_location)
+        # Проверяем, является ли пользователь получателем
         if self.to_location:
             try:
                 if self.to_location.source_type == 'склад':
-                    warehouse = Warehouse.objects.get(id=self.to_location.source_id)
-                    if warehouse.created_by == user:
+                    warehouse = Warehouse.objects.filter(
+                        id=self.to_location.source_id,
+                        created_by_position=position
+                    ).first()
+                    if warehouse:
+                        print("Returning 'receiver'")
                         return 'receiver'
                 elif self.to_location.source_type == 'бригады':
-                    brigade = Brigade.objects.get(id=self.to_location.source_id)
-                    if brigade.created_by == user:
+                    brigade = Brigade.objects.filter(
+                        id=self.to_location.source_id,
+                        created_by_position=position
+                    ).first()
+                    if brigade:
+                        print("Returning 'receiver'")
                         return 'receiver'
                 elif self.to_location.source_type == 'автомобиль':
-                    vehicle = Vehicle.objects.get(id=self.to_location.source_id)
-                    if vehicle.created_by == user:
+                    vehicle = Vehicle.objects.filter(
+                        id=self.to_location.source_id,
+                        created_by_position=position
+                    ).first()
+                    if vehicle:
+                        print("Returning 'receiver'")
                         return 'receiver'
-            except:
-                pass
+            except Exception as e:
+                print(f"Error checking to_location: {e}")
+        else:
+            print("to_location is None")
 
+        print("Returning 'none'")
         return 'none'
 
 

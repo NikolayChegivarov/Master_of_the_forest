@@ -547,11 +547,16 @@ def material_movement_confirm_shipment_view(request, movement_id):
             messages.error(request, 'Отправление уже подтверждено')
             return redirect('inventory:material_movement_list')
 
-        user_role = movement.get_user_role(request.user)
+        # Получаем должность пользователя
+        position_name = request.session.get('position_name')
+
+        # Проверяем, что пользователь - получатель (передаем position_name)
+        user_role = movement.get_user_role(request.user, position_name)
         if user_role != 'receiver':
             messages.error(request, 'Только получатель может подтвердить это отправление')
             return redirect('inventory:material_movement_list')
 
+        # Подтверждаем получение
         movement.confirm_receipt()
         messages.success(request, f'Отправление №{movement.id} успешно подтверждено!')
 
@@ -569,10 +574,16 @@ def material_movement_pending_shipments_view(request):
 
     movements = MaterialMovement.get_pending_shipments_for_user(request.user)
 
+    # Добавляем роль для каждого движения (для отображения кнопок)
+    position_name = request.session.get('position_name')
+    for movement in movements:
+        movement.user_role = movement.get_user_role(request.user, position_name)
+
     context = {
         'title': 'Ожидающие отправления',
         'employee_name': request.session.get('employee_name'),
         'movements': movements,
+        'user_position_name': position_name,
     }
 
     return render(request, 'MaterialMovement/material_movement_pending.html', context)

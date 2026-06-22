@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(BASE_DIR, 'Forest_apps'))
 
 SECRET_KEY = 'django-insecure-b%-im)u0m*s!-2%ogpgwa0h_=w&$v5m)9t)55iiqh+pn(sjc+7'
 DEBUG = True
-ALLOWED_HOSTS = ['sht-aleksey.fvds.ru', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['sht-aleksey.fvds.ru', 'localhost', '127.0.0.1', '176.12.68.226']
 
 INSTALLED_APPS = [
     'django.contrib.admin',

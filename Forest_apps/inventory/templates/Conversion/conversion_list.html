@@ -177,21 +177,20 @@
                     <tbody>
                         {% for conversion in conversions %}
                         <tr class="conversion-row" data-conversion-id="{{ conversion.id }}">
-                            <td><strong>{{ conversion.id }}</strong>2d
-                            <td>{{ conversion.conversion_date|date:"d.m.Y H:i" }}2d
-                            <td class="location-cell">{{ conversion.storage_location.get_source_name|truncatechars:30 }}2d
-                            <td>{{ conversion.source_material.name }}2d
-                            <td class="quantity-cell">{{ conversion.source_quantity_display }}2d
-                            <td class="arrow-cell">→2d
-                            <td>{{ conversion.target_material.name }}2d
-                            <td class="quantity-cell">{{ conversion.target_quantity_display }}2d
+                            <td><strong>{{ conversion.id }}</strong>
+                            <td>{{ conversion.conversion_date|date:"d.m.Y H:i" }}
+                            <td class="location-cell">{{ conversion.storage_location.get_source_name|truncatechars:30 }}
+                            <td>{{ conversion.source_material.name }}
+                            <td class="quantity-cell">{{ conversion.source_quantity_display }}
+                            <td class="arrow-cell">→
+                            <td>{{ conversion.target_material.name }}
+                            <td class="quantity-cell">{{ conversion.target_quantity_display }}
                             <td>
                                 {% if conversion.created_by_position %}
                                     <span class="position-badge">{{ conversion.created_by_position.name }}</span>
                                 {% else %}
                                     <span class="text-muted">—</span>
                                 {% endif %}
-                            2d
                             <td class="actions-cell">
                                 <div class="action-buttons-group">
                                     <a href="{% url 'inventory:conversion_detail' conversion.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
@@ -208,7 +207,6 @@
                                         {% endif %}
                                     {% endif %}
                                 </div>
-                            2d
                         </tr>
                         {% endfor %}
                     </tbody>

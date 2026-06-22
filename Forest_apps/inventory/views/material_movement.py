@@ -299,6 +299,7 @@ def material_movement_edit_view(request, movement_id):
     is_manager = (position_name and position_name.lower() == 'руководитель')
 
     try:
+        print(f"\n=== НАЧАЛО РЕДАКТИРОВАНИЯ #{movement_id} ===")
         if is_manager:
             # Руководитель может редактировать ЛЮБОЕ движение, КРОМЕ выполненных отправлений
             movement = get_object_or_404(MaterialMovement, id=movement_id)
@@ -353,6 +354,8 @@ def material_movement_edit_view(request, movement_id):
 
         if request.method == 'POST':
             # ===== ОТЛАДКА =====
+            print(f"\n=== POST ЗАПРОС ПОЛУЧЕН ===")
+            print(f"POST data: {request.POST}")
             print(f"\n=== РЕДАКТИРОВАНИЕ ДВИЖЕНИЯ #{movement_id} ===")
             print(f"Тип движения: {movement.accounting_type}")
             print(f"Старые данные:")

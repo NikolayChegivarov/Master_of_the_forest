@@ -342,7 +342,7 @@ def material_movement_edit_view(request, movement_id):
                     time_diff = timezone.now() - movement.date_time
                     if time_diff.days >= 5:
                         messages.error(request,
-                            f'Движение старше 5 дней (создано {movement.date_time.date()}), редактирование невозможно')
+                                       f'Движение старше 5 дней (создано {movement.date_time.date()}), редактирование невозможно')
                         return redirect('inventory:material_movement_detail', movement_id=movement.id)
                 # Если не выполнено - можно редактировать без проверки возраста
 
@@ -352,6 +352,29 @@ def material_movement_edit_view(request, movement_id):
                 return redirect('inventory:material_movement_list')
 
         if request.method == 'POST':
+            # ===== ОТЛАДКА =====
+            print(f"\n=== РЕДАКТИРОВАНИЕ ДВИЖЕНИЯ #{movement_id} ===")
+            print(f"Тип движения: {movement.accounting_type}")
+            print(f"Старые данные:")
+            print(f"  price: {movement.price}")
+            print(f"  quantity_pieces: {movement.quantity_pieces}")
+            print(f"  quantity_meters: {movement.quantity_meters}")
+            print(f"  quantity_cubic: {movement.quantity_cubic}")
+            print(f"  total_amount: {movement.total_amount}")
+
+            # Проверяем остатки до сохранения
+            from Forest_apps.inventory.models import MaterialBalance
+            try:
+                balance = MaterialBalance.objects.get(
+                    storage_location=movement.from_location,
+                    material=movement.material
+                )
+                print(f"\nОстаток ДО сохранения:")
+                print(f"  {movement.material.name}: {balance.quantity_pieces} шт")
+            except MaterialBalance.DoesNotExist:
+                print(f"\nОстаток НЕ НАЙДЕН!")
+            # ===== КОНЕЦ ОТЛАДКИ =====
+
             form = MaterialMovementCreateForm(
                 request.POST,
                 instance=movement,

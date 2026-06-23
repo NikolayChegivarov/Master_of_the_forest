@@ -299,17 +299,6 @@ class MaterialMovement(models.Model):
     def execute_movement(self):
         """Выполнение движения с проверкой остатков"""
 
-        print(f"\n=== EXECUTE MOVEMENT START ===")
-        print(f"Movement ID: {self.id}")
-        print(f"Тип: {self.accounting_type}")
-        print(f"От куда: {self.from_location}")
-        print(f"Куда: {self.to_location}")
-        print(f"Материал: {self.material}")
-        print(f"Количество штук: {self.quantity_pieces}")
-        print(f"Количество погонных метров: {self.quantity_meters}")
-        print(f"Количество кубических метров: {self.quantity_cubic}")
-        print(f"Завершено {self.is_completed}")
-
         if self.is_completed:
             print("ERROR: Movement already completed")
             raise ValueError("Движение уже выполнено")
@@ -606,8 +595,6 @@ class MaterialMovement(models.Model):
         """Определяет роль пользователя для данного движения"""
         from Forest_apps.core.models import Warehouse, Brigade, Vehicle, Position
         from Forest_apps.inventory.models import StorageLocation
-
-        print(f"=== get_user_role для движения {self.id} ===")
 
         # Если position_name не передан, пытаемся получить из сессии
         if not position_name:

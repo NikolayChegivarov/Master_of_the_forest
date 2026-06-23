@@ -70,10 +70,6 @@ class Material(models.Model):
         Получение материалов по типу
         """
         return cls.objects.filter(material_type=material_type).order_by('name')
-    # Получение древесины
-    # wood_materials = Material.get_materials_by_type('древесина')
-    # for material in wood_materials:
-    #     print(material)
 
     @classmethod
     def get_all_materials(cls):
@@ -81,10 +77,6 @@ class Material(models.Model):
         Получение всех материалов с группировкой по типу
         """
         return cls.objects.all().order_by('material_type', 'name')
-    # Получение всех материалов
-    # all_materials = Material.get_all_materials()
-    # for material in all_materials:
-    #     print(material)
 
 
 class Forestry(models.Model):

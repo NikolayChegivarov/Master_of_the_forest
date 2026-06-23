@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from Forest_apps.employees.models import Employee
-
+from Forest_apps.core.models import Position
 
 class CustomLoginForm(forms.Form):
     """Форма входа с выбором сотрудника из списка руководящих должностей"""
@@ -39,7 +39,6 @@ class CustomLoginForm(forms.Form):
         ]
 
         # Все должности в консоль
-        from Forest_apps.core.models import Position
         for pos in Position.objects.all():
             print(f"ID: {pos.id}, Название: '{pos.name}', Активна: {pos.is_active}")
 

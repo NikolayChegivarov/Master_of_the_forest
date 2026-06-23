@@ -23,8 +23,6 @@ def material_movement_list_view(request):
 
     # Получаем должность текущего пользователя из сессии
     user_position_name = request.session.get('position_name')
-    print(f"=== VIEW DEBUG: user_position_name = {user_position_name} ===")
-    print(f"=== VIEW DEBUG: session keys = {request.session.keys()} ===")
 
     user_position_id = None
 
@@ -292,25 +290,21 @@ def material_movement_detail_view(request, movement_id):
 
 @login_required
 def material_movement_edit_view(request, movement_id):
-    """Редактирование движения"""
+    """Редактирование движения с откатом старых данных и применением новых"""
 
     # Получаем должность текущего пользователя из сессии
     position_name = request.session.get('position_name')
     is_manager = (position_name and position_name.lower() == 'руководитель')
 
     try:
-        print(f"\n=== НАЧАЛО РЕДАКТИРОВАНИЯ #{movement_id} ===")
         if is_manager:
-            # Руководитель может редактировать ЛЮБОЕ движение, КРОМЕ выполненных отправлений
             movement = get_object_or_404(MaterialMovement, id=movement_id)
 
-            # Даже руководитель не может редактировать выполненное отправление
             if movement.accounting_type == 'Отправление' and movement.is_completed:
-                messages.error(request, 'Нельзя редактировать выполненное отправление (это договор между сторонами)')
+                messages.error(request, 'Нельзя редактировать выполненное отправление')
                 return redirect('inventory:material_movement_detail', movement_id=movement.id)
 
         else:
-            # Обычные пользователи - только свои движения
             try:
                 position = Position.objects.get(name__iexact=position_name)
                 movement = get_object_or_404(
@@ -322,73 +316,149 @@ def material_movement_edit_view(request, movement_id):
                 messages.error(request, 'Ошибка определения должности')
                 return redirect('inventory:material_movement_list')
 
-            # ===== ПРОВЕРКИ ДЛЯ МАСТЕРА =====
-
-            # 1. Для Отправлений: нельзя редактировать выполненные
             if movement.accounting_type == 'Отправление' and movement.is_completed:
                 messages.error(request, 'Нельзя редактировать выполненное отправление')
                 return redirect('inventory:material_movement_detail', movement_id=movement.id)
 
-            # 2. Для Отправлений: только отправитель может редактировать
             if movement.accounting_type == 'Отправление':
-                # Передаем position_name в get_user_role
                 user_role = movement.get_user_role(request.user, position_name)
                 if user_role != 'sender':
                     messages.error(request, 'Только отправитель может редактировать это отправление')
                     return redirect('inventory:material_movement_detail', movement_id=movement.id)
 
-            # 3. Для Перемещения и Списания: проверка 5 дней от создания
             if movement.accounting_type in ['Перемещение', 'Списание']:
                 if movement.is_completed:
                     time_diff = timezone.now() - movement.date_time
                     if time_diff.days >= 5:
                         messages.error(request,
-                                       f'Движение старше 5 дней (создано {movement.date_time.date()}), редактирование невозможно')
+                            f'Движение старше 5 дней (создано {movement.date_time.date()}), редактирование невозможно')
                         return redirect('inventory:material_movement_detail', movement_id=movement.id)
-                # Если не выполнено - можно редактировать без проверки возраста
 
-            # 4. Для Реализации: мастер их вообще не видит
             if movement.accounting_type == 'Реализация':
                 messages.error(request, 'Доступ запрещен')
                 return redirect('inventory:material_movement_list')
 
         if request.method == 'POST':
-            # ===== ОТЛАДКА =====
-            print(f"\n=== POST ЗАПРОС ПОЛУЧЕН ===")
-            print(f"POST data: {request.POST}")
-            print(f"\n=== РЕДАКТИРОВАНИЕ ДВИЖЕНИЯ #{movement_id} ===")
-            print(f"Тип движения: {movement.accounting_type}")
-            print(f"Старые данные:")
-            print(f"  price: {movement.price}")
-            print(f"  quantity_pieces: {movement.quantity_pieces}")
-            print(f"  quantity_meters: {movement.quantity_meters}")
-            print(f"  quantity_cubic: {movement.quantity_cubic}")
-            print(f"  total_amount: {movement.total_amount}")
+            # Получаем старые данные ДО изменения
+            old_from_location = movement.from_location
+            old_to_location = movement.to_location
+            old_material = movement.material
+            old_quantity_pieces = movement.quantity_pieces or 0
+            old_quantity_meters = movement.quantity_meters or 0
+            old_quantity_cubic = movement.quantity_cubic or 0
+            old_is_completed = movement.is_completed
 
-            # Проверяем остатки до сохранения
-            from Forest_apps.inventory.models import MaterialBalance
-            try:
-                balance = MaterialBalance.objects.get(
-                    storage_location=movement.from_location,
-                    material=movement.material
-                )
-                print(f"\nОстаток ДО сохранения:")
-                print(f"  {movement.material.name}: {balance.quantity_pieces} шт")
-            except MaterialBalance.DoesNotExist:
-                print(f"\nОстаток НЕ НАЙДЕН!")
-            # ===== КОНЕЦ ОТЛАДКИ =====
-
+            # Создаем форму с skip_balance_check=True для редактирования
             form = MaterialMovementCreateForm(
                 request.POST,
                 instance=movement,
                 user=request.user,
-                position_name=position_name
+                position_name=position_name,
+                skip_balance_check=True
             )
+
             if form.is_valid():
+                # Получаем новые данные из формы
+                new_from_location = form.cleaned_data.get('from_location')
+                new_to_location = form.cleaned_data.get('to_location')
+                new_material = form.cleaned_data.get('material')
+                new_quantity_pieces = form.cleaned_data.get('quantity_pieces') or 0
+                new_quantity_meters = form.cleaned_data.get('quantity_meters') or 0
+                new_quantity_cubic = form.cleaned_data.get('quantity_cubic') or 0
+
+                from Forest_apps.inventory.models import MaterialBalance
+
+                # ===== ЕСЛИ ДВИЖЕНИЕ УЖЕ ВЫПОЛНЕНО, ДЕЛАЕМ ОТКАТ =====
+                if old_is_completed:
+                    # 1. ВОЗВРАЩАЕМ МАТЕРИАЛ НА СКЛАД (ОТКАТ)
+                    try:
+                        from_balance = MaterialBalance.objects.get(
+                            storage_location=old_from_location,
+                            material=old_material
+                        )
+                        from_balance.quantity_pieces += old_quantity_pieces
+                        from_balance.quantity_meters = (from_balance.quantity_meters or 0) + old_quantity_meters
+                        from_balance.quantity_cubic = (from_balance.quantity_cubic or 0) + old_quantity_cubic
+                        from_balance.save()
+                    except MaterialBalance.DoesNotExist:
+                        messages.error(request, f'Ошибка отката: баланс не найден')
+                        return redirect('inventory:material_movement_edit', movement_id=movement.id)
+
+                    # 2. ЕСЛИ БЫЛА РЕАЛИЗАЦИЯ - УДАЛЯЕМ ЗАПИСЬ У КОНТРАГЕНТА
+                    if movement.accounting_type == 'Реализация' and old_to_location:
+                        try:
+                            to_balance = MaterialBalance.objects.get(
+                                storage_location=old_to_location,
+                                material=old_material
+                            )
+                            to_balance.quantity_pieces -= old_quantity_pieces
+                            to_balance.quantity_meters = (to_balance.quantity_meters or 0) - old_quantity_meters
+                            to_balance.quantity_cubic = (to_balance.quantity_cubic or 0) - old_quantity_cubic
+                            to_balance.save()
+                        except MaterialBalance.DoesNotExist:
+                            pass  # Если нет — пропускаем
+
+                # ===== ПРИМЕНЯЕМ НОВЫЕ ДАННЫЕ =====
+                if old_is_completed:
+                    # 3. ПРОВЕРЯЕМ И СПИСЫВАЕМ МАТЕРИАЛ СО СКЛАДА
+                    try:
+                        new_from_balance = MaterialBalance.objects.get(
+                            storage_location=new_from_location,
+                            material=new_material
+                        )
+
+                        # Проверка достаточности
+                        if new_quantity_pieces > 0 and new_from_balance.quantity_pieces < new_quantity_pieces:
+                            raise ValueError(f'Недостаточно материала "{new_material.name}" на складе')
+                        if new_quantity_meters > 0 and (new_from_balance.quantity_meters or 0) < new_quantity_meters:
+                            raise ValueError(f'Недостаточно материала "{new_material.name}" на складе')
+                        if new_quantity_cubic > 0 and (new_from_balance.quantity_cubic or 0) < new_quantity_cubic:
+                            raise ValueError(f'Недостаточно материала "{new_material.name}" на складе')
+
+                        new_from_balance.quantity_pieces -= new_quantity_pieces
+                        new_from_balance.quantity_meters = (new_from_balance.quantity_meters or 0) - new_quantity_meters
+                        new_from_balance.quantity_cubic = (new_from_balance.quantity_cubic or 0) - new_quantity_cubic
+                        new_from_balance.save()
+                    except MaterialBalance.DoesNotExist:
+                        messages.error(request, f'Материал "{new_material.name}" отсутствует на складе')
+                        return redirect('inventory:material_movement_edit', movement_id=movement.id)
+                    except ValueError as e:
+                        messages.error(request, str(e))
+                        return redirect('inventory:material_movement_edit', movement_id=movement.id)
+
+                    # 4. ЕСЛИ РЕАЛИЗАЦИЯ - СОЗДАЕМ ЗАПИСЬ У КОНТРАГЕНТА
+                    if movement.accounting_type == 'Реализация' and new_to_location:
+                        try:
+                            new_to_balance = MaterialBalance.objects.get(
+                                storage_location=new_to_location,
+                                material=new_material
+                            )
+                            new_to_balance.quantity_pieces += new_quantity_pieces
+                            new_to_balance.quantity_meters = (new_to_balance.quantity_meters or 0) + new_quantity_meters
+                            new_to_balance.quantity_cubic = (new_to_balance.quantity_cubic or 0) + new_quantity_cubic
+                            new_to_balance.save()
+                        except MaterialBalance.DoesNotExist:
+                            MaterialBalance.objects.create(
+                                storage_location=new_to_location,
+                                material=new_material,
+                                quantity_pieces=new_quantity_pieces,
+                                quantity_meters=new_quantity_meters,
+                                quantity_cubic=new_quantity_cubic,
+                                created_by=request.user,
+                                created_by_position=movement.created_by_position
+                            )
+
+                # Сохраняем обновленное движение
                 updated_movement = form.save(commit=False)
+                if old_is_completed:
+                    updated_movement.is_completed = True
                 updated_movement.save()
+
                 messages.success(request, f'Движение №{updated_movement.id} успешно обновлено!')
                 return redirect('inventory:material_movement_detail', movement_id=updated_movement.id)
+            else:
+                messages.error(request, f'Ошибка формы: {form.errors}')
+                return redirect('inventory:material_movement_edit', movement_id=movement.id)
         else:
             form = MaterialMovementCreateForm(
                 instance=movement,

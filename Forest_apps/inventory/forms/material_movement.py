@@ -99,6 +99,7 @@ class MaterialMovementCreateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         self.position_name = kwargs.pop('position_name', None)
+        self.skip_balance_check = kwargs.pop('skip_balance_check', False)
         self.instance = kwargs.get('instance', None)
         super().__init__(*args, **kwargs)
 
@@ -230,6 +231,7 @@ class MaterialMovementCreateForm(forms.ModelForm):
     def clean(self):
         """Валидация формы"""
         cleaned_data = super().clean()
+
         accounting_type = cleaned_data.get('accounting_type')
         from_location = cleaned_data.get('from_location')
         to_location = cleaned_data.get('to_location')
@@ -240,11 +242,17 @@ class MaterialMovementCreateForm(forms.ModelForm):
         quantity_meters = cleaned_data.get('quantity_meters') or 0
         quantity_cubic = cleaned_data.get('quantity_cubic') or 0
 
-        # Проверка - хотя бы одно количество должно быть указано
+        # Проверка - хотя бы одно количество должно быть указано (ВСЕГДА!)
         if not quantity_pieces and not quantity_meters and not quantity_cubic:
             raise forms.ValidationError('Необходимо указать хотя бы одно количество')
 
-        # ========== ПРОВЕРКА ОСТАТКОВ (для всех типов, где списывается материал) ==========
+        # ========== ПРОВЕРКА ОСТАТКОВ (пропускаем только при редактировании) ==========
+        # Если это редактирование с skip_balance_check=True, пропускаем проверку остатков
+        if getattr(self, 'skip_balance_check', False):
+            # Пропускаем проверку остатков, только базовая валидация
+            return cleaned_data
+
+        # Проверка остатков для всех типов, где списывается материал
         if accounting_type in ['Перемещение', 'Отправление', 'Реализация', 'Списание']:
             if from_location and material:
                 from Forest_apps.inventory.models import MaterialBalance

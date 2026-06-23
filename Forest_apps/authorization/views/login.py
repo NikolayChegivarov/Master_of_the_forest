@@ -9,7 +9,6 @@ def login_view(request):
     # Если пользователь уже авторизован - редиректим на его панель
     if request.user.is_authenticated:
         position_name = request.session.get('position_name', '').lower()
-        print(f"Already authenticated: {position_name}")  # Отладка
 
         if position_name == 'руководитель':
             return redirect('authorization:supervisor_dashboard')
@@ -40,8 +39,6 @@ def login_view(request):
             request.session['employee_name'] = employee.full_name
             request.session['position_name'] = employee.position.name
             request.session.save()  # Принудительно сохраняем сессию
-
-            print(f"Session after login: {request.session.items()}")  # Отладка
 
             messages.success(request, f'Добро пожаловать, {employee.full_name}!')
 

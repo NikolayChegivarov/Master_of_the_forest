@@ -2,8 +2,13 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
-from django.apps import apps  # Для get_model
+from django.apps import apps
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+
+# Импорты из других приложений
+from Forest_apps.core.models import Warehouse, Brigade, Vehicle, Position
+from Forest_apps.employees.models import Employee  # если понадобится
 
 User = get_user_model()
 
@@ -88,8 +93,6 @@ class StorageLocation(models.Model):
         if not user or not user.is_authenticated:
             return False
 
-        from Forest_apps.core.models import Warehouse, Brigade, Vehicle
-
         try:
             if self.source_type == 'склад':
                 return Warehouse.objects.filter(id=self.source_id, created_by=user).exists()
@@ -98,7 +101,6 @@ class StorageLocation(models.Model):
             elif self.source_type == 'автомобиль':
                 return Vehicle.objects.filter(id=self.source_id, created_by=user).exists()
             elif self.source_type == 'контрагент':
-                # Контрагенты всегда считаются "чужими" для перемещений
                 return False
         except:
             pass
@@ -122,7 +124,6 @@ class MaterialMovement(models.Model):
         choices=ACCOUNTING_TYPE_CHOICES
     )
 
-    # ✅ Правильные строковые ссылки
     employee = models.ForeignKey(
         'employees.Employee',
         on_delete=models.PROTECT,
@@ -264,7 +265,6 @@ class MaterialMovement(models.Model):
     def save(self, *args, **kwargs):
         """Метод сохранения с расчетом суммы только для Реализации"""
         if self.accounting_type == 'Реализация' and self.price:
-            # Приоритет: кубические метры → штуки → погонные метры
             if self.quantity_cubic is not None and self.quantity_cubic > 0:
                 self.total_amount = self.quantity_cubic * self.price
             elif self.quantity_meters is not None and self.quantity_meters > 0:
@@ -298,12 +298,12 @@ class MaterialMovement(models.Model):
 
     def execute_movement(self):
         """Выполнение движения с проверкой остатков"""
+        from .models import MaterialBalance
 
         if self.is_completed:
             print("ERROR: Movement already completed")
             raise ValueError("Движение уже выполнено")
 
-        # Проверка наличия достаточного количества материалов
         self._check_sufficient_quantity()
 
         if self.accounting_type == 'Перемещение':
@@ -313,10 +313,6 @@ class MaterialMovement(models.Model):
             if self.from_location.source_type in ['контрагент'] or self.to_location.source_type in ['контрагент']:
                 raise ValueError("В перемещении не могут участвовать контрагенты")
 
-            # Импортируем модель здесь, чтобы избежать циклического импорта
-            from .models import MaterialBalance
-
-            # Получаем или создаем остаток в месте назначения
             try:
                 from_balance = MaterialBalance.objects.get(
                     storage_location=self.from_location,
@@ -326,7 +322,6 @@ class MaterialMovement(models.Model):
                 print(f"ERROR: Material not found at from_location")
                 raise ValueError(f"Материал {self.material.name} отсутствует на {self.from_location.get_source_name()}")
 
-            # Проверяем наличие достаточного количества
             if self.quantity_pieces and from_balance.quantity_pieces < self.quantity_pieces:
                 raise ValueError(
                     f"Недостаточно материала в штуках: есть {from_balance.quantity_pieces}, требуется {self.quantity_pieces}"
@@ -340,7 +335,6 @@ class MaterialMovement(models.Model):
                     f"Недостаточно материала в кубических метрах: есть {from_balance.quantity_cubic or 0}, требуется {self.quantity_cubic}"
                 )
 
-            # Уменьшаем количество у отправителя
             print("Уменьшаем количество у отправителя...")
             if self.quantity_pieces:
                 from_balance.quantity_pieces -= self.quantity_pieces
@@ -352,7 +346,6 @@ class MaterialMovement(models.Model):
             from_balance.save()
             print(f"Баланс отправителя после отправления: pieces={from_balance.quantity_pieces}")
 
-            # Увеличиваем количество у получателя
             print("Увеличиваем количество у получателя...")
             try:
                 to_balance = MaterialBalance.objects.get(
@@ -372,7 +365,6 @@ class MaterialMovement(models.Model):
                 print(f"баланс получателя после обновления: pieces={to_balance.quantity_pieces}")
 
             except MaterialBalance.DoesNotExist:
-                # Если у получателя нет такого материала, создаем новую запись
                 MaterialBalance.objects.create(
                     storage_location=self.to_location,
                     material=self.material,
@@ -387,12 +379,10 @@ class MaterialMovement(models.Model):
             self.completed_at = timezone.now()
 
         elif self.accounting_type == 'Реализация':
-
             if not self.to_location or self.to_location.source_type != 'контрагент':
                 raise ValueError("Для реализации получателем должен быть контрагент")
             if not self.price:
                 raise ValueError("Для реализации необходимо указать цену")
-            from .models import MaterialBalance
 
             try:
                 from_balance = MaterialBalance.objects.get(
@@ -402,7 +392,6 @@ class MaterialMovement(models.Model):
             except MaterialBalance.DoesNotExist:
                 raise ValueError(f"Материал {self.material.name} отсутствует на {self.from_location.get_source_name()}")
 
-            # Проверяем наличие достаточного количества
             if self.quantity_pieces and from_balance.quantity_pieces < self.quantity_pieces:
                 raise ValueError(
                     f"Недостаточно материала в штуках: есть {from_balance.quantity_pieces}, требуется {self.quantity_pieces}"
@@ -416,7 +405,6 @@ class MaterialMovement(models.Model):
                     f"Недостаточно материала в кубических метрах: есть {from_balance.quantity_cubic or 0}, требуется {self.quantity_cubic}"
                 )
 
-            # Уменьшаем количество у отправителя (ТОЛЬКО УМЕНЬШАЕМ, НЕ ДОБАВЛЯЕМ ПОЛУЧАТЕЛЮ)
             if self.quantity_pieces:
                 from_balance.quantity_pieces -= self.quantity_pieces
             if self.quantity_meters:
@@ -425,7 +413,6 @@ class MaterialMovement(models.Model):
                 from_balance.quantity_cubic = (from_balance.quantity_cubic or 0) - self.quantity_cubic
             from_balance.save()
 
-            # НЕ создаем запись у получателя! Только уменьшаем у отправителя.
             self.is_completed = True
             self.completed_at = timezone.now()
 
@@ -434,21 +421,15 @@ class MaterialMovement(models.Model):
             if not self.to_location:
                 raise ValueError("Для списания необходимо указать получателя (бригаду или ТС)")
 
-            # Проверка, что отправитель - склад или автомобиль (свои)
             if self.from_location.source_type not in ['склад', 'автомобиль']:
                 raise ValueError("Списание возможно только со склада или автомобиля")
 
-            # Проверка, что получатель - бригада или автомобиль (только для аналитики)
             if self.to_location.source_type not in ['бригады', 'автомобиль']:
                 raise ValueError("Получателем при списании может быть только бригада или транспортное средство")
 
-            # Проверка, что материал - ГСМ или запчасти
             if self.material.material_type not in ['ГСМ', 'запчасти']:
                 raise ValueError("Списание возможно только для материалов типа ГСМ или запчасти")
 
-            from .models import MaterialBalance
-
-            # Получаем остаток у отправителя
             try:
                 from_balance = MaterialBalance.objects.get(
                     storage_location=self.from_location,
@@ -460,7 +441,6 @@ class MaterialMovement(models.Model):
                 print(f"ERROR: Material not found at from_location")
                 raise ValueError(f"Материал {self.material.name} отсутствует на {self.from_location.get_source_name()}")
 
-            # Проверяем наличие достаточного количества
             if self.quantity_pieces and from_balance.quantity_pieces < self.quantity_pieces:
                 raise ValueError(
                     f"Недостаточно материала в штуках: есть {from_balance.quantity_pieces}, требуется {self.quantity_pieces}"
@@ -474,7 +454,6 @@ class MaterialMovement(models.Model):
                     f"Недостаточно материала в кубических метрах: есть {from_balance.quantity_cubic or 0}, требуется {self.quantity_cubic}"
                 )
 
-            # Уменьшаем количество у отправителя (ТОЛЬКО УМЕНЬШАЕМ, НЕ ДОБАВЛЯЕМ ПОЛУЧАТЕЛЮ)
             if self.quantity_pieces:
                 from_balance.quantity_pieces -= self.quantity_pieces
             if self.quantity_meters:
@@ -483,10 +462,9 @@ class MaterialMovement(models.Model):
                 from_balance.quantity_cubic = (from_balance.quantity_cubic or 0) - self.quantity_cubic
             from_balance.save()
 
-            # НЕ создаем запись у получателя! Только уменьшаем у отправителя.
-            # Получатель нужен только для аналитики в документе движения.
             self.is_completed = True
             self.completed_at = timezone.now()
+
         self.save()
 
     def confirm_receipt(self):
@@ -496,10 +474,8 @@ class MaterialMovement(models.Model):
         if self.is_completed:
             raise ValueError("Отправление уже подтверждено")
 
-        # Проверяем наличие материалов у отправителя (должны быть зарезервированы)
         self._check_sufficient_quantity()
 
-        # Выполняем движение материалов
         MaterialBalance = apps.get_model('inventory', 'MaterialBalance')
         from_balance, to_balance = MaterialBalance.process_movement(self)
 
@@ -535,15 +511,8 @@ class MaterialMovement(models.Model):
     @classmethod
     def get_pending_shipments_for_user(cls, user):
         """Получение ожидающих отправлений для пользователя (где пользователь - получатель)"""
-        from Forest_apps.inventory.models import StorageLocation
-        from Forest_apps.core.models import Warehouse, Brigade, Vehicle, Position
-
-        # Получаем должность пользователя из сессии (нужно передавать или получать)
-        # Временно используем created_by, но лучше через сессию
-
         user_locations = []
 
-        # Склады, созданные пользователем
         warehouses = Warehouse.objects.filter(created_by=user)
         for wh in warehouses:
             try:
@@ -552,7 +521,6 @@ class MaterialMovement(models.Model):
             except StorageLocation.DoesNotExist:
                 pass
 
-        # Бригады
         brigades = Brigade.objects.filter(created_by=user)
         for br in brigades:
             try:
@@ -561,7 +529,6 @@ class MaterialMovement(models.Model):
             except StorageLocation.DoesNotExist:
                 pass
 
-        # Транспорт
         vehicles = Vehicle.objects.filter(created_by=user)
         for vh in vehicles:
             try:
@@ -593,10 +560,6 @@ class MaterialMovement(models.Model):
 
     def get_user_role(self, user, position_name=None):
         """Определяет роль пользователя для данного движения"""
-        from Forest_apps.core.models import Warehouse, Brigade, Vehicle, Position
-        from Forest_apps.inventory.models import StorageLocation
-
-        # Если position_name не передан, пытаемся получить из сессии
         if not position_name:
             if hasattr(user, 'session') and user.is_authenticated:
                 position_name = user.session.get('position_name')
@@ -607,7 +570,6 @@ class MaterialMovement(models.Model):
             print("position_name is None, returning 'none'")
             return 'none'
 
-        # Находим должность
         position = Position.objects.filter(name__iexact=position_name).first()
         if not position:
             print(f"Position not found for name: {position_name}")
@@ -615,7 +577,6 @@ class MaterialMovement(models.Model):
 
         print(f"Position found: {position.id} - {position.name}")
 
-        # Проверяем, является ли пользователь отправителем
         try:
             if self.from_location.source_type == 'склад':
                 warehouse = Warehouse.objects.filter(
@@ -644,7 +605,6 @@ class MaterialMovement(models.Model):
         except Exception as e:
             print(f"Error checking from_location: {e}")
 
-        # Проверяем, является ли пользователь получателем
         if self.to_location:
             try:
                 if self.to_location.source_type == 'склад':
@@ -740,12 +700,6 @@ class MaterialBalance(models.Model):
     class Meta:
         verbose_name = 'Остаток материала'
         verbose_name_plural = 'Остатки материалов'
-        # constraints = [
-        #     models.UniqueConstraint(
-        #         fields=['storage_location', 'material'],
-        #         name='unique_material_balance'
-        #     )
-        # ]
         indexes = [
             models.Index(fields=['storage_location', 'material']),
             models.Index(fields=['material', 'storage_location']),
@@ -766,7 +720,6 @@ class MaterialBalance(models.Model):
         except cls.DoesNotExist:
             raise ValueError(f"Материал {movement.material} не найден в месте хранения {movement.from_location}")
 
-        # Проверка наличия достаточного количества
         if movement.quantity_pieces and from_balance.quantity_pieces < movement.quantity_pieces:
             raise ValueError(
                 f"Недостаточно материала в штуках: есть {from_balance.quantity_pieces}, требуется {movement.quantity_pieces}"
@@ -780,7 +733,6 @@ class MaterialBalance(models.Model):
                 f"Недостаточно материала в кубических метрах: есть {from_balance.quantity_cubic or 0}, требуется {movement.quantity_cubic}"
             )
 
-        # Уменьшаем количество у отправителя
         if movement.quantity_pieces:
             from_balance.quantity_pieces -= movement.quantity_pieces
         if movement.quantity_meters:
@@ -853,7 +805,6 @@ class MaterialBalance(models.Model):
             balance.save()
 
         except cls.DoesNotExist:
-            # ✅ ИСПРАВЛЕНИЕ: заменяем None на 0
             balance = cls.objects.create(
                 storage_location=storage_location,
                 material=material,
@@ -950,10 +901,9 @@ class Conversion(models.Model):
         'inventory.StorageLocation',
         on_delete=models.PROTECT,
         verbose_name='Место хранения',
-        limit_choices_to={'source_type': 'склад'}  # Только склады
+        limit_choices_to={'source_type': 'склад'}
     )
 
-    # Материал, который списываем (исходный)
     source_material = models.ForeignKey(
         'forestry.Material',
         on_delete=models.PROTECT,
@@ -991,7 +941,6 @@ class Conversion(models.Model):
         default=None
     )
 
-    # Материал, который создаем (результат)
     target_material = models.ForeignKey(
         'forestry.Material',
         on_delete=models.PROTECT,
@@ -1078,22 +1027,18 @@ class Conversion(models.Model):
 
     def clean(self):
         """Валидация данных"""
-        # Проверка, что указано хотя бы одно количество для исходного материала
         if not self.source_quantity_pieces and not self.source_quantity_meters and not self.source_quantity_cubic:
             raise ValidationError('Необходимо указать хотя бы одно количество для списания')
 
-        # Проверка, что указано хотя бы одно количество для целевого материала
         if not self.target_quantity_pieces and not self.target_quantity_meters and not self.target_quantity_cubic:
             raise ValidationError('Необходимо указать хотя бы одно количество для создания')
 
-        # Проверка, что исходный и целевой материалы - древесина
         if self.source_material and self.source_material.material_type != 'древесина':
             raise ValidationError('Исходный материал должен быть типа "древесина"')
 
         if self.target_material and self.target_material.material_type != 'древесина':
             raise ValidationError('Целевой материал должен быть типа "древесина"')
 
-        # Проверка, что исходный и целевой материалы разные
         if self.source_material == self.target_material:
             raise ValidationError('Исходный и целевой материалы должны быть разными')
 
@@ -1104,7 +1049,6 @@ class Conversion(models.Model):
         if self.is_completed:
             raise ValueError("Конвертация уже выполнена")
 
-        # Получаем баланс исходного материала
         try:
             source_balance = MaterialBalance.objects.get(
                 storage_location=self.storage_location,
@@ -1114,7 +1058,6 @@ class Conversion(models.Model):
             raise ValueError(
                 f"Материал {self.source_material.name} отсутствует на складе {self.storage_location.get_source_name()}")
 
-        # Проверяем наличие достаточного количества исходного материала
         if self.source_quantity_pieces and source_balance.quantity_pieces < self.source_quantity_pieces:
             raise ValueError(
                 f"Недостаточно исходного материала в штуках: есть {source_balance.quantity_pieces}, требуется {self.source_quantity_pieces}"
@@ -1128,7 +1071,6 @@ class Conversion(models.Model):
                 f"Недостаточно исходного материала в кубических метрах: есть {source_balance.quantity_cubic or 0}, требуется {self.source_quantity_cubic}"
             )
 
-        # Уменьшаем количество исходного материала
         if self.source_quantity_pieces:
             source_balance.quantity_pieces -= self.source_quantity_pieces
         if self.source_quantity_meters:
@@ -1138,14 +1080,12 @@ class Conversion(models.Model):
 
         source_balance.save()
 
-        # Создаем или обновляем баланс целевого материала
         try:
             target_balance = MaterialBalance.objects.get(
                 storage_location=self.storage_location,
                 material=self.target_material
             )
 
-            # Обновляем существующий баланс
             if self.target_quantity_pieces:
                 target_balance.quantity_pieces += self.target_quantity_pieces
             if self.target_quantity_meters:
@@ -1156,7 +1096,6 @@ class Conversion(models.Model):
             target_balance.save()
 
         except MaterialBalance.DoesNotExist:
-            # Создаем новый баланс для целевого материала
             MaterialBalance.objects.create(
                 storage_location=self.storage_location,
                 material=self.target_material,
@@ -1167,7 +1106,6 @@ class Conversion(models.Model):
                 created_by_position=self.created_by_position
             )
 
-        # Отмечаем конвертацию как выполненную
         self.is_completed = True
         self.completed_at = timezone.now()
         self.save()
@@ -1320,11 +1258,9 @@ class Receipt(models.Model):
 
     def clean(self):
         """Валидация данных"""
-        # Проверка, что указано хотя бы одно количество
         if not self.quantity_pieces and not self.quantity_meters and not self.quantity_cubic:
             raise ValidationError('Необходимо указать хотя бы одно количество')
 
-        # Проверка, что место хранения - склад
         if self.storage_location and self.storage_location.source_type != 'склад':
             raise ValidationError('Поступление возможно только на склад')
 

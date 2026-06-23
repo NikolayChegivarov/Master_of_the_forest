@@ -12,7 +12,6 @@ from Forest_apps.employees.models import Employee  # если понадобит
 
 User = get_user_model()
 
-
 # МАТЕРИАЛЫ МЕСТА ХРАНЕНИЯ И ОСТАТКИ
 class StorageLocation(models.Model):
     """Место хранения"""
@@ -564,18 +563,12 @@ class MaterialMovement(models.Model):
             if hasattr(user, 'session') and user.is_authenticated:
                 position_name = user.session.get('position_name')
 
-        print(f"position_name: {position_name}")
-
         if not position_name:
-            print("position_name is None, returning 'none'")
             return 'none'
 
         position = Position.objects.filter(name__iexact=position_name).first()
         if not position:
-            print(f"Position not found for name: {position_name}")
             return 'none'
-
-        print(f"Position found: {position.id} - {position.name}")
 
         try:
             if self.from_location.source_type == 'склад':
@@ -584,7 +577,6 @@ class MaterialMovement(models.Model):
                     created_by_position=position
                 ).first()
                 if warehouse:
-                    print("Returning 'sender'")
                     return 'sender'
             elif self.from_location.source_type == 'бригады':
                 brigade = Brigade.objects.filter(
@@ -592,7 +584,6 @@ class MaterialMovement(models.Model):
                     created_by_position=position
                 ).first()
                 if brigade:
-                    print("Returning 'sender'")
                     return 'sender'
             elif self.from_location.source_type == 'автомобиль':
                 vehicle = Vehicle.objects.filter(
@@ -600,7 +591,6 @@ class MaterialMovement(models.Model):
                     created_by_position=position
                 ).first()
                 if vehicle:
-                    print("Returning 'sender'")
                     return 'sender'
         except Exception as e:
             print(f"Error checking from_location: {e}")
@@ -613,7 +603,6 @@ class MaterialMovement(models.Model):
                         created_by_position=position
                     ).first()
                     if warehouse:
-                        print("Returning 'receiver'")
                         return 'receiver'
                 elif self.to_location.source_type == 'бригады':
                     brigade = Brigade.objects.filter(
@@ -621,7 +610,6 @@ class MaterialMovement(models.Model):
                         created_by_position=position
                     ).first()
                     if brigade:
-                        print("Returning 'receiver'")
                         return 'receiver'
                 elif self.to_location.source_type == 'автомобиль':
                     vehicle = Vehicle.objects.filter(
@@ -629,14 +617,11 @@ class MaterialMovement(models.Model):
                         created_by_position=position
                     ).first()
                     if vehicle:
-                        print("Returning 'receiver'")
                         return 'receiver'
             except Exception as e:
                 print(f"Error checking to_location: {e}")
         else:
             print("to_location is None")
-
-        print("Returning 'none'")
         return 'none'
 
 

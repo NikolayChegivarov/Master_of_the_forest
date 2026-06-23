@@ -39,6 +39,20 @@
                 <small class="form-text text-muted">Тип движения нельзя изменить при редактировании</small>
             </div>
 
+            <!-- Поле Дата и время -->
+            <div class="form-group">
+                <label for="{{ form.date_time.id_for_label }}">{{ form.date_time.label }}:</label>
+                {{ form.date_time }}
+                {% if form.date_time.errors %}
+                    <div class="field-error">
+                        {% for error in form.date_time.errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small class="form-text text-muted">Выберите дату и время движения</small>
+            </div>
+
             <!-- Поле Откуда -->
             <div class="form-group">
                 <label for="{{ form.from_location.id_for_label }}">{{ form.from_location.label }}:</label>

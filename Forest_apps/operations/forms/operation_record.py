@@ -42,13 +42,13 @@ class OperationRecordCreateForm(forms.ModelForm):
             }),
             'square_meters': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Площадь в м²',
+                'placeholder': 'Погонные метры (м.п.)',
                 'step': '0.001',
                 'min': '0.001'
             }),
             'cubic_meters': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Объем в м³',
+                'placeholder': 'Кубические метры (м³)',
                 'step': '0.001',
                 'min': '0.001'
             }),
@@ -58,8 +58,8 @@ class OperationRecordCreateForm(forms.ModelForm):
             'warehouse': 'Склад',
             'material': 'Материал',
             'quantity': 'Количество (шт)',
-            'square_meters': 'Площадь (м²)',
-            'cubic_meters': 'Объем (м³)',
+            'square_meters': 'Погонные метры (м.п.)',
+            'cubic_meters': 'Кубические метры (м³)',
         }
 
     def __init__(self, *args, **kwargs):

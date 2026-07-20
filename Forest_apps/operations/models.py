@@ -86,6 +86,8 @@ class OperationRecord(models.Model):
         max_digits=12,
         decimal_places=3,
         validators=[MinValueValidator(0.001)],
+        null=True,
+        blank=True,
         help_text='Количество в штуках'
     )
     square_meters = models.DecimalField(

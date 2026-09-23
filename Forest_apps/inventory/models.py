@@ -256,6 +256,9 @@ class MaterialMovement(models.Model):
             models.Index(fields=['date_time', 'accounting_type']),
             models.Index(fields=['from_location', 'to_location']),
             models.Index(fields=['is_completed']),
+            models.Index(fields=['created_by_position']),          # ← новый
+            models.Index(fields=['-date_time']),                   # ← для сортировки
+            models.Index(fields=['material', 'is_completed']),      # ← для фильтра
         ]
 
     def __str__(self):
@@ -623,6 +626,8 @@ class MaterialMovement(models.Model):
         else:
             print("to_location is None")
         return 'none'
+
+
 
 
 class MaterialBalance(models.Model):

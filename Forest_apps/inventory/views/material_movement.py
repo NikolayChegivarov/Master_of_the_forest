@@ -1,8 +1,9 @@
 # ПРЕДСТАВЛЕНИЯ ДВИЖЕНИЯ МАТЕРИАЛОВ
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.paginator import Paginator
 from django.contrib import messages
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count
 from django.utils import timezone
 from django.http import JsonResponse
 from datetime import timedelta
@@ -19,80 +20,41 @@ from Forest_apps.inventory.forms.material_movement import (
 
 @login_required
 def material_movement_list_view(request):
-    """Список движений материалов (для должности пользователя как отправителя или получателя)"""
+    """
+    Список движений материалов.
+    Оптимизирован: убран N+1, объединены агрегации, добавлена пагинация.
+    """
 
-    # Получаем должность текущего пользователя из сессии
+    # ========== 1. Получаем должность пользователя ==========
     user_position_name = request.session.get('position_name')
-
-    user_position_id = None
-
-    # Проверяем, является ли пользователь руководителем
     is_manager = (user_position_name and user_position_name.lower() == 'руководитель')
 
-    # Находим ID должности по названию
-    try:
-        position = Position.objects.get(name__iexact=user_position_name)
-        user_position_id = position.id
-    except Position.DoesNotExist:
-        user_position_id = -1
+    # ========== 2. Получаем ownership один раз (4 запроса) ==========
+    from Forest_apps.inventory.services import StorageLocationService
 
-    # Получаем ID мест хранения, принадлежащих этой должности
-    user_location_ids = []
+    ownership = StorageLocationService.get_user_position_ownership_ids(user_position_name)
+    user_location_ids = list(ownership['all_location_ids'])
 
-    # Склады, созданные должностью
-    warehouses = Warehouse.objects.filter(created_by_position_id=user_position_id)
-    for wh in warehouses:
-        try:
-            location = StorageLocation.objects.get(source_type='склад', source_id=wh.id)
-            user_location_ids.append(location.id)
-        except StorageLocation.DoesNotExist:
-            pass
+    # ========== 3. Базовый queryset ==========
+    base_qs = MaterialMovement.objects.select_related(
+        'from_location', 'to_location', 'material', 'employee', 'vehicle',
+        'created_by', 'created_by_position'
+    )
 
-    # Бригады, созданные должностью
-    brigades = Brigade.objects.filter(created_by_position_id=user_position_id)
-    for br in brigades:
-        try:
-            location = StorageLocation.objects.get(source_type='бригады', source_id=br.id)
-            user_location_ids.append(location.id)
-        except StorageLocation.DoesNotExist:
-            pass
-
-    # Транспорт, созданный должностью
-    vehicles = Vehicle.objects.filter(created_by_position_id=user_position_id)
-    for vh in vehicles:
-        try:
-            location = StorageLocation.objects.get(source_type='автомобиль', source_id=vh.id)
-            user_location_ids.append(location.id)
-        except StorageLocation.DoesNotExist:
-            pass
-
-    # Базовый запрос
     if is_manager:
-        # Для руководителя - показываем ВСЕ движения
-        movements = MaterialMovement.objects.select_related(
-            'from_location', 'to_location', 'material', 'employee', 'vehicle',
-            'created_by', 'created_by_position'
-        ).order_by('-date_time')
+        movements = base_qs.order_by('-date_time')
     else:
-        # Для мастера леса - только движения, где фигурирует его склад, НО исключая Реализации
-        movements = MaterialMovement.objects.filter(
-            Q(from_location_id__in=user_location_ids) |
-            Q(to_location_id__in=user_location_ids)
-        ).exclude(
-            accounting_type='Реализация'
-        ).select_related(
-            'from_location', 'to_location', 'material', 'employee', 'vehicle',
-            'created_by', 'created_by_position'
-        ).order_by('-date_time')
+        if not user_location_ids:
+            movements = base_qs.none()
+        else:
+            movements = base_qs.filter(
+                Q(from_location_id__in=user_location_ids) |
+                Q(to_location_id__in=user_location_ids)
+            ).exclude(
+                accounting_type='Реализация'
+            ).order_by('-date_time')
 
-    # Получаем список всех водителей для фильтра
-    driver_position = Position.objects.filter(name__iexact='водитель').first()
-    if driver_position:
-        drivers = Employee.objects.filter(position=driver_position, is_active=True).order_by('last_name', 'first_name')
-    else:
-        drivers = Employee.objects.none()
-
-    # Фильтрация
+    # ========== 4. Фильтрация ==========
     filter_form = MaterialMovementFilterForm(request.GET or None)
 
     if filter_form.is_valid():
@@ -107,27 +69,20 @@ def material_movement_list_view(request):
 
         if accounting_type:
             movements = movements.filter(accounting_type=accounting_type)
-
         if date_from:
             movements = movements.filter(date_time__date__gte=date_from)
-
         if date_to:
             movements = movements.filter(date_time__date__lte=date_to)
-
         if from_location:
             movements = movements.filter(from_location=from_location)
-
         if to_location:
             movements = movements.filter(to_location=to_location)
-
         if material:
             movements = movements.filter(material=material)
-
         if is_completed == 'true':
             movements = movements.filter(is_completed=True)
         elif is_completed == 'false':
             movements = movements.filter(is_completed=False)
-
         if search:
             movements = movements.filter(
                 Q(material__name__icontains=search) |
@@ -141,36 +96,80 @@ def material_movement_list_view(request):
     if employee_id:
         movements = movements.filter(employee_id=employee_id)
 
-    # Добавляем роль для каждого движения (передаем position_name)
-    for movement in movements:
-        movement.user_role = movement.get_user_role(request.user, user_position_name)
+    # ========== 5. ОДНА агрегация вместо 7 запросов ==========
+    stats = movements.aggregate(
+        total_count=Count('id'),
+        pending_count=Count('id', filter=Q(is_completed=False)),
+        total_amount=Sum('total_amount', filter=Q(accounting_type='Реализация')),
+        total_pieces=Sum('quantity_pieces'),
+        total_meters=Sum('quantity_meters'),
+        total_cubic=Sum('quantity_cubic'),
+    )
 
-    # Получаем ID мест хранения текущего пользователя для проверки прав на подтверждение
-    user_locations = user_location_ids
+    total_count = stats['total_count'] or 0
+    pending_count = stats['pending_count'] or 0
+    total_amount = stats['total_amount'] or 0
+    total_pieces = stats['total_pieces'] or 0
+    total_meters = stats['total_meters'] or 0
+    total_cubic = stats['total_cubic'] or 0
 
-    # Подсчет ожидающих отправлений для текущего пользователя
-    pending_shipments_count = MaterialMovement.get_pending_shipments_for_user(request.user).count()
+    # ========== 6. Пагинация ==========
+    paginator = Paginator(movements, 50)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
 
-    # Подсчет статистики
-    total_count = movements.count()
-    total_amount = movements.filter(accounting_type='Реализация').aggregate(
-        total=Sum('total_amount')
-    )['total'] or 0
-    pending_count = movements.filter(is_completed=False).count()
+    # ========== 7. Роль пользователя для отображения кнопок ==========
+    # Считаем ОДИН раз для всех движений (без N+1)
+    warehouse_ids = ownership['warehouse_ids']
+    brigade_ids = ownership['brigade_ids']
+    vehicle_ids = ownership['vehicle_ids']
 
-    # Новая статистика по количествам
-    total_pieces = movements.aggregate(total=Sum('quantity_pieces'))['total'] or 0
-    total_meters = movements.aggregate(total=Sum('quantity_meters'))['total'] or 0
-    total_cubic = movements.aggregate(total=Sum('quantity_cubic'))['total'] or 0
+    for movement in page_obj:
+        from_loc = movement.from_location
+        to_loc = movement.to_location
 
-    # Вычисляем дату 5 дней назад для проверки возраста
+        role = 'none'
+        if from_loc and (
+            (from_loc.source_type == 'склад' and from_loc.source_id in warehouse_ids) or
+            (from_loc.source_type == 'бригады' and from_loc.source_id in brigade_ids) or
+            (from_loc.source_type == 'автомобиль' and from_loc.source_id in vehicle_ids)
+        ):
+            role = 'sender'
+        elif to_loc and (
+            (to_loc.source_type == 'склад' and to_loc.source_id in warehouse_ids) or
+            (to_loc.source_type == 'бригады' and to_loc.source_id in brigade_ids) or
+            (to_loc.source_type == 'автомобиль' and to_loc.source_id in vehicle_ids)
+        ):
+            role = 'receiver'
+
+        movement.user_role = role
+
+    # ========== 8. Быстрый подсчёт ожидающих отправлений ==========
+    pending_shipments_count = MaterialMovement.objects.filter(
+        accounting_type='Отправление',
+        to_location_id__in=user_location_ids,
+        is_completed=False
+    ).count()
+
+    # ========== 9. Водители для фильтра ==========
+    driver_position = Position.objects.filter(name__iexact='водитель').first()
+    if driver_position:
+        drivers = Employee.objects.filter(
+            position=driver_position, is_active=True
+        ).order_by('last_name', 'first_name')
+    else:
+        drivers = Employee.objects.none()
+
+    # ========== 10. Контекст ==========
     now_minus_5_days = timezone.now() - timedelta(days=5)
 
     context = {
         'title': 'Движение материалов',
         'employee_name': request.session.get('employee_name'),
         'position_name': user_position_name,
-        'movements': movements,
+        'movements': page_obj,           # ← Page объект, не queryset
+        'page_obj': page_obj,            # ← для пагинации в шаблоне
+        'paginator': paginator,
         'filter_form': filter_form,
         'total_count': total_count,
         'total_amount': total_amount,
@@ -179,11 +178,10 @@ def material_movement_list_view(request):
         'total_meters': total_meters,
         'total_cubic': total_cubic,
         'pending_shipments_count': pending_shipments_count,
-        'user_locations': user_locations,
+        'user_locations': user_location_ids,
         'is_manager': is_manager,
         'drivers': drivers,
         'now_minus_5_days': now_minus_5_days,
-        'user_position_name': user_position_name,
     }
 
     return render(request, 'MaterialMovement/material_movement_list.html', context)

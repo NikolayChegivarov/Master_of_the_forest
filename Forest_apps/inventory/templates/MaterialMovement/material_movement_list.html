@@ -149,7 +149,7 @@
     <div class="movements-list">
         <h3>Движения материалов ({{ position_name|default:"наша должность" }})</h3>
 
-        {% if movements %}
+        {% if page_obj %}
             <div class="table-responsive">
                 <table class="movements-table" id="movements-table">
                     <thead>
@@ -173,7 +173,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for movement in movements %}
+                        {% for movement in page_obj %}
                         <tr class="movement-row {% if not movement.is_completed %}pending-row{% endif %}" data-movement-id="{{ movement.id }}">
                             <td><strong>{{ movement.id }}</strong></td>
                             <td>{{ movement.date_time|date:"d.m.Y H:i" }}</td>
@@ -295,6 +295,29 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- ========== ПАГИНАЦИЯ ========== -->
+            {% if page_obj.has_other_pages %}
+            <div class="pagination-container">
+                <div class="pagination">
+                    {% if page_obj.has_previous %}
+                        <a href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">« Первая</a>
+                        <a href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">← Назад</a>
+                    {% endif %}
+
+                    <span class="page-info">
+                        Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+                        ({{ page_obj.paginator.count }} записей)
+                    </span>
+
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Вперёд →</a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" class="page-link">Последняя »</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
         {% else %}
             <div class="empty-message">
                 {% if filter_form.has_changed %}

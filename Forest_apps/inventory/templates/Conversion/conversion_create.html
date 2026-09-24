@@ -70,8 +70,18 @@
 
                 <!-- Поле Исходный материал -->
                 <div class="form-group">
-                    <label for="{{ form.source_material.id_for_label }}">{{ form.source_material.label }}:</label>
-                    {{ form.source_material }}
+                    <label for="source-material-search">{{ form.source_material.label }}:</label>
+                    <div class="material-search-wrapper">
+                        <input type="text" id="source-material-search" class="form-control material-search"
+                               placeholder="Начните вводить название..." autocomplete="off">
+                        <div id="source-material-dropdown" class="material-dropdown" style="display: none;"></div>
+                    </div>
+                    <select name="source_material" id="id_source_material" style="display: none;">
+                        <option value="">---------</option>
+                        {% for material in form.fields.source_material.queryset %}
+                            <option value="{{ material.id }}" {% if form.source_material.value|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>{{ material.name }}</option>
+                        {% endfor %}
+                    </select>
                     {% if form.source_material.errors %}
                         <div class="field-error">
                             {% for error in form.source_material.errors %}
@@ -130,8 +140,18 @@
 
                 <!-- Поле Целевой материал -->
                 <div class="form-group">
-                    <label for="{{ form.target_material.id_for_label }}">{{ form.target_material.label }}:</label>
-                    {{ form.target_material }}
+                    <label for="target-material-search">{{ form.target_material.label }}:</label>
+                    <div class="material-search-wrapper">
+                        <input type="text" id="target-material-search" class="form-control material-search"
+                               placeholder="Начните вводить название..." autocomplete="off">
+                        <div id="target-material-dropdown" class="material-dropdown" style="display: none;"></div>
+                    </div>
+                    <select name="target_material" id="id_target_material" style="display: none;">
+                        <option value="">---------</option>
+                        {% for material in form.fields.target_material.queryset %}
+                            <option value="{{ material.id }}" {% if form.target_material.value|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>{{ material.name }}</option>
+                        {% endfor %}
+                    </select>
                     {% if form.target_material.errors %}
                         <div class="field-error">
                             {% for error in form.target_material.errors %}
@@ -432,4 +452,19 @@
         }
     }
 </style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initMaterialSearch({
+        inputId: 'source-material-search',
+        selectId: 'id_source_material',
+        dropdownId: 'source-material-dropdown'
+    });
+
+    initMaterialSearch({
+        inputId: 'target-material-search',
+        selectId: 'id_target_material',
+        dropdownId: 'target-material-dropdown'
+    });
+});
+</script>
 {% endblock %}

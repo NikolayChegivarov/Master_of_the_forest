@@ -37,35 +37,31 @@
                 </div>
 
                 <div class="filter-group">
-                    <label for="source_material">Исходный материал:</label>
-                    <div class="filter-input-wrapper">
+                    <label for="source_material_search">Исходный материал:</label>
+                    <div class="material-search-wrapper">
                         <input type="text" id="source_material_search" class="form-control material-search"
-                               placeholder="Поиск исходного материала..." autocomplete="off">
-                        <div id="source_material_dropdown" class="filter-dropdown" style="display: none;"></div>
+                               placeholder="Поиск материала..." autocomplete="off">
+                        <div id="source_material_dropdown" class="material-dropdown" style="display: none;"></div>
                     </div>
                     <select name="source_material" id="id_source_material" style="display: none;">
                         <option value="">Все материалы</option>
                         {% for material in materials %}
-                            <option value="{{ material.id }}" {% if request.GET.source_material|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>
-                                {{ material.name }}
-                            </option>
+                            <option value="{{ material.id }}" {% if request.GET.source_material|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>{{ material.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div class="filter-group">
-                    <label for="target_material">Целевой материал:</label>
-                    <div class="filter-input-wrapper">
+                    <label for="target_material_search">Целевой материал:</label>
+                    <div class="material-search-wrapper">
                         <input type="text" id="target_material_search" class="form-control material-search"
-                               placeholder="Поиск целевого материала..." autocomplete="off">
-                        <div id="target_material_dropdown" class="filter-dropdown" style="display: none;"></div>
+                               placeholder="Поиск материала..." autocomplete="off">
+                        <div id="target_material_dropdown" class="material-dropdown" style="display: none;"></div>
                     </div>
                     <select name="target_material" id="id_target_material" style="display: none;">
                         <option value="">Все материалы</option>
                         {% for material in materials %}
-                            <option value="{{ material.id }}" {% if request.GET.target_material|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>
-                                {{ material.name }}
-                            </option>
+                            <option value="{{ material.id }}" {% if request.GET.target_material|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>{{ material.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -827,6 +823,30 @@ document.addEventListener('DOMContentLoaded', function() {
     if (dateTo) {
         dateTo.addEventListener('change', submitForm);
     }
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initMaterialSearch({
+        inputId: 'source_material_search',
+        selectId: 'id_source_material',
+        dropdownId: 'source_material_dropdown',
+        onSelect: function() { document.getElementById('filter-form').submit(); }
+    });
+
+    initMaterialSearch({
+        inputId: 'target_material_search',
+        selectId: 'id_target_material',
+        dropdownId: 'target_material_dropdown',
+        onSelect: function() { document.getElementById('filter-form').submit(); }
+    });
+
+    initLocationSearch({
+        inputId: 'storage_location_search',
+        selectId: 'id_storage_location',
+        dropdownId: 'storage_location_dropdown',
+        onSelect: function() { document.getElementById('filter-form').submit(); }
+    });
 });
 </script>
 {% endblock %}

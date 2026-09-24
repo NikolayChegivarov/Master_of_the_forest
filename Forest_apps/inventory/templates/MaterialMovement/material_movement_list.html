@@ -113,8 +113,18 @@
                     {{ filter_form.to_location }}
                 </div>
                 <div class="filter-group">
-                    {{ filter_form.material.label_tag }}
-                    {{ filter_form.material }}
+                    <label for="material-search-filter">Материал:</label>
+                    <div class="material-search-wrapper">
+                        <input type="text" id="material-search-filter" class="form-control material-search"
+                               placeholder="Поиск материала..." autocomplete="off">
+                        <div id="material-filter-dropdown" class="material-dropdown" style="display: none;"></div>
+                    </div>
+                    <select name="material" id="id_material_filter" style="display: none;">
+                        <option value="">Все материалы</option>
+                        {% for material in filter_form.fields.material.queryset %}
+                            <option value="{{ material.id }}" {% if request.GET.material|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>{{ material.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="filter-group">
                     {{ filter_form.is_completed.label_tag }}
@@ -1022,6 +1032,17 @@
                 }
             });
         }
+
+        // ========== ПОИСК МАТЕРИАЛА ==========
+        initMaterialSearch({
+            inputId: 'material-search-filter',
+            selectId: 'id_material_filter',
+            dropdownId: 'material-filter-dropdown',
+            onSelect: function() {
+                localStorage.removeItem('selectedMovementRow');
+                document.getElementById('filter-form').submit();
+            }
+        });
     });
 </script>
 {% endblock %}

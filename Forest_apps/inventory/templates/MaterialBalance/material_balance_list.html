@@ -75,12 +75,25 @@
                     {{ filter_form.material_type }}
                 </div>
                 <div class="filter-group">
-                    {{ filter_form.material.label_tag }}
-                    {{ filter_form.material }}
-                </div>
-                <div class="filter-group">
                     {{ filter_form.search.label_tag }}
                     {{ filter_form.search }}
+                </div>
+                <!-- УБРАНО: {{ filter_form.material.label_tag }} {{ filter_form.material }} -->
+
+                <!-- Оставлен только кастомный поиск материала -->
+                <div class="filter-group">
+                    <label for="material-search-filter">Материал:</label>
+                    <div class="material-search-wrapper">
+                        <input type="text" id="material-search-filter" class="form-control material-search"
+                               placeholder="Поиск материала..." autocomplete="off">
+                        <div id="material-filter-dropdown" class="material-dropdown" style="display: none;"></div>
+                    </div>
+                    <select name="material" id="id_material_filter" style="display: none;">
+                        <option value="">Все материалы</option>
+                        {% for material in filter_form.fields.material.queryset %}
+                            <option value="{{ material.id }}" {% if request.GET.material|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>{{ material.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="filter-group">
                     <label>&nbsp;</label>
@@ -614,10 +627,21 @@
 <!-- JavaScript для автоматической отправки фильтров и выделения строк -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // ========== ЛОГИКА ДЛЯ ВЫДЕЛЕНИЯ СТРОК ==========
+        // ========== ПОИСК МАТЕРИАЛА ==========
+        initMaterialSearch({
+            inputId: 'material-search-filter',
+            selectId: 'id_material_filter',
+            dropdownId: 'material-filter-dropdown',
+            onSelect: function() {
+                // При выборе материала отправляем форму
+                localStorage.removeItem('selectedBalanceRow');
+                document.getElementById('filter-form').submit();
+            }
+        });
+
+        // ========== ВЫДЕЛЕНИЕ СТРОК ==========
         const rows = document.querySelectorAll('.balances-table tbody tr');
 
-        // Функция для сохранения выделенной строки в localStorage
         function saveSelectedRow(rowId) {
             if (rowId) {
                 localStorage.setItem('selectedBalanceRow', rowId);
@@ -626,7 +650,6 @@
             }
         }
 
-        // Функция для загрузки выделенной строки из localStorage
         function loadSelectedRow() {
             const savedRowId = localStorage.getItem('selectedBalanceRow');
             if (savedRowId) {
@@ -637,56 +660,38 @@
             }
         }
 
-        // Добавляем обработчик клика на каждую строку
         rows.forEach(row => {
             row.addEventListener('click', function(e) {
-                // Если кликнули по ссылке, не выделяем строку
                 if (e.target.closest('.location-link')) {
                     return;
                 }
-
-                // Убираем выделение со всех строк
                 rows.forEach(r => r.classList.remove('selected-row'));
-
-                // Выделяем текущую строку
                 this.classList.add('selected-row');
-
-                // Сохраняем ID выделенной строки
                 const balanceId = this.getAttribute('data-balance-id');
                 saveSelectedRow(balanceId);
             });
         });
 
-        // Загружаем сохраненное выделение при загрузке страницы
         loadSelectedRow();
 
-        // ========== ЛОГИКА ДЛЯ ФИЛЬТРОВ ==========
+        // ========== ФИЛЬТРЫ ==========
         const form = document.getElementById('filter-form');
         const storageLocationSelect = document.querySelector('select[name="storage_location"]');
         const materialTypeSelect = document.querySelector('select[name="material_type"]');
-        const materialSelect = document.querySelector('select[name="material"]');
         const searchInput = document.querySelector('input[name="search"]');
         const hideEmptyCheckbox = document.getElementById('hide_empty');
 
-        // Функция отправки формы
         function submitForm() {
-            // При фильтрации очищаем сохраненное выделение
             localStorage.removeItem('selectedBalanceRow');
             form.submit();
         }
 
-        // Автоматическая отправка при изменении select-полей
         if (storageLocationSelect) {
             storageLocationSelect.addEventListener('change', submitForm);
         }
         if (materialTypeSelect) {
             materialTypeSelect.addEventListener('change', submitForm);
         }
-        if (materialSelect) {
-            materialSelect.addEventListener('change', submitForm);
-        }
-
-        // Для поиска используем кнопку или Enter
         if (searchInput) {
             searchInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
@@ -695,8 +700,6 @@
                 }
             });
         }
-
-        // Автоматическая отправка при изменении чекбокса
         if (hideEmptyCheckbox) {
             hideEmptyCheckbox.addEventListener('change', submitForm);
         }

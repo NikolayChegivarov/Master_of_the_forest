@@ -1002,6 +1002,17 @@ class Conversion(models.Model):
         blank=True
     )
 
+    # НОВОЕ: связь с движением, созданным при массовой отправке
+    shipped_movement = models.ForeignKey(
+        'inventory.MaterialMovement',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Документ отправки',
+        related_name='shipped_conversions',
+        help_text='Движение, созданное при отправке целевого материала этой конвертации'
+    )
+
     class Meta:
         verbose_name = 'Конвертация древесины'
         verbose_name_plural = 'Конвертации древесины'

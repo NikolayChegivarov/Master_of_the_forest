@@ -7,6 +7,15 @@
 
 {% block content %}
 <div class="conversion-container">
+    <!-- ==================== СООБЩЕНИЯ ==================== -->
+    {% if messages %}
+        <div class="messages-container">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     <!-- Кнопка создания на всю ширину -->
     <div class="create-button-container">
         <a href="{% url 'inventory:conversion_create' %}" class="create-button">
@@ -21,11 +30,8 @@
             <div class="filters-row">
                 <div class="filter-group">
                     <label for="storage_location">Склад:</label>
-                    <div class="filter-input-wrapper">
-                        <input type="text" id="storage_location_search" class="form-control storage-location-search"
-                               placeholder="Поиск склада..." autocomplete="off">
-                        <div id="storage_location_dropdown" class="filter-dropdown" style="display: none;"></div>
-                    </div>
+                    <input type="text" id="storage_location_search" class="form-control storage-location-search"
+                           placeholder="Поиск склада..." autocomplete="off">
                     <select name="storage_location" id="id_storage_location" style="display: none;">
                         <option value="">Все склады</option>
                         {% for warehouse in user_warehouses %}
@@ -34,36 +40,37 @@
                             </option>
                         {% endfor %}
                     </select>
+                    <div id="storage_location_dropdown" class="filter-dropdown" style="display: none;"></div>
                 </div>
 
                 <div class="filter-group">
-                    <label for="source_material_search">Исходный материал:</label>
-                    <div class="material-search-wrapper">
-                        <input type="text" id="source_material_search" class="form-control material-search"
-                               placeholder="Поиск материала..." autocomplete="off">
-                        <div id="source_material_dropdown" class="material-dropdown" style="display: none;"></div>
-                    </div>
+                    <label for="source_material">Исходный материал:</label>
+                    <input type="text" id="source_material_search" class="form-control material-search"
+                           placeholder="Поиск исходного материала..." autocomplete="off">
                     <select name="source_material" id="id_source_material" style="display: none;">
                         <option value="">Все материалы</option>
                         {% for material in materials %}
-                            <option value="{{ material.id }}" {% if request.GET.source_material|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>{{ material.name }}</option>
+                            <option value="{{ material.id }}" {% if request.GET.source_material|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>
+                                {{ material.name }}
+                            </option>
                         {% endfor %}
                     </select>
+                    <div id="source_material_dropdown" class="filter-dropdown" style="display: none;"></div>
                 </div>
 
                 <div class="filter-group">
-                    <label for="target_material_search">Целевой материал:</label>
-                    <div class="material-search-wrapper">
-                        <input type="text" id="target_material_search" class="form-control material-search"
-                               placeholder="Поиск материала..." autocomplete="off">
-                        <div id="target_material_dropdown" class="material-dropdown" style="display: none;"></div>
-                    </div>
+                    <label for="target_material">Целевой материал:</label>
+                    <input type="text" id="target_material_search" class="form-control material-search"
+                           placeholder="Поиск целевого материала..." autocomplete="off">
                     <select name="target_material" id="id_target_material" style="display: none;">
                         <option value="">Все материалы</option>
                         {% for material in materials %}
-                            <option value="{{ material.id }}" {% if request.GET.target_material|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>{{ material.name }}</option>
+                            <option value="{{ material.id }}" {% if request.GET.target_material|stringformat:"s" == material.id|stringformat:"s" %}selected{% endif %}>
+                                {{ material.name }}
+                            </option>
                         {% endfor %}
                     </select>
+                    <div id="target_material_dropdown" class="filter-dropdown" style="display: none;"></div>
                 </div>
             </div>
 
@@ -149,83 +156,165 @@
         </div>
     </div>
 
-    <!-- Таблица конвертаций -->
-    <div class="conversions-list">
-        <h3>Конвертации древесины ({{ position_name|default:"наша должность" }})</h3>
+    <!-- Блок действий с выбранными конвертациями -->
+    <div class="batch-actions-bar" id="batch-actions-bar" style="display: none;">
+        <div class="batch-info">
+            <span class="batch-count">Выбрано: <strong id="selected-count">0</strong></span>
+        </div>
+        <div class="batch-buttons">
+            <button type="button" class="btn-batch-shipping" id="btn-shipping">
+                📤 Отправить целевой материал
+            </button>
+            <button type="button" class="btn-batch-clear" id="btn-clear-selection">
+                ✖ Снять выделение
+            </button>
+        </div>
+    </div>
 
-        {% if conversions %}
-            <div class="table-responsive">
-                <table class="conversions-table" id="conversions-table">
-                    <thead>
-                        <tr>
-                            <th>№</th>
-                            <th>Дата</th>
-                            <th>Склад</th>
-                            <th>Исходный материал</th>
-                            <th>Кол-во (списано)</th>
-                            <th>→</th>
-                            <th>Целевой материал</th>
-                            <th>Кол-во (создано)</th>
-                            <th>Создатель</th>
-                            <th class="text-center">Действия</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for conversion in conversions %}
-                        <tr class="conversion-row" data-conversion-id="{{ conversion.id }}">
-                            <td><strong>{{ conversion.id }}</strong>
-                            <td>{{ conversion.conversion_date|date:"d.m.Y H:i" }}
-                            <td class="location-cell">{{ conversion.storage_location.get_source_name|truncatechars:30 }}
-                            <td>{{ conversion.source_material.name }}
-                            <td class="quantity-cell">{{ conversion.source_quantity_display }}
-                            <td class="arrow-cell">→
-                            <td>{{ conversion.target_material.name }}
-                            <td class="quantity-cell">{{ conversion.target_quantity_display }}
-                            <td>
-                                {% if conversion.created_by_position %}
-                                    <span class="position-badge">{{ conversion.created_by_position.name }}</span>
-                                {% else %}
-                                    <span class="text-muted">—</span>
-                                {% endif %}
-                            <td class="actions-cell">
-                                <div class="action-buttons-group">
-                                    <a href="{% url 'inventory:conversion_detail' conversion.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
+    <!-- Форма для массовой отправки выбранных конвертаций -->
+    <form method="post" action="{% url 'inventory:conversion_shipping_create' %}" id="shipping-form">
+        {% csrf_token %}
+        <input type="hidden" name="conversion_ids" id="conversion_ids_input" value="">
 
-                                    {% if is_manager %}
-                                        <a href="{% url 'inventory:conversion_edit' conversion.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
-                                        <a href="{% url 'inventory:conversion_delete' conversion.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить эту конвертацию?');">🗑️</a>
+        <!-- Таблица конвертаций -->
+        <div class="conversions-list">
+            <h3>Конвертации древесины ({{ position_name|default:"наша должность" }})</h3>
+
+            {% if conversions %}
+                <div class="table-responsive">
+                    <table class="conversions-table" id="conversions-table">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width: 50px;">
+                                    <input type="checkbox" id="select-all-checkbox" title="Выбрать все">
+                                </th>
+                                <th>№</th>
+                                <th>Дата</th>
+                                <th>Склад</th>
+                                <th>Исходный материал</th>
+                                <th>Кол-во (списано)</th>
+                                <th>→</th>
+                                <th>Целевой материал</th>
+                                <th>Кол-во (создано)</th>
+                                <th>Создатель</th>
+                                <th class="text-center">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for conversion in conversions %}
+                            <tr class="conversion-row {% if conversion.shipped_movement_id %}shipped-row{% endif %}"
+                                data-conversion-id="{{ conversion.id }}"
+                                {% if conversion.shipped_movement_id %}data-shipped="1"{% endif %}>
+                                <td class="text-center checkbox-cell">
+                                    {% if conversion.shipped_movement_id %}
+                                        <span class="shipped-lock"
+                                              title="Конвертация уже отправлена (движение №{{ conversion.shipped_movement_id }})">
+                                            📤
+                                        </span>
                                     {% else %}
-                                        {% if conversion.created_at >= now_minus_5_days %}
+                                        <input type="checkbox" class="conversion-checkbox"
+                                               value="{{ conversion.id }}"
+                                               data-conversion-id="{{ conversion.id }}">
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ conversion.id }}</strong></td>
+                                <td>{{ conversion.conversion_date|date:"d.m.Y H:i" }}</td>
+                                <td class="location-cell">{{ conversion.storage_location.get_source_name|truncatechars:30 }}</td>
+                                <td>{{ conversion.source_material.name }}</td>
+                                <td class="quantity-cell">{{ conversion.source_quantity_display }}</td>
+                                <td class="arrow-cell">→</td>
+                                <td>{{ conversion.target_material.name }}</td>
+                                <td class="quantity-cell">{{ conversion.target_quantity_display }}</td>
+                                <td>
+                                    {% if conversion.created_by_position %}
+                                        <span class="position-badge">{{ conversion.created_by_position.name }}</span>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                    {% if conversion.shipped_movement_id %}
+                                        <br>
+                                        <span class="shipped-badge">
+                                            Отправлено (движение №{{ conversion.shipped_movement_id }})
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="actions-cell">
+                                    <div class="action-buttons-group">
+                                        <a href="{% url 'inventory:conversion_detail' conversion.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
+
+                                        {% if is_manager %}
                                             <a href="{% url 'inventory:conversion_edit' conversion.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                             <a href="{% url 'inventory:conversion_delete' conversion.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить эту конвертацию?');">🗑️</a>
                                         {% else %}
-                                            <span class="no-action" title="Конвертация старше 5 дней, редактирование невозможно">🔒</span>
+                                            {% if conversion.created_at >= now_minus_5_days %}
+                                                <a href="{% url 'inventory:conversion_edit' conversion.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
+                                                <a href="{% url 'inventory:conversion_delete' conversion.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить эту конвертацию?');">🗑️</a>
+                                            {% else %}
+                                                <span class="no-action" title="Конвертация старше 5 дней, редактирование невозможно">🔒</span>
+                                            {% endif %}
                                         {% endif %}
-                                    {% endif %}
-                                </div>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="empty-message">
-                {% if request.GET.date_from or request.GET.date_to or request.GET.storage_location or request.GET.source_material or request.GET.target_material %}
-                    <p>По заданным критериям ничего не найдено.</p>
-                    <a href="{% url 'inventory:conversion_list' %}" class="btn btn-secondary">Сбросить фильтры</a>
-                {% else %}
-                    <p>У {{ position_name|default:"вашей должности" }} пока нет ни одной конвертации древесины.</p>
-                    <p class="text-muted">Создайте первую конвертацию, чтобы переработать древесину.</p>
-                    <a href="{% url 'inventory:conversion_create' %}" class="btn btn-primary">Создать конвертацию</a>
-                {% endif %}
-            </div>
-        {% endif %}
-    </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-message">
+                    {% if request.GET.date_from or request.GET.date_to or request.GET.storage_location or request.GET.source_material or request.GET.target_material %}
+                        <p>По заданным критериям ничего не найдено.</p>
+                        <a href="{% url 'inventory:conversion_list' %}" class="btn btn-secondary">Сбросить фильтры</a>
+                    {% else %}
+                        <p>У {{ position_name|default:"вашей должности" }} пока нет ни одной конвертации древесины.</p>
+                        <p class="text-muted">Создайте первую конвертацию, чтобы переработать древесину.</p>
+                        <a href="{% url 'inventory:conversion_create' %}" class="btn btn-primary">Создать конвертацию</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </form>
 </div>
 
 <style>
     .conversion-container {
         padding: 20px;
+    }
+
+    /* ==================== СООБЩЕНИЯ ==================== */
+    .messages-container {
+        margin-bottom: 20px;
+    }
+
+    .alert {
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        font-weight: 500;
+    }
+
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+
+    .alert-warning {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+    }
+
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .alert-info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
     }
 
     /* Кнопка создания на всю ширину */
@@ -302,11 +391,6 @@
         font-weight: 500;
     }
 
-    .filter-input-wrapper {
-        position: relative;
-        width: 100%;
-    }
-
     .filter-group input,
     .filter-group select {
         width: 100%;
@@ -332,7 +416,7 @@
         border-radius: 8px;
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         background-color: white;
-        width: 100%;
+        width: calc(100% - 2px);
         top: 100%;
         left: 0;
         margin-top: 4px;
@@ -447,6 +531,76 @@
         color: #666;
     }
 
+    /* Панель массовых действий */
+    .batch-actions-bar {
+        background: linear-gradient(145deg, #0066cc, #004d99);
+        color: white;
+        border-radius: 12px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        position: sticky;
+        top: 10px;
+        z-index: 100;
+    }
+
+    .batch-info {
+        font-size: 16px;
+    }
+
+    .batch-count strong {
+        font-size: 20px;
+        background: white;
+        color: #004d99;
+        padding: 2px 10px;
+        border-radius: 20px;
+        margin-left: 5px;
+    }
+
+    .batch-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .btn-batch-shipping {
+        padding: 10px 24px;
+        background: #28a745;
+        color: white;
+        border: 2px solid white;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-batch-shipping:hover {
+        background: #1e7e34;
+        transform: translateY(-2px);
+    }
+
+    .btn-batch-clear {
+        padding: 10px 24px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 2px solid white;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-batch-clear:hover {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
     /* Таблица */
     .conversions-list {
         background: white;
@@ -470,7 +624,7 @@
     .conversions-table {
         width: 100%;
         border-collapse: collapse;
-        min-width: 1200px;
+        min-width: 1300px;
     }
 
     .conversions-table th {
@@ -506,6 +660,73 @@
 
     .conversions-table tbody tr.selected-row:hover {
         background-color: #c3e6cb !important;
+    }
+
+    /* ==================== ОТПРАВЛЕННЫЕ КОНВЕРТАЦИИ ==================== */
+    .conversions-table tbody tr.shipped-row {
+        background-color: #f5f5f5 !important;
+        opacity: 0.75;
+        cursor: default;
+        border-left: 3px solid #adb5bd;
+    }
+
+    .conversions-table tbody tr.shipped-row:hover {
+        background-color: #f5f5f5 !important;
+        opacity: 0.85;
+    }
+
+    .conversions-table tbody tr.shipped-row td {
+        color: #999;
+    }
+
+    .conversions-table tbody tr.shipped-row td strong {
+        color: #777;
+    }
+
+    .conversions-table tbody tr.shipped-row .quantity-cell {
+        color: #999;
+    }
+
+    .conversions-table tbody tr.shipped-row .arrow-cell {
+        color: #bbb;
+    }
+
+    .shipped-lock {
+        display: inline-block;
+        font-size: 18px;
+        color: #888;
+        cursor: help;
+    }
+
+    .shipped-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        background: #e9ecef;
+        color: #6c757d;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        margin-top: 4px;
+        white-space: nowrap;
+    }
+
+    /* Чекбоксы */
+    .checkbox-cell {
+        cursor: pointer;
+    }
+
+    .conversion-checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: #2c5e2e;
+    }
+
+    #select-all-checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: white;
     }
 
     .location-cell {
@@ -654,6 +875,15 @@
         background: #1e4220;
     }
 
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #5a6268;
+    }
+
     @media (max-width: 768px) {
         .conversion-container {
             padding: 10px;
@@ -689,6 +919,21 @@
             width: 100%;
             margin: 2px 0;
         }
+
+        .batch-actions-bar {
+            flex-direction: column;
+            align-items: stretch;
+            position: static;
+        }
+
+        .batch-buttons {
+            flex-direction: column;
+        }
+
+        .btn-batch-shipping,
+        .btn-batch-clear {
+            width: 100%;
+        }
     }
 </style>
 
@@ -703,10 +948,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!searchInput || !hiddenSelect || !dropdown) return;
 
-        // Находим wrapper для правильного позиционирования
-        const wrapper = searchInput.closest('.filter-input-wrapper');
-
-        // Получаем опции из скрытого select
         const options = Array.from(hiddenSelect.options).filter(opt => opt.value !== '');
 
         function showDropdown(filteredOptions) {
@@ -721,18 +962,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 item.className = 'filter-dropdown-item';
                 item.textContent = opt.textContent;
                 item.setAttribute('data-value', opt.value);
-                item.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
+                item.addEventListener('click', function() {
                     searchInput.value = this.textContent;
                     hiddenSelect.value = this.getAttribute('data-value');
                     dropdown.style.display = 'none';
-                    // Отправляем форму
                     document.getElementById('filter-form').submit();
                 });
                 dropdown.appendChild(item);
             });
             dropdown.style.display = 'block';
+
+            const rect = searchInput.getBoundingClientRect();
+            dropdown.style.position = 'absolute';
+            dropdown.style.top = rect.bottom + 'px';
+            dropdown.style.left = rect.left + 'px';
+            dropdown.style.width = rect.width + 'px';
         }
 
         function filterOptions() {
@@ -743,7 +987,6 @@ document.addEventListener('DOMContentLoaded', function() {
             showDropdown(filtered);
         }
 
-        // Обработчики событий
         searchInput.addEventListener('input', filterOptions);
         searchInput.addEventListener('focus', filterOptions);
         searchInput.addEventListener('click', function(e) {
@@ -751,14 +994,12 @@ document.addEventListener('DOMContentLoaded', function() {
             filterOptions();
         });
 
-        // Закрываем dropdown при клике вне
         document.addEventListener('click', function(e) {
-            if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+            if (e.target !== searchInput && !dropdown.contains(e.target)) {
                 dropdown.style.display = 'none';
             }
         });
 
-        // Устанавливаем начальное значение
         if (hiddenSelect.value) {
             const selected = options.find(opt => opt.value === hiddenSelect.value);
             if (selected) {
@@ -767,7 +1008,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Настраиваем все фильтры
     setupSearchFilter('storage_location_search', 'id_storage_location', 'storage_location_dropdown');
     setupSearchFilter('source_material_search', 'id_source_material', 'source_material_dropdown');
     setupSearchFilter('target_material_search', 'id_target_material', 'target_material_dropdown');
@@ -787,7 +1027,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const savedRowId = localStorage.getItem('selectedConversionRow');
         if (savedRowId) {
             const savedRow = document.querySelector(`.conversions-table tbody tr[data-conversion-id="${savedRowId}"]`);
-            if (savedRow) {
+            if (savedRow && !savedRow.classList.contains('shipped-row')) {
                 savedRow.classList.add('selected-row');
             }
         }
@@ -795,7 +1035,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     rows.forEach(row => {
         row.addEventListener('click', function(e) {
-            if (e.target.closest('.btn-action')) {
+            // Не выделяем отправленные строки
+            if (this.classList.contains('shipped-row')) {
+                return;
+            }
+
+            // Не выделяем, если кликнули по интерактивным элементам
+            if (e.target.closest('.btn-action') ||
+                e.target.closest('.conversion-checkbox') ||
+                e.target.tagName === 'INPUT') {
                 return;
             }
             rows.forEach(r => r.classList.remove('selected-row'));
@@ -807,46 +1055,86 @@ document.addEventListener('DOMContentLoaded', function() {
 
     loadSelectedRow();
 
-    // ========== АВТОМАТИЧЕСКАЯ ОТПРАВКА ДЛЯ ДАТ ==========
-    const dateFrom = document.getElementById('date_from');
-    const dateTo = document.getElementById('date_to');
-    const form = document.getElementById('filter-form');
+    // ========== ЧЕКБОКСЫ ДЛЯ МАССОВОЙ ОТПРАВКИ ==========
 
-    function submitForm() {
-        localStorage.removeItem('selectedConversionRow');
-        form.submit();
+    const checkboxes = document.querySelectorAll('.conversion-checkbox');
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    const batchActionsBar = document.getElementById('batch-actions-bar');
+    const selectedCountEl = document.getElementById('selected-count');
+    const shippingForm = document.getElementById('shipping-form');
+    const conversionIdsInput = document.getElementById('conversion_ids_input');
+    const btnShipping = document.getElementById('btn-shipping');
+    const btnClearSelection = document.getElementById('btn-clear-selection');
+
+    function updateSelection() {
+        const selected = Array.from(checkboxes).filter(cb => cb.checked);
+        const count = selected.length;
+
+        if (count > 0) {
+            batchActionsBar.style.display = 'flex';
+            selectedCountEl.textContent = count;
+        } else {
+            batchActionsBar.style.display = 'none';
+        }
+
+        if (selectAllCheckbox) {
+            selectAllCheckbox.checked = count > 0 && count === checkboxes.length;
+            selectAllCheckbox.indeterminate = count > 0 && count < checkboxes.length;
+        }
+
+        rows.forEach(row => {
+            const cb = row.querySelector('.conversion-checkbox');
+            if (cb && cb.checked && !row.classList.contains('shipped-row')) {
+                row.classList.add('selected-row');
+            } else if (cb && !cb.checked && !row.classList.contains('shipped-row')) {
+                // Снимаем подсветку, если была установлена кликом по чекбоксу
+                // (но не трогаем ту, что установлена кликом по строке)
+            }
+        });
     }
 
-    if (dateFrom) {
-        dateFrom.addEventListener('change', submitForm);
-    }
-    if (dateTo) {
-        dateTo.addEventListener('change', submitForm);
-    }
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    initMaterialSearch({
-        inputId: 'source_material_search',
-        selectId: 'id_source_material',
-        dropdownId: 'source_material_dropdown',
-        onSelect: function() { document.getElementById('filter-form').submit(); }
+    checkboxes.forEach(cb => {
+        cb.addEventListener('change', function(e) {
+            e.stopPropagation();
+            updateSelection();
+        });
     });
 
-    initMaterialSearch({
-        inputId: 'target_material_search',
-        selectId: 'id_target_material',
-        dropdownId: 'target_material_dropdown',
-        onSelect: function() { document.getElementById('filter-form').submit(); }
-    });
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            checkboxes.forEach(cb => {
+                cb.checked = isChecked;
+            });
+            updateSelection();
+        });
+    }
 
-    initLocationSearch({
-        inputId: 'storage_location_search',
-        selectId: 'id_storage_location',
-        dropdownId: 'storage_location_dropdown',
-        onSelect: function() { document.getElementById('filter-form').submit(); }
-    });
+    if (btnShipping) {
+        btnShipping.addEventListener('click', function() {
+            const selected = Array.from(checkboxes).filter(cb => cb.checked);
+            if (selected.length === 0) {
+                alert('Выберите хотя бы одну конвертацию');
+                return;
+            }
+
+            const ids = selected.map(cb => cb.value);
+            conversionIdsInput.value = ids.join(',');
+
+            shippingForm.submit();
+        });
+    }
+
+    if (btnClearSelection) {
+        btnClearSelection.addEventListener('click', function() {
+            checkboxes.forEach(cb => cb.checked = false);
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
+            updateSelection();
+        });
+    }
 });
 </script>
 {% endblock %}

@@ -28,7 +28,7 @@ def conversion_list_view(request):
     if is_manager:
         # Руководитель видит ВСЕ конвертации
         conversions = Conversion.objects.select_related(
-            'storage_location', 'source_material', 'target_material', 'created_by_position'
+            'storage_location', 'source_material', 'target_material', 'created_by_position', 'shipped_movement'
         ).order_by('-conversion_date')
         # Для руководителя - все склады
         user_warehouses = StorageLocation.objects.filter(source_type='склад').order_by('source_type')

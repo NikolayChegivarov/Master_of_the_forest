@@ -1,5 +1,5 @@
 from django.urls import path
-from Forest_apps.inventory.views import storage_location
+from Forest_apps.inventory.views import storage_location, conversion_shipping
 from Forest_apps.inventory.views import material_balance
 from Forest_apps.inventory.views import material_movement
 from Forest_apps.inventory.views import conversion
@@ -45,6 +45,18 @@ urlpatterns = [
          name='material_movement_confirm'),
     path('movements/pending-shipments/', material_movement.material_movement_pending_shipments_view,
          name='material_movement_pending_shipments'),
+
+    # Массовая отправка целевого материала из конвертаций  ← НОВОЕ
+    path(
+        'conversions/shipping/',
+        conversion_shipping.conversion_shipping_create_view,
+        name='conversion_shipping_create'
+    ),
+    path(
+        'conversions/shipping/save/',
+        conversion_shipping.conversion_shipping_save_view,
+        name='conversion_shipping_save'
+    ),
 
     # API
     path('api/locations-by-type/', material_movement.get_locations_by_type, name='api_locations_by_type'),

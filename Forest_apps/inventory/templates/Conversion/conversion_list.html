@@ -240,17 +240,29 @@
                                 </td>
                                 <td class="actions-cell">
                                     <div class="action-buttons-group">
+                                        <!-- 👁️ Просмотр — есть у всех -->
                                         <a href="{% url 'inventory:conversion_detail' conversion.id %}" class="btn-action view-btn" title="Просмотр">👁️</a>
 
-                                        {% if is_manager %}
+                                        {% if conversion.shipped_movement_id %}
+                                            <!-- Отправлена — редактирование и удаление недоступны НИКОМУ -->
+                                            <span class="no-action"
+                                                  title="Конвертация отправлена (движение №{{ conversion.shipped_movement_id }}) — редактирование и удаление недоступны">
+                                                🔒
+                                            </span>
+                                        {% elif is_manager %}
+                                            <!-- Руководитель, не отправлена — может всё -->
                                             <a href="{% url 'inventory:conversion_edit' conversion.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                             <a href="{% url 'inventory:conversion_delete' conversion.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить эту конвертацию?');">🗑️</a>
                                         {% else %}
+                                            <!-- Мастер, не отправлена — проверка 5 дней -->
                                             {% if conversion.created_at >= now_minus_5_days %}
                                                 <a href="{% url 'inventory:conversion_edit' conversion.id %}" class="btn-action edit-btn" title="Редактировать">✏️</a>
                                                 <a href="{% url 'inventory:conversion_delete' conversion.id %}" class="btn-action delete-btn" title="Удалить" onclick="return confirm('Удалить эту конвертацию?');">🗑️</a>
                                             {% else %}
-                                                <span class="no-action" title="Конвертация старше 5 дней, редактирование невозможно">🔒</span>
+                                                <span class="no-action"
+                                                      title="Конвертация старше 5 дней, редактирование невозможно. Обратитесь к руководителю.">
+                                                    🔒
+                                                </span>
                                             {% endif %}
                                         {% endif %}
                                     </div>
@@ -1086,9 +1098,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const cb = row.querySelector('.conversion-checkbox');
             if (cb && cb.checked && !row.classList.contains('shipped-row')) {
                 row.classList.add('selected-row');
-            } else if (cb && !cb.checked && !row.classList.contains('shipped-row')) {
-                // Снимаем подсветку, если была установлена кликом по чекбоксу
-                // (но не трогаем ту, что установлена кликом по строке)
             }
         });
     }

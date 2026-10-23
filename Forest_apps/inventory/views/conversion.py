@@ -203,6 +203,15 @@ def conversion_edit_view(request, conversion_id):
     position_name = request.session.get('position_name')
     is_manager = (position_name and position_name.lower() == 'руководитель')
 
+    # ===== Запрет редактирования отправленных конвертаций =====
+    if conversion.shipped_movement_id:
+        messages.error(
+            request,
+            f'Нельзя редактировать конвертацию №{conversion.id}: '
+            f'целевой материал уже отправлен (движение №{conversion.shipped_movement_id}).'
+        )
+        return redirect('inventory:conversion_list')
+
     # Проверка прав (оставляем как есть)
     if not is_manager:
         from Forest_apps.core.models import Warehouse
@@ -492,6 +501,15 @@ def conversion_delete_view(request, conversion_id):
     conversion = get_object_or_404(Conversion, id=conversion_id)
     position_name = request.session.get('position_name')
     is_manager = (position_name and position_name.lower() == 'руководитель')
+
+    # ===== Запрет удаления отправленных конвертаций =====
+    if conversion.shipped_movement_id:
+        messages.error(
+            request,
+            f'Нельзя удалить конвертацию №{conversion.id}: '
+            f'целевой материал уже отправлен (движение №{conversion.shipped_movement_id}).'
+        )
+        return redirect('inventory:conversion_list')
 
     # Проверка прав
     if not is_manager:

@@ -18,25 +18,43 @@
 
         body {
             font-family: Arial, sans-serif;
-            line-height: 1.6;
+            line-height: 1.5;
             color: #333;
+            background: #f0f2f0;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 0 15px;
         }
 
+        /* ==================== КОМПАКТНАЯ ШАПКА ==================== */
         header {
             background: #2c5e2e;
             color: white;
-            padding: 1rem 0;
+            padding: 6px 0;
         }
 
+        header .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            line-height: 1.2;
+            margin: 0;
+        }
+
+        /* ==================== КОМПАКТНАЯ НАВИГАЦИЯ ==================== */
         nav {
             background: #3a7a3c;
-            padding: 0.5rem 0;
+            padding: 4px 0;
         }
 
         nav ul {
@@ -46,57 +64,69 @@
             align-items: center;
             margin: 0;
             padding: 0;
+            gap: 12px;
         }
 
         nav ul li {
-            margin-right: 1.5rem;
-            margin-bottom: 0;
+            margin: 0;
         }
 
         nav ul li a {
             color: white;
             text-decoration: none;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 4px;
+            font-size: 13px;
+            padding: 3px 6px;
+            border-radius: 4px;
+            transition: background 0.2s;
         }
 
         nav ul li a:hover {
-            text-decoration: underline;
+            text-decoration: none;
+            background: rgba(255,255,255,0.15);
         }
 
         .home-link {
-            font-size: 1.2rem;
+            font-size: 14px;
         }
 
+        /* ==================== КОМПАКТНЫЙ MAIN ==================== */
         main {
-            min-height: 70vh;
-            padding: 2rem 0;
-        }
-
-        footer {
-            background: #333;
-            color: white;
-            text-align: center;
-            padding: 1rem 0;
-            margin-top: 2rem;
+            min-height: calc(100vh - 110px);
+            padding: 10px 0;
         }
 
         .content {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            background: transparent;
+            padding: 0;
         }
 
+        /* ==================== КОМПАКТНЫЙ FOOTER ==================== */
+        footer {
+            background: #333;
+            color: #bbb;
+            text-align: center;
+            padding: 5px 0;
+            font-size: 11px;
+            margin-top: 10px;
+        }
+
+        footer p {
+            margin: 0;
+        }
+
+        /* ==================== СООБЩЕНИЯ ==================== */
         .messages {
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         .alert {
-            padding: 12px;
+            padding: 8px 12px;
             border-radius: 4px;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
+            font-size: 13px;
         }
 
         .alert-error {
@@ -111,31 +141,48 @@
             border: 1px solid #c3e6cb;
         }
 
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
         .alert-info {
             background: #d1ecf1;
             color: #0c5460;
             border: 1px solid #bee5eb;
         }
 
+        /* ==================== ПРАВАЯ ЧАСТЬ НАВИГАЦИИ ==================== */
         .ml-auto {
             margin-left: auto;
         }
 
+        .nav-user-block {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
         .user-info {
             color: white;
-            margin-right: 15px;
+            font-size: 12px;
             font-weight: 500;
+            white-space: nowrap;
         }
 
         .logout-btn {
             background: #c0392b;
             color: white;
-            padding: 8px 20px;
+            padding: 3px 12px;
             border-radius: 4px;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 12px;
             transition: background 0.3s;
             display: inline-block;
+            white-space: nowrap;
         }
 
         .logout-btn:hover {
@@ -147,9 +194,9 @@
         .badge-warning {
             background: #ffc107;
             color: #212529;
-            padding: 5px 10px;
+            padding: 2px 8px;
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 11px;
             font-weight: 600;
             display: inline-block;
             white-space: nowrap;
@@ -158,13 +205,14 @@
         .return-btn {
             background: #17a2b8;
             color: white;
-            padding: 5px 15px;
+            padding: 2px 10px;
             border-radius: 4px;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
             transition: background 0.3s;
             display: inline-block;
             white-space: nowrap;
+            font-size: 11px;
         }
 
         .return-btn:hover {
@@ -172,15 +220,33 @@
             text-decoration: none;
         }
 
+        /* ==================== АДАПТИВНОСТЬ ==================== */
+        @media (max-width: 992px) {
+            header h1 {
+                font-size: 16px;
+            }
+
+            nav ul {
+                gap: 6px;
+            }
+
+            nav ul li a {
+                font-size: 12px;
+            }
+        }
+
         @media (max-width: 768px) {
+            header h1 {
+                font-size: 15px;
+            }
+
             nav ul {
                 flex-direction: column;
                 align-items: flex-start;
+                gap: 4px;
             }
 
             nav ul li {
-                margin-right: 0;
-                margin-bottom: 10px;
                 width: 100%;
             }
 
@@ -189,15 +255,23 @@
                 width: 100%;
             }
 
+            .nav-user-block {
+                justify-content: space-between;
+                width: 100%;
+                padding-top: 4px;
+                border-top: 1px solid rgba(255,255,255,0.15);
+            }
+
             .user-info {
-                display: block;
-                margin-bottom: 5px;
+                display: inline;
+                margin-bottom: 0;
             }
 
             .badge-warning,
             .return-btn {
-                width: 100%;
-                text-align: center;
+                display: inline-block;
+                width: auto;
+                text-align: left;
             }
         }
     </style>
@@ -206,24 +280,24 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- ==================== КОМПАКТНАЯ ШАПКА ==================== -->
     <header>
         <div class="container">
             <h1>{% block header %}Управление лесным хозяйством{% endblock %}</h1>
         </div>
     </header>
 
+    <!-- ==================== КОМПАКТНАЯ НАВИГАЦИЯ ==================== -->
     <nav>
         <div class="container">
             <ul>
                 <li><a href="/" class="home-link" title="Главная">🏠 <span class="home-text">Главная</span></a></li>
 
-                <!-- Проверяем наличие employee_name в сессии -->
                 {% if request.session.employee_name %}
 
-                    <!-- Индикатор режима подмены -->
                     {% if request.session.is_switched %}
                         <li>
-                            <span class="badge-warning">🔀 Режим подмены: {{ request.session.position_name }}</span>
+                            <span class="badge-warning">🔀 {{ request.session.position_name }}</span>
                         </li>
                         <li>
                             <a href="{% url 'authorization:return_to_original' %}" class="return-btn">↩️ Вернуться</a>
@@ -235,10 +309,12 @@
                     {% endblock %}
 
                     <li class="ml-auto">
-                        <span class="user-info">
-                            {{ request.session.employee_name }} ({{ request.session.position_name }})
-                        </span>
-                        <a href="{% url 'authorization:logout' %}" class="logout-btn">Выйти</a>
+                        <div class="nav-user-block">
+                            <span class="user-info">
+                                {{ request.session.employee_name }} ({{ request.session.position_name }})
+                            </span>
+                            <a href="{% url 'authorization:logout' %}" class="logout-btn">Выйти</a>
+                        </div>
                     </li>
                 {% else %}
                     <li class="ml-auto">
@@ -263,17 +339,15 @@
             {% endif %}
 
             <!-- Основной контент -->
-            <div class="content">
-                {% block content %}
-                <!-- Контент будет подставляться в дочерних шаблонах -->
-                {% endblock %}
-            </div>
+            {% block content %}
+            <!-- Контент будет подставляться в дочерних шаблонах -->
+            {% endblock %}
         </div>
     </main>
 
     <footer>
         <div class="container">
-            <p>&copy; {% now "Y" %} Управление лесным хозяйством. Все права защищены.</p>
+            <p>&copy; {% now "Y" %} Управление лесным хозяйством</p>
         </div>
     </footer>
 
